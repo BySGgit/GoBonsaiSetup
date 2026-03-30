@@ -1,0 +1,52 @@
+# Node/Vite/Vue project in subdirectory (e.g. /gobonsai-web)
+
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# Build output
+dist/
+dist-ssr/
+*.local
+
+# Vite / local dev
+vite.config.*.timestamp-*
+vite.config.*.timestamp-*.mjs
+.vite/
+.vite-cache/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.sw?
+*~
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# TypeScript
+*.tsbuildinfo
+
+# Env files (keep example)
+.env
+.env.*.local
+!.env.example
+
+# Test coverage
+coverage/
+
+# Optional: lockfile if you want a single canonical one
+# Uncomment only the one you use
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml

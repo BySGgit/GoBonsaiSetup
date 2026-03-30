@@ -1,0 +1,244 @@
+.rdata:004B7C14                 text "UTF-16LE", 'sunColor',0
+.rdata:004B7C26                 align 4
+.rdata:004B7C28 aEnablesky:                             ; DATA XREF: sub_471650+38↑o
+.rdata:004B7C28                 text "UTF-16LE", 'enableSky',0
+.rdata:004B7C3C                 dd offset ??_R4Sky@@6B@ ; const Sky::`RTTI Complete Object Locator'
+.rdata:004B7C40 ; const Sky::`vftable'
+.rdata:004B7C40 ??_7Sky@@6B@    dd offset sub_4100D0    ; DATA XREF: sub_4100E0+50↑o
+.rdata:004B7C40                                         ; sub_410200+28↑o
+.rdata:004B7C44                 dd offset sub_410200
+.rdata:004B7C48                 dd offset sub_401A50
+.rdata:004B7C4C                 dd offset sub_410950
+.rdata:004B7C50                 dd offset sub_450BD0
+.rdata:004B7C54                 dd offset sub_411000
+.rdata:004B7C58                 dd offset nullsub_5
+.rdata:004B7C5C                 dd offset sub_450B80
+.rdata:004B7C60                 dd offset nullsub_1
+.rdata:004B7C64 ; const wchar_t aBarkPng
+.rdata:004B7C64 aBarkPng:                               ; DATA XREF: sub_412510+5↑o
+.rdata:004B7C64                 text "UTF-16LE", 'bark.png',0
+.rdata:004B7C76                 align 4
+.rdata:004B7C78 ; const wchar_t aBark
+.rdata:004B7C78 aBark:                                  ; DATA XREF: sub_412510+1B↑o
+.rdata:004B7C78                 text "UTF-16LE", 'bark',0
+.rdata:004B7C82                 align 4
+.rdata:004B7C84 ; const wchar_t aLeafPng
+.rdata:004B7C84 aLeafPng:                               ; DATA XREF: sub_412510:loc_412542↑o
+.rdata:004B7C84                 text "UTF-16LE", 'leaf.png',0
+.rdata:004B7C96                 align 4
+.rdata:004B7C98 ; const wchar_t aLeaf
+.rdata:004B7C98 aLeaf:                                  ; DATA XREF: sub_412510+48↑o
+.rdata:004B7C98                 text "UTF-16LE", 'leaf',0
+.rdata:004B7CA2                 align 4
+.rdata:004B7CA4 ; const wchar_t aCloudPng
+.rdata:004B7CA4 aCloudPng:                              ; DATA XREF: sub_412510:loc_41256F↑o
+.rdata:004B7CA4                 text "UTF-16LE", 'cloud.png',0
+.rdata:004B7CB8 ; const wchar_t aCloud
+.rdata:004B7CB8 aCloud:                                 ; DATA XREF: sub_412510+75↑o
+.rdata:004B7CB8                 text "UTF-16LE", 'cloud',0
+.rdata:004B7CC4 ; const wchar_t aPotPng
+.rdata:004B7CC4 aPotPng:                                ; DATA XREF: sub_412510:loc_41259C↑o
+.rdata:004B7CC4                 text "UTF-16LE", 'pot.png',0
+.rdata:004B7CD4 ; const wchar_t aPot
+.rdata:004B7CD4 aPot:                                   ; DATA XREF: sub_412510+A2↑o
+.rdata:004B7CD4                 text "UTF-16LE", 'pot',0
+.rdata:004B7CDC ; const wchar_t aSoilPng
+.rdata:004B7CDC aSoilPng:                               ; DATA XREF: sub_412510:loc_4125C9↑o
+.rdata:004B7CDC                 text "UTF-16LE", 'soil.png',0
+.rdata:004B7CEE                 align 10h
+.rdata:004B7CF0 ; const wchar_t aSoil
+.rdata:004B7CF0 aSoil:                                  ; DATA XREF: sub_412510+CF↑o
+.rdata:004B7CF0                 text "UTF-16LE", 'soil',0
+.rdata:004B7CFA                 align 4
+.rdata:004B7CFC ; const wchar_t aCirclePng
+.rdata:004B7CFC aCirclePng:                             ; DATA XREF: sub_412510:loc_4125F6↑o
+.rdata:004B7CFC                 text "UTF-16LE", 'circle.png',0
+.rdata:004B7D12                 align 4
+.rdata:004B7D14 ; const wchar_t aCircle
+.rdata:004B7D14 aCircle:                                ; DATA XREF: sub_412510+FC↑o
+.rdata:004B7D14                 text "UTF-16LE", 'circle',0
+.rdata:004B7D22                 align 4
+.rdata:004B7D24 ; const wchar_t aBumptestPng
+.rdata:004B7D24 aBumptestPng:                           ; DATA XREF: sub_412510:loc_412623↑o
+.rdata:004B7D24                 text "UTF-16LE", 'bumpTest.png',0
+.rdata:004B7D3E                 align 10h
+.rdata:004B7D40 ; const wchar_t aBumptest
+.rdata:004B7D40 aBumptest:                              ; DATA XREF: sub_412510+129↑o
+.rdata:004B7D40                 text "UTF-16LE", 'bumpTest',0
+.rdata:004B7D52                 align 4
+.rdata:004B7D54 aUpdatetreevert:                        ; DATA XREF: sub_412700+1D3↑o
+.rdata:004B7D54                 text "UTF-16LE", 'updateTreeVerts',0
+.rdata:004B7D74 aUpdatevertinte:                        ; DATA XREF: sub_412700+24E↑o
+.rdata:004B7D74                 text "UTF-16LE", 'updateVertInterval',0
+.rdata:004B7D9A                 align 4
+.rdata:004B7D9C aWindstrengthma:                        ; DATA XREF: sub_412D20+2FD↑o
+.rdata:004B7D9C                 text "UTF-16LE", 'windStrengthMax',0
+.rdata:004B7DBC aUpdatelights:                          ; DATA XREF: sub_471730+38↑o
+.rdata:004B7DBC                 text "UTF-16LE", 'updateLights',0
+.rdata:004B7DD6                 align 4
+.rdata:004B7DD8 aLightupdatespe:                        ; DATA XREF: sub_4130D0+105↑o
+.rdata:004B7DD8                 text "UTF-16LE", 'lightUpdatesPerDay',0
+.rdata:004B7DFE                 align 10h
+.rdata:004B7E00 aSpecularenable:                        ; DATA XREF: sub_413350+162↑o
+.rdata:004B7E00                 text "UTF-16LE", 'specularEnable',0
+.rdata:004B7E1E                 align 10h
+.rdata:004B7E20 flt_4B7E20      dd 100000.0             ; DATA XREF: sub_4139D0+55↑r
+.rdata:004B7E20                                         ; sub_42D070:loc_42D32D↑r
+.rdata:004B7E24                 dd offset ??_R4BonsaiController@@6B@ ; const BonsaiController::`RTTI Complete Object Locator'
+.rdata:004B7E28 ; const BonsaiController::`vftable'
+.rdata:004B7E28 ??_7BonsaiController@@6B@ dd offset sub_412040
+.rdata:004B7E28                                         ; DATA XREF: sub_412080+26↑o
+.rdata:004B7E28                                         ; sub_451D70+CC↑o
+.rdata:004B7E2C                 dd offset sub_412050
+.rdata:004B7E30                 dd offset sub_412060
+.rdata:004B7E34 aUpdatemovement:                        ; DATA XREF: sub_4143E0+82↑o
+.rdata:004B7E34                 text "UTF-16LE", 'updateMovement',0
+.rdata:004B7E52                 align 4
+.rdata:004B7E54 aShowlightdirec:                        ; DATA XREF: sub_4143E0+13C↑o
+.rdata:004B7E54                 text "UTF-16LE", 'showLightDirections',0
+.rdata:004B7E7C aResistanceradi:                        ; DATA XREF: sub_414BB0+59↑o
+.rdata:004B7E7C                 text "UTF-16LE", 'resistanceRadiusBias',0
+.rdata:004B7EA6                 align 4
+.rdata:004B7EA8 aLightambientco:                        ; DATA XREF: sub_415020+50↑o
+.rdata:004B7EA8                 text "UTF-16LE", 'lightAmbientCoeff',0
+.rdata:004B7ECC aLightambientmi:                        ; DATA XREF: sub_415020+C8↑o
+.rdata:004B7ECC                 text "UTF-16LE", 'lightAmbientMin',0
+.rdata:004B7EEC                 align 10h
+.rdata:004B7EF0                 dd offset ??_R4TreeSection@@6B@ ; const TreeSection::`RTTI Complete Object Locator'
+.rdata:004B7EF4 ; const TreeSection::`vftable'
+.rdata:004B7EF4 ??_7TreeSection@@6B@ dd offset __RTC_NumErrors_0
+.rdata:004B7EF4                                         ; DATA XREF: sub_413F20↑o
+.rdata:004B7EF4                                         ; sub_413F50+41↑o ...
+.rdata:004B7EF8                 dd offset sub_415990
+.rdata:004B7EFC                 dd offset sub_401A50
+.rdata:004B7F00                 dd offset sub_4143E0
+.rdata:004B7F04                 dd offset sub_450BD0
+.rdata:004B7F08                 dd offset sub_414FF0
+.rdata:004B7F0C                 dd offset nullsub_5
+.rdata:004B7F10                 dd offset sub_450B80
+.rdata:004B7F14                 dd offset sub_4146F0
+.rdata:004B7F18                 dd offset sub_414E10
+.rdata:004B7F1C                 dd offset sub_414CE0
+.rdata:004B7F20                 dd offset ?decline_incoming_messages@?$propagator_block@V?$single_link_registry@V?$ITarget@I@Concurrency@@@Concurrency@@V?$multi_link_registry@V?$ISource@W4agent_status@Concurrency@@@Concurrency@@@2@V?$ordered_message_processor@I@2@@Concurrency@@IAEXXZ ; Concurrency::propagator_block<Concurrency::single_link_registry<Concurrency::ITarget<uint>>,Concurrency::multi_link_registry<Concurrency::ISource<Concurrency::agent_status>>,Concurrency::ordered_message_processor<uint>>::decline_incoming_messages(void)
+.rdata:004B7F24                 dd offset sub_414270
+.rdata:004B7F28                 dd offset sub_4142B0
+.rdata:004B7F2C                 dd offset sub_413F30
+.rdata:004B7F30                 dd offset sub_415440
+.rdata:004B7F34                 align 8
+.rdata:004B7F38                 dd offset ??_R4TreeSectionBud@@6B@ ; const TreeSectionBud::`RTTI Complete Object Locator'
+.rdata:004B7F3C ; const TreeSectionBud::`vftable'
+.rdata:004B7F3C ??_7TreeSectionBud@@6B@ dd offset sub_415980
+.rdata:004B7F3C                                         ; DATA XREF: sub_4159C0+49↑o
+.rdata:004B7F40                 dd offset sub_415990
+.rdata:004B7F44                 dd offset sub_401A50
+.rdata:004B7F48                 dd offset sub_4143E0
+.rdata:004B7F4C                 dd offset sub_450BD0
+.rdata:004B7F50                 dd offset sub_416030
+.rdata:004B7F54                 dd offset nullsub_5
+.rdata:004B7F58                 dd offset sub_450B80
+.rdata:004B7F5C                 dd offset sub_4146F0
+.rdata:004B7F60                 dd offset sub_415EF0
+.rdata:004B7F64                 dd offset sub_414CE0
+.rdata:004B7F68                 dd offset sub_415ED0
+.rdata:004B7F6C                 dd offset sub_414270
+.rdata:004B7F70                 dd offset sub_4142B0
+.rdata:004B7F74                 dd offset sub_413F30
+.rdata:004B7F78                 dd offset sub_415440
+.rdata:004B7F7C aMinleaflight:                          ; DATA XREF: sub_416510+1B0↑o
+.rdata:004B7F7C                 text "UTF-16LE", 'minLeafLight',0
+.rdata:004B7F96                 align 4
+.rdata:004B7F98 aMinleaflightra:                        ; DATA XREF: sub_416510+243↑o
+.rdata:004B7F98                 text "UTF-16LE", 'minLeafLightRate',0
+.rdata:004B7FBA                 align 4
+.rdata:004B7FBC aHealthfalloffp:                        ; DATA XREF: sub_416510+355↑o
+.rdata:004B7FBC                 text "UTF-16LE", 'healthFallOffPercent',0
+.rdata:004B7FE6                 align 4
+.rdata:004B7FE8 aLeafgrowrate:                          ; DATA XREF: sub_416510+8B7↑o
+.rdata:004B7FE8                 text "UTF-16LE", 'leafGrowRate',0
+.rdata:004B8002                 align 8
+.rdata:004B8008                 dd offset ??_R4TreeSectionLeaf@@6B@ ; const TreeSectionLeaf::`RTTI Complete Object Locator'
+.rdata:004B800C ; const TreeSectionLeaf::`vftable'
+.rdata:004B800C ??_7TreeSectionLeaf@@6B@ dd offset sub_416380
+.rdata:004B800C                                         ; DATA XREF: sub_4163B0+48↑o
+.rdata:004B8010                 dd offset sub_415990
+.rdata:004B8014                 dd offset sub_401A50
+.rdata:004B8018                 dd offset sub_416500
+.rdata:004B801C                 dd offset sub_450BD0
+.rdata:004B8020                 dd offset sub_417070
+.rdata:004B8024                 dd offset sub_416EC0
+.rdata:004B8028                 dd offset sub_450B80
+.rdata:004B802C                 dd offset sub_4146F0
+.rdata:004B8030                 dd offset sub_416510
+.rdata:004B8034                 dd offset sub_414CE0
+.rdata:004B8038                 dd offset ?decline_incoming_messages@?$propagator_block@V?$single_link_registry@V?$ITarget@I@Concurrency@@@Concurrency@@V?$multi_link_registry@V?$ISource@W4agent_status@Concurrency@@@Concurrency@@@2@V?$ordered_message_processor@I@2@@Concurrency@@IAEXXZ ; Concurrency::propagator_block<Concurrency::single_link_registry<Concurrency::ITarget<uint>>,Concurrency::multi_link_registry<Concurrency::ISource<Concurrency::agent_status>>,Concurrency::ordered_message_processor<uint>>::decline_incoming_messages(void)
+.rdata:004B803C                 dd offset sub_414270
+.rdata:004B8040                 dd offset sub_4142B0
+.rdata:004B8044                 dd offset sub_416390
+.rdata:004B8048                 dd offset sub_4086F0
+.rdata:004B804C                 align 10h
+.rdata:004B8050                 dd offset ??_R4TreeSectionSeed@@6B@ ; const TreeSectionSeed::`RTTI Complete Object Locator'
+.rdata:004B8054 ; const TreeSectionSeed::`vftable'
+.rdata:004B8054 ??_7TreeSectionSeed@@6B@ dd offset sub_417210
+.rdata:004B8054                                         ; DATA XREF: sub_417220+4A↑o
+.rdata:004B8058                 dd offset sub_415990
+.rdata:004B805C                 dd offset sub_401A50
+.rdata:004B8060                 dd offset sub_4143E0
+.rdata:004B8064                 dd offset sub_450BD0
+.rdata:004B8068                 dd offset sub_414FF0
+.rdata:004B806C                 dd offset nullsub_5
+.rdata:004B8070                 dd offset sub_450B80
+.rdata:004B8074                 dd offset sub_417300
+.rdata:004B8078                 dd offset sub_417440
+.rdata:004B807C                 dd offset sub_414CE0
+.rdata:004B8080                 dd offset nullsub_1
+.rdata:004B8084                 dd offset sub_414270
+.rdata:004B8088                 dd offset sub_4142B0
+.rdata:004B808C                 dd offset sub_413F30
+.rdata:004B8090                 dd offset sub_415440
+.rdata:004B8094                 align 8
+.rdata:004B8098                 dd offset ??_R4TreeSectionStump@@6B@ ; const TreeSectionStump::`RTTI Complete Object Locator'
+.rdata:004B809C ; const TreeSectionStump::`vftable'
+.rdata:004B809C ??_7TreeSectionStump@@6B@ dd offset sub_417540
+.rdata:004B809C                                         ; DATA XREF: sub_417550+47↑o
+.rdata:004B80A0                 dd offset sub_415990
+.rdata:004B80A4                 dd offset sub_401A50
+.rdata:004B80A8                 dd offset sub_4143E0
+.rdata:004B80AC                 dd offset sub_450BD0
+.rdata:004B80B0                 dd offset sub_4179B0
+.rdata:004B80B4                 dd offset nullsub_5
+.rdata:004B80B8                 dd offset sub_450B80
+.rdata:004B80BC                 dd offset sub_4146F0
+.rdata:004B80C0                 dd offset sub_417620
+.rdata:004B80C4                 dd offset sub_417610
+.rdata:004B80C8                 dd offset ?decline_incoming_messages@?$propagator_block@V?$single_link_registry@V?$ITarget@I@Concurrency@@@Concurrency@@V?$multi_link_registry@V?$ISource@W4agent_status@Concurrency@@@Concurrency@@@2@V?$ordered_message_processor@I@2@@Concurrency@@IAEXXZ ; Concurrency::propagator_block<Concurrency::single_link_registry<Concurrency::ITarget<uint>>,Concurrency::multi_link_registry<Concurrency::ISource<Concurrency::agent_status>>,Concurrency::ordered_message_processor<uint>>::decline_incoming_messages(void)
+.rdata:004B80CC                 dd offset sub_414270
+.rdata:004B80D0                 dd offset sub_4142B0
+.rdata:004B80D4                 dd offset sub_413F30
+.rdata:004B80D8                 dd offset sub_415440
+.rdata:004B80DC aHealthenergyad:                        ; DATA XREF: sub_417C90+FE↑o
+.rdata:004B80DC                 text "UTF-16LE", 'healthEnergyAdjustment',0
+.rdata:004B810A                 align 4
+.rdata:004B810C aRandombudrotat:                        ; DATA XREF: sub_417FF0+23C↑o
+.rdata:004B810C                 text "UTF-16LE", 'randomBudRotation',0
+.rdata:004B8130                 dd offset ??_R4TreeSectionTwig@@6B@ ; const TreeSectionTwig::`RTTI Complete Object Locator'
+.rdata:004B8134 ; const TreeSectionTwig::`vftable'
+.rdata:004B8134 ??_7TreeSectionTwig@@6B@ dd offset sub_417BA0
+.rdata:004B8134                                         ; DATA XREF: sub_417BB0+3E↑o
+.rdata:004B8138                 dd offset sub_415990
+.rdata:004B813C                 dd offset sub_401A50
+.rdata:004B8140                 dd offset sub_4143E0
+.rdata:004B8144                 dd offset sub_450BD0
+.rdata:004B8148                 dd offset sub_418F10
+.rdata:004B814C                 dd offset sub_419100
+.rdata:004B8150                 dd offset sub_450B80
+.rdata:004B8154                 dd offset sub_4146F0
+.rdata:004B8158                 dd offset sub_417C90
+.rdata:004B815C                 dd offset sub_417610
+.rdata:004B8160                 dd offset ?decline_incoming_messages@?$propagator_block@V?$single_link_registry@V?$ITarget@I@Concurrency@@@Concurrency@@V?$multi_link_registry@V?$ISource@W4agent_status@Concurrency@@@Concurrency@@@2@V?$ordered_message_processor@I@2@@Concurrency@@IAEXXZ ; Concurrency::propagator_block<Concurrency::single_link_registry<Concurrency::ITarget<uint>>,Concurrency::multi_link_registry<Concurrency::ISource<Concurrency::agent_status>>,Concurrency::ordered_message_processor<uint>>::decline_incoming_messages(void)
+.rdata:004B8164                 dd offset sub_418E40
+.rdata:004B8168                 dd offset sub_4142B0
+.rdata:004B816C                 dd offset sub_413F30
+.rdata:004B8170                 dd offset sub_415440
+.rdata:004B8174 ; const WCHAR LibFileName
+.rdata:004B8174 LibFileName:                            ; DATA XREF: sub_41C130+1C2↑o
+.rdata:004B8174                 text "UTF-16LE", 'user32.dll',0

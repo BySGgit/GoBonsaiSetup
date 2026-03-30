@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>GoBonsai RE - Educational Reconstruction</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #111; color: white; font-family: sans-serif; }
+        #info { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 8px; pointer-events: none; }
+        .stat { margin-bottom: 5px; }
+        .label { color: #888; font-size: 0.8em; }
+        .value { font-weight: bold; color: #4af; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <div class="stat"><span class="label">Age:</span> <span id="age" class="value">0.00</span></div>
+        <div class="stat"><span class="label">Target Age:</span> <span id="targetAge" class="value">0.00</span></div>
+        <div class="stat"><span class="label">Days:</span> <span id="days" class="value">0</span></div>
+        <div class="stat"><span class="label">Growth Step:</span> <span class="value">0.1</span></div>
+    </div>
+
+    <!-- Загрузка Three.js через CDN -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        /**
+         * Эмуляция MSVC rand() для 100% точности генерации
+         */
+        class MSVCRand {
+            constructor(seed = 1) {
+                this.state = seed;
+            }
+            srand(seed) { this.state = seed; }
+            rand() {
+                this.state = (Math.imul(this.state, 214013) + 2531011) & 0x7FFFFFFF;
+                return (this.state >> 16) & 0x7FFF;
+            }
+            randFloat() {
+                return this.rand() / 32767.0;
+            }
+        }
+
+        /**
+         * Секция дерева (Ветка)
+         * Эмулирует структуру из sub_4143E0 и sub_411000
+         */
+        class TreeSection {
+            constructor(parent = null, level = 0) {
+                this.parent = parent;
+                this.level = level;
+                this.children = [];
+                
+                // Трансформации (аналоги офсетов в C)
+                this.rotation = new THREE.Vector3(0, 0, 0); // +228, +232 и т.д.
+                this.targetRotation = new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.5,
+                    Math.random() * 0.5,
+                    (Math.random() - 0.5) * 0.5
+                );
+                
+                this.scale = 0.1; // Текущий размер
+                this.maxScale = 1.0 / (level + 1); // Чем выше, тем тоньше ветки
+                
+                // Three.js объект для визуализации
+                this.group = new THREE.Group();
+                this.mesh = this.createMesh();
+                this.group.add(this.mesh);
+                
+                if (parent) {
+                    parent.group.add(this.group);
+                    // Смещаем ветку к концу родительской (упрощенно)
+                    this.group.position.y = 1.0; 
+                }
+            }
+
+            createMesh() {
+                const geometry = new THREE.CylinderGeometry(0.05, 0.1, 1, 8);
+                const material = new THREE.MeshPhongMaterial({ color: 0x5d4037 });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.y = 0.5; // Смещение центра цилиндра
+                return mesh;
+            }
+
+            // Аналог sub_4143E0 (Обновление физики ветки)
+            update(ageFactor) {
+                // Плавный LERP поворота (как в коде 0.1 * (target - current))
+                this.rotation.x += (this.targetRotation.x - this.rotation.x) * 0.1;
+                this.rotation.y += (this.targetRotation.y - this.rotation.y) * 0.1;
+                this.rotation.z += (this.targetRotation.z - this.rotation.z) * 0.1;
+                
+                this.group.rotation.set(this.rotation.x, this.rotation.y, this.rotation.z);
+                
+                // Масштаб зависит от общего возраста дерева (ageFactor)
+                const currentScale = Math.min(this.maxScale, ageFactor - (this.level * 0.1));
+                if (currentScale > 0) {
+                    this.group.scale.set(currentScale, currentScale, currentScale);
+                    this.group.visible = true;
+                } else {
+                    this.group.visible = false;
+                }
+
+                // Рекурсивное обновление детей
+                this.children.forEach(child => child.update(ageFactor));
+            }
+
+            // Добавление новой под-ветки
+            addBranch() {
+                if (this.level < 4) { // Ограничение глубины для демо
+                    const child = new TreeSection(this, this.level + 1);
+                    this.children.push(child);
+                    return child;
+                }
+                return null;
+            }
+        }
+
+        /**
+         * Основная логика BonsaiController из GoBonsai.exe
+         */
+        class BonsaiController {
+            constructor(scene) {
+                this.rng = new MSVCRand(1337);
+                this.scene = scene;
+                
+                this.age = 0.0;
+                this.targetAge = 0.0;
+                this.growthStep = 0.01; // Уменьшим для плавности в JS
+                
+                this.gameTime = 0;
+                
+                // Создаем корень дерева
+                this.root = new TreeSection();
+                this.scene.add(this.root.group);
+                
+                this.init();
+            }
+
+            init() {
+                this.targetAge = this.rng.randFloat() * 2.0;
+                this.age = 0.1;
+                
+                // Создаем начальную структуру (аналог генерации)
+                let current = this.root;
+                for(let i=0; i<3; i++) {
+                    current = current.addBranch();
+                }
+            }
+
+            setNewTarget() {
+                this.targetAge += this.rng.randFloat() * 0.5;
+                // При достижении определенного возраста добавляем ветку
+                this.addRandomBranch(this.root);
+            }
+
+            addRandomBranch(parent) {
+                if (parent.children.length < 2) {
+                    parent.addBranch();
+                } else {
+                    const randomIndex = Math.floor(Math.random() * parent.children.length);
+                    this.addRandomBranch(parent.children[randomIndex]);
+                }
+            }
+
+            update() {
+                this.updateClock();
+                this.updateAnimation();
+                this.root.update(this.age);
+            }
+
+        // --- Инициализация 3D сцены ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Освещение
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 10, 7.5);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040));
+
+        const bonsai = new BonsaiController(scene);
+
+        // UI элементы
+        const elAge = document.getElementById('age');
+        const elTarget = document.getElementById('targetAge');
+        const elDays = document.getElementById('days');
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Обновление логики
+            bonsai.update();
+
+            // Обновление UI
+            elAge.innerText = bonsai.age.toFixed(4);
+            elTarget.innerText = bonsai.targetAge.toFixed(4);
+            elDays.innerText = Math.floor(bonsai.gameTime);
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
