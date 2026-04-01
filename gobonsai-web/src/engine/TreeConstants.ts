@@ -30,13 +30,15 @@ export const TREE_CONSTANTS = {
 
     // sub_4093B0.c: Geometry
     GEOMETRY: {
-        BASE_RADIUS_FACTOR: 0.03, // v47 = trunkThickness * 0.03
-        SEGMENTS_PER_SECTION: 12, 
-        RADIAL_SEGMENTS: 32,      // Inner loop breaks at v9 > 32
-        HEIGHT_FACTOR: 2.5,
-        RADIUS_DECAY: 0.95, 
-        TAPER_ROOT: 0.95,
-        TAPER_BRANCH: 0.8,
+        /** Matches v47 = trunkThickness * 0.03 style scaling (see migration guide) */
+        BASE_RADIUS_FACTOR: 0.03,
+        RADIAL_SEGMENTS: 32,
+        HEIGHT_FACTOR: 0.75,
+        RADIUS_DECAY: 0.88,
+        TAPER_ROOT: 0.82,
+        TAPER_BRANCH: 0.62,
+        /** Min fraction of parent segment length used to place side branches (avoids “all from root”) */
+        MIN_PARENT_LENGTH_FOR_ATTACH: 0.35,
     },
 
     // Roots logic (crawling effect)

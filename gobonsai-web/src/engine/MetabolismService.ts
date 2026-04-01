@@ -1,71 +1,185 @@
 import * as THREE from 'three';
-import { TREE_CONSTANTS } from './TreeConstants';
 import { TreeSection } from './TreeSection';
+import { GrowthConstants } from './config/GrowthConstants';
+import { MSVCRand } from './MSVCRand';
+
+const _inv = new THREE.Matrix4();
+const _normalMat = new THREE.Matrix3();
+const _lightWorld = new THREE.Vector3();
+const _lightLocal = new THREE.Vector3();
+const _localUp = new THREE.Vector3(0, 1, 0);
 
 export interface MetabolismState {
     energy: number;
     health: number;
+    trunkThickness: number;
+    age: number;
+}
+
+/**
+ * sub_416510.c — свет: D3DXMatrixInverse(this+104) + sub_401540 (D3DXVec3TransformNormal) + dot с flt_4D5390/8C/94.
+ * Здесь: inverse(world) + normal matrix, локальный «вверх» · свет (эквивалентно мировому up·L при ортогональной части).
+ * v34 = *(+52)*v22 + *(+53)*0.5; энергия; пропуск роста.
+ */
+export interface MetabolismUpdateResult {
+    logs: string[];
+    /** Суммарный «расход» локальной energy по секциям за кадр — прокси для части root+436 (до полного sub_414E10). */
+    totalEnergySpent: number;
 }
 
 export class MetabolismService {
-    /**
-     * Логика метаболизма из sub_416510.c
-     * Обновлено для 100% соответствия оригиналу, включая расчет освещенности через dot product.
-     */
     public static update(
-        state: MetabolismState,
-        section: TreeSection, // Передаем секцию для доступа к ее ориентации
-        age: number,
-        lightDirection: THREE.Vector3, // Глобальный вектор направления света
-        deltaTime: number
-    ): string[] {
+        stats: MetabolismState,
+        root: TreeSection,
+        lightDirection: THREE.Vector3,
+        lightIntensity: number,
+        deltaTime: number,
+        rng: MSVCRand
+    ): MetabolismUpdateResult {
         const logs: string[] = [];
-        const { METABOLISM } = TREE_CONSTANTS;
+        MetabolismService.syncMetabolismLightScales(root);
+        MetabolismService.clearGrowthSkipFlags(root);
+        const totalEnergySpent = MetabolismService.updateBranchEnergyTree(
+            root,
+            lightDirection,
+            lightIntensity,
+            deltaTime,
+            rng,
+            stats.trunkThickness
+        );
+        stats.energy = root.energy;
 
-        // 1. Расчет фактора освещенности (эквивалент sub_416510.c: 58-63)
-        const branchUpVector = new THREE.Vector3(0, 1, 0);
-        // Применяем кватернион вращения секции, чтобы получить ее направление 'up' в мировых координатах
-        branchUpVector.applyQuaternion(section.group.quaternion);
+        const dtScale = Math.min(2, deltaTime * 60);
+        const energy = stats.energy;
 
-        // Скалярное произведение (dot product) между вектором ветки и направлением света
-        const lightDot = branchUpVector.dot(lightDirection);
-        
-        // В оригинале используется fabs - абсолютное значение. Это значит, что и нижняя сторона веток поглощает свет.
-        const lightFactor = Math.abs(lightDot);
+        if (energy < GrowthConstants.CRITICAL_ENERGY_THRESHOLD) {
+            stats.health -= GrowthConstants.HEALTH_DECAY_CRITICAL * dtScale;
+            if (stats.health < 0) stats.health = 0;
+            logs.push('Critical energy! Health decaying.');
+        } else if (energy < GrowthConstants.LOW_ENERGY_THRESHOLD) {
+            stats.health -= GrowthConstants.HEALTH_DECAY_LOW * dtScale;
+            if (stats.health < 0) stats.health = 0;
+            logs.push('Low energy. Health slowly decaying.');
+        } else if (energy > GrowthConstants.HIGH_ENERGY_THRESHOLD && stats.health < 1.0) {
+            stats.health += GrowthConstants.HEALTH_RECOVERY_RATE * dtScale;
+            if (stats.health > 1.0) stats.health = 1.0;
+        }
 
-        const metabolicRate = METABOLISM.ENERGY_GAIN_RATE * deltaTime;
-        const prevEnergy = state.energy;
-        const prevHealth = state.health;
+        if (stats.age > GrowthConstants.AGE_HEALTH_DECAY_START) {
+            const ageFactor =
+                (stats.age - GrowthConstants.AGE_HEALTH_DECAY_START) * GrowthConstants.AGE_HEALTH_DECAY_RATE;
+            stats.health -= ageFactor * dtScale;
+            if (stats.health < 0) stats.health = 0;
+        }
 
-        // 2. Фотосинтез (эквивалент sub_416510.c: 283-287)
-        // Прирост энергии зависит от фактора освещенности и текущего здоровья
-        const energyGain = lightFactor * state.health * metabolicRate;
-        state.energy += energyGain;
+        if (stats.health <= 0) {
+            logs.push('Tree has died from neglect!');
+        }
 
-        // 3. Затраты на поддержание структуры (эквивалент sub_416510.c:295)
-        const maintenanceCost = METABOLISM.MAINTENANCE_COST_BASE * (age / 10.0 + 1.0) * deltaTime;
-        state.energy -= maintenanceCost;
+        return { logs, totalEnergySpent };
+    }
 
-        // 4. Увядание при недостатке энергии (эквивалент sub_416510.c: 299-301)
-        if (state.energy < METABOLISM.CRITICAL_ENERGY) {
-            const decayFactor = 1.0 - (state.energy / METABOLISM.CRITICAL_ENERGY);
-            state.health -= METABOLISM.HEALTH_DECAY_RATE * decayFactor * deltaTime;
-            
-            if (prevHealth >= 0.3 && state.health < 0.3) {
-                logs.push("Дерево увядает! Нужен свет и уход.");
+    private static syncMetabolismLightScales(root: TreeSection): void {
+        const stack: TreeSection[] = [root];
+        while (stack.length) {
+            const s = stack.pop()!;
+            s.metabolismLightScale = s.baseGrowth;
+            for (const c of s.children) stack.push(c);
+        }
+    }
+
+    private static clearGrowthSkipFlags(root: TreeSection): void {
+        const stack: TreeSection[] = [root];
+        while (stack.length) {
+            const s = stack.pop()!;
+            s.skipGrowthTick = false;
+            for (const c of s.children) stack.push(c);
+        }
+    }
+
+    private static updateBranchEnergyTree(
+        root: TreeSection,
+        lightDirection: THREE.Vector3,
+        lightIntensityUser: number,
+        deltaTime: number,
+        rng: MSVCRand,
+        trunkThicknessHint: number
+    ): number {
+        const lv = GrowthConstants.LIGHT_VECTOR;
+        const simTicks = Math.min(2, deltaTime * 60);
+        const b4 = GrowthConstants.FLT_4D63B4;
+        const b8 = GrowthConstants.FLT_4D63B8;
+        const bC = GrowthConstants.FLT_4D63BC;
+
+        let totalSpent = 0;
+
+        const visit = (section: TreeSection, isRoot: boolean): void => {
+            const energyBeforeVisit = section.energy;
+
+            if (lightDirection.lengthSq() > 1e-12) {
+                _lightWorld.copy(lightDirection).normalize().multiplyScalar(lightIntensityUser);
+            } else {
+                _lightWorld.set(
+                    lv.x * lightIntensityUser,
+                    lv.y * lightIntensityUser,
+                    lv.z * lightIntensityUser
+                );
             }
-        } else if (state.energy > 0.6 && state.health < 1.0) {
-            // 5. Восстановление здоровья (эквивалент sub_416510.c: 306-308)
-            state.health += METABOLISM.HEALTH_DECAY_RATE * deltaTime;
-        }
 
-        if (prevEnergy > METABOLISM.CRITICAL_ENERGY && state.energy <= METABOLISM.CRITICAL_ENERGY) {
-            logs.push("Критически низкая энергия");
-        }
+            _inv.copy(section.group.matrixWorld).invert();
+            _normalMat.getNormalMatrix(_inv);
+            _lightLocal.copy(_lightWorld).applyNormalMatrix(_normalMat);
 
-        state.energy = Math.max(0, Math.min(1.0, state.energy));
-        state.health = Math.max(0, Math.min(1.0, state.health));
+            const v21 =
+                _localUp.x * _lightLocal.x + _localUp.y * _lightLocal.y + _localUp.z * _lightLocal.z;
+            const v22 = Math.abs(v21);
 
-        return logs;
+            let v34 = section.metabolismLightScale * v22 + section.metabolismLightOffset * 0.5;
+            if (v34 >= 0) {
+                if (v34 > 1.0) v34 = 1.0;
+            } else {
+                v34 = 0;
+            }
+
+            section.lastLightFactor = v34;
+
+            let v29 = (v34 - b4) / (0.0 - b4);
+            if (v29 < 0) v29 = 0;
+            if (v29 > 1) v29 = 1;
+            const v24 = v29;
+
+            let energy = section.energy - v24 * b8 * simTicks;
+            if (energy < 0) energy = 0;
+            if (energy > 1) energy = 1;
+            section.energy = energy;
+
+            const v4 = 0.0;
+            if (v4 >= section.energy || (1.0 - section.energy) * bC > rng.randFloat()) {
+                section.skipGrowthTick = true;
+            }
+
+            if (isRoot && trunkThicknessHint <= GrowthConstants.METABOLISM_ROOT_THICKNESS_GATE) {
+                const v23 = trunkThicknessHint;
+                section.energy -= rng.randFloat() * 0.025 * (1.0 - v23 / 0.01) * simTicks;
+                if (section.energy < 0) section.energy = 0;
+            }
+
+            const localSpent = Math.max(0, energyBeforeVisit - section.energy);
+            const scale = GrowthConstants.SUB40DC90_METABOLISM_SPENT_SCALE as number;
+            // sub_414E10 суммирует +436 только от листьевых ветвей (sub_416510); внутренние узлы — через детей.
+            if (section.children.length === 0) {
+                totalSpent += localSpent;
+                section.energySpent436 = Math.min(1, localSpent * scale);
+            } else {
+                section.energySpent436 = 0;
+            }
+
+            for (const child of section.children) {
+                visit(child, false);
+            }
+        };
+
+        visit(root, true);
+        return totalSpent;
     }
 }

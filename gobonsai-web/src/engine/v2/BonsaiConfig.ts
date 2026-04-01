@@ -13,8 +13,10 @@ export const BonsaiConfig = {
     resistanceCoeff: 1.0,            // flt_4D8608
 
     // --- Segment sizing (full.c:5362-5388) ---
-    minSegmentSize: 0.01,            // flt_4D85E8
-    maxSegmentSize: 0.1,             // flt_4D85EC
+    // flt_4D85E8 / flt_4D85EC are passed as a1/a2 to sub_40D0B0
+    // default preset (sub_4701D0): 2.0 / 5.0
+    minSegmentSize: 2.0,            // flt_4D85E8
+    maxSegmentSize: 5.0,             // flt_4D85EC
     minLeafSize: 0.005,              // flt_4D85F0
     maxLeafSize: 0.05,               // flt_4D85F4
     maxBudSize: 0.02,                // flt_4D85F8
@@ -25,8 +27,10 @@ export const BonsaiConfig = {
     radiusGrowRate: 0.01,            // flt_4D8618 - used in sub_417C90:20
 
     // --- Energy system (full.c:5408-5448) ---
-    minBudEnergy: 0.001,             // flt_4D862C - порог для создания побегов
-    maxBudEnergy: 0.1,               // flt_4D8630 - макс энергия почки
+    // flt_4D862C / flt_4D8630 are passed as a18/a19 to sub_40D0B0
+    // default preset (sub_4701D0): 0.2 / 2.0
+    minBudEnergy: 0.2,              // flt_4D862C - порог для создания побегов
+    maxBudEnergy: 2.0,              // flt_4D8630 - макс энергия почки
     leafEnergyProduction: 0.01,      // flt_4D8634
     apicalGrowthStrength: 0.7,       // flt_4D8638 - сила апикального роста
     energyRebalancePercent: 0.1,     // flt_4D863C

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import BonsaiViewer from './components/BonsaiViewerV2.vue';
+import BonsaiViewer from './components/BonsaiViewer.vue';
 import Dashboard from './components/Dashboard.vue';
 
 const viewerRef = ref<any>(null);
@@ -35,6 +35,7 @@ const handleUpdateMode = (mode: 'water' | 'prune' | 'wire') => {
 
 const handleReset = () => {
   if (confirm('Вы уверены, что хотите сбросить прогресс? Это действие необратимо.')) {
+    localStorage.removeItem('gobonsai_state');
     localStorage.removeItem('gobonsai_v2_state');
     window.location.reload();
   }

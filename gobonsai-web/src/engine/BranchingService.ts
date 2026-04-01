@@ -1,12 +1,17 @@
-import * as THREE from 'three';
 import { TREE_CONSTANTS } from './TreeConstants';
+
+function u32(x: number): number {
+    return x >>> 0;
+}
 import { MSVCRand } from './MSVCRand';
 import { TreeSection } from './TreeSection';
+import { GrowthConstants } from './config/GrowthConstants';
+import { TransformService } from './math/TransformService';
 
 export class BranchingService {
     /**
-     * Логика принятия решения о ветвлении из sub_408A30.c
-     * Возвращает количество затраченной энергии.
+     * sub_4188E0.c — lateral branch spawn.
+     * v13 = growth headroom; v14 = clamped probability; v15/yaw, v19/pitch for direction.
      */
     public static process(section: TreeSection, energy: number, rng: MSVCRand): number {
         const { GROWTH } = TREE_CONSTANTS;
@@ -14,36 +19,42 @@ export class BranchingService {
         
         if (section.level >= GROWTH.MAX_LEVEL) return 0;
 
-        // sub_4188E0.c: Динамическая вероятность ветвления
-        // В оригинале вероятность зависит от роста толщины (v13)
-        // Здесь используем упрощенную, но верную оригиналу вероятность 0.2
-        const branchingProb = 0.2;
-        const maxChildren = section.level === 0 ? 4 : 2;
-
-        if (section.children.length < maxChildren && rng.randFloat() < branchingProb && energy > 0.3) {
-            // sub_4188E0.c:46-47 - Углы отклонения
-            // yaw (v15): rand * 2pi - pi
-            // pitch (v19): rand * 1.1 - 1.6 (отрицательный pitch означает наклон "от ствола")
-            const yaw = rng.randFloat() * Math.PI * 2 - Math.PI;
-            const pitch = rng.randFloat() * 1.1 - 1.6;
-            
-            const spawnPos = 0.4 + rng.randFloat() * 0.55;
-            const newBranch = section.addBranch(spawnPos);
-            
-            if (newBranch) {
-                energyConsumed += 0.2; 
-                
-                // sub_4188E0.c:50 - Направление ветки (0, v19, -v15)
-                // Преобразуем в кватернион
-                const tempEuler = new THREE.Euler(pitch, 0, -yaw);
-                newBranch.targetRotation.setFromEuler(tempEuler);
+        const v13 = Math.max(0, section.baseGrowth - section.currentGrowth);
+        const growthNorm = section.maxGrowth > 0 ? section.growthRate / section.maxGrowth : 0;
+        if (growthNorm < 0.38 || energy <= 0.22) {
+            for (const child of section.children) {
+                if (energy > 0.08) energyConsumed += this.process(child, energy - energyConsumed, rng);
             }
-        } 
+            return energyConsumed;
+        }
 
-        // Рекурсивный проход (sub_4188E0.c не рекурсивен сам по себе, 
-        // но в движке вызывается для всей структуры)
+        if (v13 >= GrowthConstants.BRANCH_THRESHOLD_MIN * 0.2 || growthNorm > 0.72) {
+            let v14 = (v13 / GrowthConstants.BRANCH_THRESHOLD_MAX) * 0.0003;
+            v14 = Math.max(0, Math.min(0.003, v14));
+            const yearlyP = Math.min(0.38, v14 * 420 + growthNorm * 0.06);
+
+            const sideBranches = section.children.filter(c => !c.isContinuation);
+            const maxSideBranches = section.level === 0 ? 4 : 2;
+
+            if (sideBranches.length < maxSideBranches && yearlyP > rng.randFloat()) {
+                const spawnPos = 0.28 + rng.randFloat() * 0.62;
+                const newBranch = section.addBranch(spawnPos, false);
+                if (newBranch) {
+                    section.spawnDelta480 = u32(section.spawnDelta480 + 1);
+                    const yaw = rng.randFloat() * (Math.PI * 2) - Math.PI;
+                    const pitch = rng.randFloat() * 1.1 - 1.6;
+                    TransformService.rotationYawPitchRoll(newBranch.targetRotation, -yaw, pitch, 0);
+
+                    newBranch.baseGrowth = section.baseGrowth * 0.72;
+                    newBranch.maxGrowth = Math.max(2.0, section.maxGrowth * 0.65);
+                    energyConsumed += 0.22;
+                    section.currentGrowth += Math.min(v13 * 0.35, 0.4);
+                }
+            }
+        }
+
         for (const child of section.children) {
-            if (energy - energyConsumed > 0.1) {
+            if (energy - energyConsumed > 0.08) {
                 energyConsumed += this.process(child, energy - energyConsumed, rng);
             }
         }

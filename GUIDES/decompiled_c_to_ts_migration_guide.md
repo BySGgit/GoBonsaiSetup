@@ -1,5 +1,7 @@
 # GoBonsai Reverse Engineering → TypeScript Migration Guide (Expanded Offsets)
 
+**Перед переносом логики в TS** имеет смысл сначала разобрать декомпил и зафиксировать спецификацию оригинала: см. **[c_truth_extraction_workflow.md](./c_truth_extraction_workflow.md)** (иерархия источников, артефакты Hex-Rays, чеклист на функцию, выходные артефакты).
+
 ## 1. System Mapping (C → TS)
 
 ### MetabolismService.ts

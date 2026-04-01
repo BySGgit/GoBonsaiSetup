@@ -124,9 +124,9 @@ onMounted(() => {
   const renderScene = new RenderPass(scene, camera);
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.5, 
-    0.4, 
-    0.85 
+    0.22,
+    0.35,
+    0.92
   );
 
   composer = new EffectComposer(renderer);
@@ -134,13 +134,13 @@ onMounted(() => {
   composer.addPass(bloomPass);
   composer.addPass(new OutputPass());
 
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+  const ambientLight = new THREE.AmbientLight(0xfff5ee, 0.52);
   scene.add(ambientLight);
 
-  const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+  const hemisphereLight = new THREE.HemisphereLight(0xe8f0ff, 0x4a3528, 1.05);
   scene.add(hemisphereLight);
 
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+  const directionalLight = new THREE.DirectionalLight(0xfff8f0, 1.45);
   directionalLight.position.set(5, 12, 8);
   directionalLight.castShadow = true;
   directionalLight.shadow.mapSize.width = 2048;
@@ -149,7 +149,11 @@ onMounted(() => {
   directionalLight.shadow.camera.far = 50;
   scene.add(directionalLight);
 
-  const pointLight = new THREE.PointLight(0xffaa00, 0, 50);
+  const fillLight = new THREE.DirectionalLight(0xb8c8e8, 0.38);
+  fillLight.position.set(-6, 4, -4);
+  scene.add(fillLight);
+
+  const pointLight = new THREE.PointLight(0xffcc88, 0, 50);
   pointLight.position.set(-5, 5, -5);
   scene.add(pointLight);
 
@@ -173,8 +177,9 @@ onMounted(() => {
       bonsai.update(deltaTime);
       
       directionalLight.intensity = Math.max(0.1, bonsai.lightIntensity * 2);
-      ambientLight.intensity = Math.max(0.2, bonsai.lightIntensity * 0.5);
-      if (pointLight) pointLight.intensity = Math.max(0, (1 - bonsai.lightIntensity) * 0.5);
+      ambientLight.intensity = Math.max(0.18, bonsai.lightIntensity * 0.42);
+      fillLight.intensity = Math.max(0.08, bonsai.lightIntensity * 0.4);
+      if (pointLight) pointLight.intensity = Math.max(0, (1 - bonsai.lightIntensity) * 0.45);
       
       const bgColorVal = new THREE.Color(0x050505).lerp(new THREE.Color(0x1a1a2e), bonsai.lightIntensity);
       scene.background = bgColorVal;

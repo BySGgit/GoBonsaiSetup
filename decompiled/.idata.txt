@@ -1,0 +1,805 @@
+.idata:00473000 ; Section 2. (virtual address 00073000)
+.idata:00473000 ; Virtual size                  : 00055740 ( 350016.)
+.idata:00473000 ; Section size in file          : 00055800 ( 350208.)
+.idata:00473000 ; Offset to raw data for section: 00071C00
+.idata:00473000 ; Flags 40000040: Data Readable
+.idata:00473000 ; Alignment     : default
+.idata:00473000 ;
+.idata:00473000 ; Imports from COMCTL32.dll
+.idata:00473000 ;
+.idata:00473000 ; ===========================================================================
+.idata:00473000
+.idata:00473000 ; Segment type: Externs
+.idata:00473000 ; _idata
+.idata:00473000 ; void (__stdcall *InitCommonControls)()
+.idata:00473000                 extrn InitCommonControls:dword
+.idata:00473000                                         ; CODE XREF: sub_41C130:loc_41C17F↑p
+.idata:00473000                                         ; DATA XREF: sub_41C130:loc_41C17F↑r ...
+.idata:00473000                                         ; Import by ordinal 17
+.idata:00473004
+.idata:00473008 ;
+.idata:00473008 ; Imports from GDI32.dll
+.idata:00473008 ;
+.idata:00473008 ; int (__stdcall *GetDIBits)(HDC hdc, HBITMAP hbm, UINT start, UINT cLines, LPVOID lpvBits, LPBITMAPINFO lpbmi, UINT usage)
+.idata:00473008                 extrn GetDIBits:dword   ; CODE XREF: sub_421370+17A↑p
+.idata:00473008                                         ; sub_421370+1F8↑p
+.idata:00473008                                         ; DATA XREF: ...
+.idata:0047300C ; BOOL (__stdcall *DeleteDC)(HDC hdc)
+.idata:0047300C                 extrn DeleteDC:dword    ; CODE XREF: sub_421370+34A↑p
+.idata:0047300C                                         ; sub_421370+355↑p
+.idata:0047300C                                         ; DATA XREF: ...
+.idata:00473010 ; HGDIOBJ (__stdcall *GetStockObject)(int i)
+.idata:00473010                 extrn GetStockObject:dword
+.idata:00473010                                         ; CODE XREF: sub_41CC30+1D4↑p
+.idata:00473010                                         ; DATA XREF: sub_41CC30+1D4↑r
+.idata:00473014 ; int (__stdcall *GetObjectW)(HANDLE h, int c, LPVOID pv)
+.idata:00473014                 extrn GetObjectW:dword  ; CODE XREF: sub_421370+76↑p
+.idata:00473014                                         ; DATA XREF: sub_421370+76↑r
+.idata:00473018 ; HDC (__stdcall *CreateCompatibleDC)(HDC hdc)
+.idata:00473018                 extrn CreateCompatibleDC:dword
+.idata:00473018                                         ; CODE XREF: sub_421370+138↑p
+.idata:00473018                                         ; sub_421370+1BA↑p
+.idata:00473018                                         ; DATA XREF: ...
+.idata:0047301C ; HGDIOBJ (__stdcall *SelectObject)(HDC hdc, HGDIOBJ h)
+.idata:0047301C                 extrn SelectObject:dword
+.idata:0047301C                                         ; CODE XREF: sub_421370+158↑p
+.idata:0047301C                                         ; sub_421370+186↑p ...
+.idata:00473020 ; BOOL (__stdcall *DeleteObject)(HGDIOBJ ho)
+.idata:00473020                 extrn DeleteObject:dword
+.idata:00473020                                         ; CODE XREF: sub_421370+31D↑p
+.idata:00473020                                         ; sub_421370+328↑p
+.idata:00473020                                         ; DATA XREF: ...
+.idata:00473024
+.idata:00473028 ;
+.idata:00473028 ; Imports from KERNEL32.dll
+.idata:00473028 ;
+.idata:00473028 ; LCID (__stdcall *GetUserDefaultLCID)()
+.idata:00473028                 extrn GetUserDefaultLCID:dword
+.idata:00473028                                         ; CODE XREF: ___get_qualified_locale:loc_45FC40↑p
+.idata:00473028                                         ; DATA XREF: ___get_qualified_locale:loc_45FC40↑r ...
+.idata:0047302C ; void (__stdcall *GetSystemTimeAsFileTime)(LPFILETIME lpSystemTimeAsFileTime)
+.idata:0047302C                 extrn GetSystemTimeAsFileTime:dword
+.idata:0047302C                                         ; CODE XREF: ___security_init_cookie+37↑p
+.idata:0047302C                                         ; DATA XREF: ___security_init_cookie+37↑r
+.idata:00473030 ; DWORD (__stdcall *GetCurrentProcessId)()
+.idata:00473030                 extrn GetCurrentProcessId:dword
+.idata:00473030                                         ; CODE XREF: ___security_init_cookie+43↑p
+.idata:00473030                                         ; DATA XREF: ___security_init_cookie+43↑r
+.idata:00473034 ; DWORD (__stdcall *GetTickCount)()
+.idata:00473034                 extrn GetTickCount:dword
+.idata:00473034                                         ; CODE XREF: ___security_init_cookie+53↑p
+.idata:00473034                                         ; DATA XREF: ___security_init_cookie+53↑r
+.idata:00473038 ; DWORD (__stdcall *GetFileType)(HANDLE hFile)
+.idata:00473038                 extrn GetFileType:dword ; CODE XREF: __ioinit+140↑p
+.idata:00473038                                         ; __ioinit+1DC↑p
+.idata:00473038                                         ; DATA XREF: ...
+.idata:0047303C ; UINT (__stdcall *SetHandleCount)(UINT uNumber)
+.idata:0047303C                 extrn SetHandleCount:dword
+.idata:0047303C                                         ; CODE XREF: __ioinit+233↑p
+.idata:0047303C                                         ; DATA XREF: __ioinit+233↑r
+.idata:00473040 ; LPWCH (__stdcall *GetEnvironmentStringsW)()
+.idata:00473040                 extrn GetEnvironmentStringsW:dword
+.idata:00473040                                         ; CODE XREF: ___crtGetEnvironmentStringsW+3↑p
+.idata:00473040                                         ; DATA XREF: ___crtGetEnvironmentStringsW+3↑r
+.idata:00473044 ; BOOL (__stdcall *FreeEnvironmentStringsW)(LPWCH penv)
+.idata:00473044                 extrn FreeEnvironmentStringsW:dword
+.idata:00473044                                         ; CODE XREF: ___crtGetEnvironmentStringsW+3F↑p
+.idata:00473044                                         ; DATA XREF: ___crtGetEnvironmentStringsW+3F↑r
+.idata:00473048 ; int (__stdcall *GetLocaleInfoW)(LCID Locale, LCTYPE LCType, LPWSTR lpLCData, int cchData)
+.idata:00473048                 extrn GetLocaleInfoW:dword
+.idata:00473048                                         ; CODE XREF: ___getlocaleinfo+135↑p
+.idata:00473048                                         ; ___getlocaleinfo+155↑p ...
+.idata:0047304C ; HANDLE (__stdcall *GetStdHandle)(DWORD nStdHandle)
+.idata:0047304C                 extrn GetStdHandle:dword
+.idata:0047304C                                         ; CODE XREF: __NMSG_WRITE+14E↑p
+.idata:0047304C                                         ; __ioinit+1CA↑p
+.idata:0047304C                                         ; DATA XREF: ...
+.idata:00473050 ; BOOL (__stdcall *IsValidCodePage)(UINT CodePage)
+.idata:00473050                 extrn IsValidCodePage:dword
+.idata:00473050                                         ; CODE XREF: __setmbcp_nolock+73↑p
+.idata:00473050                                         ; ___get_qualified_locale+13B↑p
+.idata:00473050                                         ; DATA XREF: ...
+.idata:00473054 ; UINT (__stdcall *GetOEMCP)()
+.idata:00473054                 extrn GetOEMCP:dword    ; CODE XREF: getSystemCP(int)+29↑p
+.idata:00473054                                         ; DATA XREF: getSystemCP(int)+29↑r
+.idata:00473058 ; UINT (__stdcall *GetACP)()
+.idata:00473058                 extrn GetACP:dword      ; CODE XREF: getSystemCP(int)+4C↑p
+.idata:00473058                                         ; _ProcessCodePage+7C↑p
+.idata:00473058                                         ; DATA XREF: ...
+.idata:0047305C ; HANDLE (__stdcall *HeapCreate)(DWORD flOptions, SIZE_T dwInitialSize, SIZE_T dwMaximumSize)
+.idata:0047305C                 extrn HeapCreate:dword  ; CODE XREF: __heap_init+9↑p
+.idata:0047305C                                         ; DATA XREF: __heap_init+9↑r
+.idata:00473060 ; DWORD (__stdcall *GetCurrentThreadId)()
+.idata:00473060                 extrn GetCurrentThreadId:dword
+.idata:00473060                                         ; CODE XREF: __getptd_noexit+56↑p
+.idata:00473060                                         ; __mtinit+160↑p ...
+.idata:00473064 ; void (__stdcall *SetLastError)(DWORD dwErrCode)
+.idata:00473064                 extrn SetLastError:dword
+.idata:00473064                                         ; CODE XREF: __getptd_noexit+6E↑p
+.idata:00473064                                         ; DATA XREF: __getptd_noexit+6E↑r
+.idata:00473068 ; BOOL (__stdcall *TlsFree)(DWORD dwTlsIndex)
+.idata:00473068                 extrn TlsFree:dword     ; CODE XREF: __mtterm+2B↑p
+.idata:00473068                                         ; DATA XREF: __mtterm+2B↑r ...
+.idata:0047306C ; BOOL (__stdcall *TlsSetValue)(DWORD dwTlsIndex, LPVOID lpTlsValue)
+.idata:0047306C                 extrn TlsSetValue:dword ; CODE XREF: ___set_flsgetvalue+2A↑p
+.idata:0047306C                                         ; __mtinit+BC↑p
+.idata:0047306C                                         ; DATA XREF: ...
+.idata:00473070 ; LPVOID (__stdcall *TlsGetValue)(DWORD dwTlsIndex)
+.idata:00473070                 extrn TlsGetValue:dword ; CODE XREF: ___set_flsgetvalue+9↑p
+.idata:00473070                                         ; DATA XREF: ___set_flsgetvalue+9↑r ...
+.idata:00473074 ; DWORD (__stdcall *TlsAlloc)()
+.idata:00473074                 extrn TlsAlloc:dword    ; CODE XREF: __crtTlsAlloc(x)↑p
+.idata:00473074                                         ; __mtinit:loc_45A4AD↑p
+.idata:00473074                                         ; DATA XREF: ...
+.idata:00473078 ; void (__stdcall __noreturn *ExitProcess)(UINT uExitCode)
+.idata:00473078                 extrn ExitProcess:dword ; CODE XREF: ___crtExitProcess+11↑p
+.idata:00473078                                         ; DATA XREF: ___crtExitProcess+11↑r
+.idata:0047307C ; int (__stdcall *GetLocaleInfoA)(LCID Locale, LCTYPE LCType, LPSTR lpLCData, int cchData)
+.idata:0047307C                 extrn GetLocaleInfoA:dword
+.idata:0047307C                                         ; CODE XREF: CountryEnumProc(x)+43↑p
+.idata:0047307C                                         ; LangCountryEnumProc(x)+4B↑p ...
+.idata:00473080 ; BOOL (__stdcall *IsProcessorFeaturePresent)(DWORD ProcessorFeature)
+.idata:00473080                 extrn IsProcessorFeaturePresent:dword
+.idata:00473080                                         ; CODE XREF: sub_458B92+2↑p
+.idata:00473080                                         ; sub_46AD29+2↑p
+.idata:00473080                                         ; DATA XREF: ...
+.idata:00473084 ; BOOL (__stdcall *IsDebuggerPresent)()
+.idata:00473084                 extrn IsDebuggerPresent:dword
+.idata:00473084                                         ; CODE XREF: ___report_gsfailure+BB↑p
+.idata:00473084                                         ; __call_reportfault+EA↑p
+.idata:00473084                                         ; DATA XREF: ...
+.idata:00473088 ; LPTOP_LEVEL_EXCEPTION_FILTER (__stdcall *SetUnhandledExceptionFilter)(LPTOP_LEVEL_EXCEPTION_FILTER lpTopLevelExceptionFilter)
+.idata:00473088                 extrn SetUnhandledExceptionFilter:dword
+.idata:00473088                                         ; CODE XREF: ___report_gsfailure+D0↑p
+.idata:00473088                                         ; __call_reportfault+F4↑p ...
+.idata:0047308C ; LONG (__stdcall *UnhandledExceptionFilter)(struct _EXCEPTION_POINTERS *ExceptionInfo)
+.idata:0047308C                 extrn UnhandledExceptionFilter:dword
+.idata:0047308C                                         ; CODE XREF: ___report_gsfailure+DB↑p
+.idata:0047308C                                         ; __call_reportfault+101↑p
+.idata:0047308C                                         ; DATA XREF: ...
+.idata:00473090 ; BOOL (__stdcall *TerminateProcess)(HANDLE hProcess, UINT uExitCode)
+.idata:00473090                 extrn TerminateProcess:dword
+.idata:00473090                                         ; CODE XREF: ___report_gsfailure+FE↑p
+.idata:00473090                                         ; __invoke_watson+1D↑p
+.idata:00473090                                         ; DATA XREF: ...
+.idata:00473094 ; int (__stdcall *LCMapStringW)(LCID Locale, DWORD dwMapFlags, LPCWSTR lpSrcStr, int cchSrc, LPWSTR lpDestStr, int cchDest)
+.idata:00473094                 extrn LCMapStringW:dword
+.idata:00473094                                         ; CODE XREF: __crtLCMapStringA_stat(localeinfo_struct *,ulong,ulong,char const *,int,char *,int,int,int)+FB↑p
+.idata:00473094                                         ; __crtLCMapStringA_stat(localeinfo_struct *,ulong,ulong,char const *,int,char *,int,int,int)+134↑p ...
+.idata:00473098 ; BOOL (__stdcall *GetCPInfo)(UINT CodePage, LPCPINFO lpCPInfo)
+.idata:00473098                 extrn GetCPInfo:dword   ; CODE XREF: ___init_ctype+E9↑p
+.idata:00473098                                         ; setSBUpLow(threadmbcinfostruct *)+21↑p ...
+.idata:0047309C ; LPVOID (__stdcall *HeapAlloc)(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes)
+.idata:0047309C                 extrn HeapAlloc:dword   ; CODE XREF: _malloc+45↑p
+.idata:0047309C                                         ; __calloc_impl+43↑p
+.idata:0047309C                                         ; DATA XREF: ...
+.idata:004730A0 ; void (__stdcall *RtlUnwind)(PVOID TargetFrame, PVOID TargetIp, PEXCEPTION_RECORD ExceptionRecord, PVOID ReturnValue)
+.idata:004730A0                 extrn __imp_RtlUnwind:dword
+.idata:004730A0                                         ; DATA XREF: RtlUnwind↑r
+.idata:004730A4 ; void (__stdcall *RaiseException)(DWORD dwExceptionCode, DWORD dwExceptionFlags, DWORD nNumberOfArguments, const ULONG_PTR *lpArguments)
+.idata:004730A4                 extrn RaiseException:dword
+.idata:004730A4                                         ; CODE XREF: _CxxThrowException(x,x)+42↑p
+.idata:004730A4                                         ; __raise_exc_ex+224↑p
+.idata:004730A4                                         ; DATA XREF: ...
+.idata:004730A8 ; void (__stdcall *GetStartupInfoW)(LPSTARTUPINFOW lpStartupInfo)
+.idata:004730A8                 extrn GetStartupInfoW:dword
+.idata:004730A8                                         ; CODE XREF: ___tmainCRTStartup+10↑p
+.idata:004730A8                                         ; __ioinit+D↑p
+.idata:004730A8                                         ; DATA XREF: ...
+.idata:004730AC ; BOOL (__stdcall *HeapSetInformation)(HANDLE HeapHandle, HEAP_INFORMATION_CLASS HeapInformationClass, PVOID HeapInformation, SIZE_T HeapInformationLength)
+.idata:004730AC                 extrn HeapSetInformation:dword
+.idata:004730AC                                         ; CODE XREF: ___tmainCRTStartup+25↑p
+.idata:004730AC                                         ; DATA XREF: ___tmainCRTStartup+25↑r
+.idata:004730B0 ; LPVOID (__stdcall *HeapReAlloc)(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes)
+.idata:004730B0                 extrn HeapReAlloc:dword ; CODE XREF: _realloc+3F↑p
+.idata:004730B0                                         ; DATA XREF: _realloc+3F↑r
+.idata:004730B4 ; BOOL (__stdcall *HeapFree)(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem)
+.idata:004730B4                 extrn HeapFree:dword    ; CODE XREF: _free+16↑p
+.idata:004730B4                                         ; DATA XREF: _free+16↑r
+.idata:004730B8 ; PVOID (__stdcall *DecodePointer)(PVOID Ptr)
+.idata:004730B8                 extrn DecodePointer:dword
+.idata:004730B8                                         ; CODE XREF: _Init_atexit::~_Init_atexit(void)+15↑p
+.idata:004730B8                                         ; __onexit_nolock+15↑p ...
+.idata:004730BC ; PVOID (__stdcall *EncodePointer)(PVOID Ptr)
+.idata:004730BC                 extrn EncodePointer:dword
+.idata:004730BC                                         ; CODE XREF: _Atexit(void (*)(void))+1D↑p
+.idata:004730BC                                         ; __onexit_nolock+87↑p ...
+.idata:004730C0 ; void (__stdcall *InitializeCriticalSection)(LPCRITICAL_SECTION lpCriticalSection)
+.idata:004730C0                 extrn InitializeCriticalSection:dword
+.idata:004730C0                                         ; CODE XREF: __Mtxinit+8↑p
+.idata:004730C0                                         ; DATA XREF: __Mtxinit+8↑r
+.idata:004730C4 ; LONG (__stdcall *InterlockedExchange)(volatile LONG *Target, LONG Value)
+.idata:004730C4                 extrn InterlockedExchange:dword
+.idata:004730C4                                         ; CODE XREF: __ReleaseCPLocHash+D↑p
+.idata:004730C4                                         ; DATA XREF: __ReleaseCPLocHash+D↑r
+.idata:004730C8 ; LONG (__stdcall *InterlockedCompareExchange)(volatile LONG *Destination, LONG Exchange, LONG Comperand)
+.idata:004730C8                 extrn InterlockedCompareExchange:dword
+.idata:004730C8                                         ; CODE XREF: __GetLocaleForCP+65↑p
+.idata:004730C8                                         ; DATA XREF: __GetLocaleForCP+65↑r
+.idata:004730CC ; BOOL (__stdcall *GetStringTypeW)(DWORD dwInfoType, LPCWCH lpSrcStr, int cchSrc, LPWORD lpCharType)
+.idata:004730CC                 extrn GetStringTypeW:dword
+.idata:004730CC                                         ; CODE XREF: __Getwctype+12↑p
+.idata:004730CC                                         ; __Getwctypes+16↑p ...
+.idata:004730D0 ; LONG (__stdcall *InterlockedDecrement)(volatile LONG *lpAddend)
+.idata:004730D0                 extrn InterlockedDecrement:dword
+.idata:004730D0                                         ; CODE XREF: sub_4726F2-1FBAD↑p
+.idata:004730D0                                         ; __free_locale+2B↑p ...
+.idata:004730D4 ; LONG (__stdcall *InterlockedIncrement)(volatile LONG *lpAddend)
+.idata:004730D4                 extrn InterlockedIncrement:dword
+.idata:004730D4                                         ; CODE XREF: std::_Init_locks::_Init_locks(void)+A↑p
+.idata:004730D4                                         ; __initptd+52↑p ...
+.idata:004730D8 ; BOOL (__stdcall *EnumSystemLocalesA)(LOCALE_ENUMPROCA lpLocaleEnumProc, DWORD dwFlags)
+.idata:004730D8                 extrn EnumSystemLocalesA:dword
+.idata:004730D8                                         ; CODE XREF: _GetLcidFromLangCountry+47↑p
+.idata:004730D8                                         ; _GetLcidFromLanguage+2B↑p ...
+.idata:004730DC ; BOOL (__stdcall *IsValidLocale)(LCID Locale, DWORD dwFlags)
+.idata:004730DC                 extrn IsValidLocale:dword
+.idata:004730DC                                         ; CODE XREF: ___get_qualified_locale+14E↑p
+.idata:004730DC                                         ; DATA XREF: ___get_qualified_locale+14E↑r
+.idata:004730E0 ; DWORD (__stdcall *SetFilePointer)(HANDLE hFile, LONG lDistanceToMove, PLONG lpDistanceToMoveHigh, DWORD dwMoveMethod)
+.idata:004730E0                 extrn SetFilePointer:dword
+.idata:004730E0                                         ; CODE XREF: __lseeki64_nolock+42↑p
+.idata:004730E0                                         ; DATA XREF: __lseeki64_nolock+42↑r
+.idata:004730E4 ; UINT (__stdcall *GetConsoleCP)()
+.idata:004730E4                 extrn GetConsoleCP:dword
+.idata:004730E4                                         ; CODE XREF: __write_nolock:loc_4629DB↑p
+.idata:004730E4                                         ; DATA XREF: __write_nolock:loc_4629DB↑r
+.idata:004730E8 ; BOOL (__stdcall *GetConsoleMode)(HANDLE hConsoleHandle, LPDWORD lpMode)
+.idata:004730E8                 extrn GetConsoleMode:dword
+.idata:004730E8                                         ; CODE XREF: __write_nolock+110↑p
+.idata:004730E8                                         ; DATA XREF: __write_nolock+110↑r
+.idata:004730EC ; BOOL (__stdcall *SetStdHandle)(DWORD nStdHandle, HANDLE hHandle)
+.idata:004730EC                 extrn SetStdHandle:dword
+.idata:004730EC                                         ; CODE XREF: __free_osfhnd:loc_467D3F↑p
+.idata:004730EC                                         ; DATA XREF: __free_osfhnd:loc_467D3F↑r
+.idata:004730F0 ; BOOL (__stdcall *WriteConsoleW)(HANDLE hConsoleOutput, const void *lpBuffer, DWORD nNumberOfCharsToWrite, LPDWORD lpNumberOfCharsWritten, LPVOID lpReserved)
+.idata:004730F0                 extrn WriteConsoleW:dword
+.idata:004730F0                                         ; CODE XREF: __putwch_nolock+32↑p
+.idata:004730F0                                         ; DATA XREF: __putwch_nolock+32↑r
+.idata:004730F4 ; SIZE_T (__stdcall *HeapSize)(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem)
+.idata:004730F4                 extrn HeapSize:dword    ; CODE XREF: __msize+2B↑p
+.idata:004730F4                                         ; DATA XREF: __msize+2B↑r
+.idata:004730F8 ; LPWSTR (__stdcall *GetCommandLineW)()
+.idata:004730F8                 extrn GetCommandLineW:dword
+.idata:004730F8                                         ; CODE XREF: sub_41C130:loc_41C2E3↑p
+.idata:004730F8                                         ; ___tmainCRTStartup:loc_455397↑p
+.idata:004730F8                                         ; DATA XREF: ...
+.idata:004730FC ; BOOL (__stdcall *FreeLibrary)(HMODULE hLibModule)
+.idata:004730FC                 extrn FreeLibrary:dword ; CODE XREF: sub_41C130+1E6↑p
+.idata:004730FC                                         ; .text:0042E1BA↑p
+.idata:004730FC                                         ; DATA XREF: ...
+.idata:00473100 ; EXECUTION_STATE (__stdcall *SetThreadExecutionState)(EXECUTION_STATE esFlags)
+.idata:00473100                 extrn SetThreadExecutionState:dword
+.idata:00473100                                         ; CODE XREF: sub_41E880:loc_41F548↑p
+.idata:00473100                                         ; DATA XREF: sub_41E880:loc_41F548↑r
+.idata:00473104 ; HMODULE (__stdcall *GetModuleHandleW)(LPCWSTR lpModuleName)
+.idata:00473104                 extrn GetModuleHandleW:dword
+.idata:00473104                                         ; CODE XREF: sub_41CC30+152↑p
+.idata:00473104                                         ; sub_424DB0+209↑p ...
+.idata:00473108 ; HMODULE (__stdcall *LoadLibraryW)(LPCWSTR lpLibFileName)
+.idata:00473108                 extrn LoadLibraryW:dword
+.idata:00473108                                         ; CODE XREF: sub_41C130+1C7↑p
+.idata:00473108                                         ; sub_4369B0+12↑p ...
+.idata:0047310C ; BOOL (__stdcall *InitializeCriticalSectionAndSpinCount)(LPCRITICAL_SECTION lpCriticalSection, DWORD dwSpinCount)
+.idata:0047310C                 extrn InitializeCriticalSectionAndSpinCount:dword
+.idata:0047310C                                         ; CODE XREF: sub_419430+13↑p
+.idata:0047310C                                         ; __ioinit+176↑p ...
+.idata:00473110 ; void (__stdcall *Sleep)(DWORD dwMilliseconds)
+.idata:00473110                 extrn Sleep:dword       ; CODE XREF: sub_4208D0+B8↑p
+.idata:00473110                                         ; sub_422750+A8↑p ...
+.idata:00473114 ; BOOL (__stdcall *GetVersionExW)(LPOSVERSIONINFOW lpVersionInformation)
+.idata:00473114                 extrn GetVersionExW:dword
+.idata:00473114                                         ; CODE XREF: sub_424DB0+1F3↑p
+.idata:00473114                                         ; DATA XREF: sub_424DB0+1F3↑r
+.idata:00473118 ; void (__stdcall *LeaveCriticalSection)(LPCRITICAL_SECTION lpCriticalSection)
+.idata:00473118                 extrn LeaveCriticalSection:dword
+.idata:00473118                                         ; CODE XREF: sub_404C10+8E5↑p
+.idata:00473118                                         ; sub_406400+2EF↑p ...
+.idata:0047311C ; DWORD (__stdcall *GetModuleFileNameW)(HMODULE hModule, LPWSTR lpFilename, DWORD nSize)
+.idata:0047311C                 extrn GetModuleFileNameW:dword
+.idata:0047311C                                         ; CODE XREF: sub_41CC30+171↑p
+.idata:0047311C                                         ; __NMSG_WRITE+9C↑p ...
+.idata:00473120 ; int (__stdcall *MultiByteToWideChar)(UINT CodePage, DWORD dwFlags, LPCCH lpMultiByteStr, int cbMultiByte, LPWSTR lpWideCharStr, int cchWideChar)
+.idata:00473120                 extrn MultiByteToWideChar:dword
+.idata:00473120                                         ; CODE XREF: sub_427980+2F1↑p
+.idata:00473120                                         ; sub_428830+4BC↑p ...
+.idata:00473124 ; DWORD (__stdcall *GetLastError)()
+.idata:00473124                 extrn GetLastError:dword
+.idata:00473124                                         ; CODE XREF: sub_41CC30+1FE↑p
+.idata:00473124                                         ; sub_41CC30+36F↑p ...
+.idata:00473128 ; FARPROC (__stdcall *GetProcAddress)(HMODULE hModule, LPCSTR lpProcName)
+.idata:00473128                 extrn GetProcAddress:dword
+.idata:00473128                                         ; CODE XREF: sub_41C130+1D9↑p
+.idata:00473128                                         ; sub_4369B0+32↑p ...
+.idata:0047312C ; void (__stdcall *EnterCriticalSection)(LPCRITICAL_SECTION lpCriticalSection)
+.idata:0047312C                 extrn EnterCriticalSection:dword
+.idata:0047312C                                         ; CODE XREF: sub_404C10+8C7↑p
+.idata:0047312C                                         ; sub_406400+2D2↑p ...
+.idata:00473130 ; void (__stdcall *DeleteCriticalSection)(LPCRITICAL_SECTION lpCriticalSection)
+.idata:00473130                 extrn DeleteCriticalSection:dword
+.idata:00473130                                         ; CODE XREF: __Mtxdst+8↑p
+.idata:00473130                                         ; __mtdeletelocks+1D↑p ...
+.idata:00473134 ; int (__stdcall *lstrlenW)(LPCWSTR lpString)
+.idata:00473134                 extrn lstrlenW:dword    ; CODE XREF: sub_435650+6E↑p
+.idata:00473134                                         ; sub_435790+18↑p ...
+.idata:00473138 ; HGLOBAL (__stdcall *GlobalAlloc)(UINT uFlags, SIZE_T dwBytes)
+.idata:00473138                 extrn GlobalAlloc:dword ; CODE XREF: sub_4359A0+3F↑p
+.idata:00473138                                         ; DATA XREF: sub_4359A0+3F↑r
+.idata:0047313C ; LPVOID (__stdcall *GlobalLock)(HGLOBAL hMem)
+.idata:0047313C                 extrn GlobalLock:dword  ; CODE XREF: sub_4359A0+4D↑p
+.idata:0047313C                                         ; sub_435A60+25↑p
+.idata:0047313C                                         ; DATA XREF: ...
+.idata:00473140 ; BOOL (__stdcall *GlobalUnlock)(HGLOBAL hMem)
+.idata:00473140                 extrn GlobalUnlock:dword
+.idata:00473140                                         ; CODE XREF: sub_4359A0+96↑p
+.idata:00473140                                         ; sub_435A60+65↑p
+.idata:00473140                                         ; DATA XREF: ...
+.idata:00473144 ; HGLOBAL (__stdcall *GlobalFree)(HGLOBAL hMem)
+.idata:00473144                 extrn GlobalFree:dword  ; CODE XREF: sub_4359A0+B2↑p
+.idata:00473144                                         ; DATA XREF: sub_4359A0+B2↑r
+.idata:00473148 ; BOOL (__stdcall *QueryPerformanceFrequency)(LARGE_INTEGER *lpFrequency)
+.idata:00473148                 extrn QueryPerformanceFrequency:dword
+.idata:00473148                                         ; CODE XREF: sub_4361B0+441↑p
+.idata:00473148                                         ; sub_4375D0+3F↑p
+.idata:00473148                                         ; DATA XREF: ...
+.idata:0047314C ; BOOL (__stdcall *QueryPerformanceCounter)(LARGE_INTEGER *lpPerformanceCount)
+.idata:0047314C                 extrn QueryPerformanceCounter:dword
+.idata:0047314C                                         ; CODE XREF: sub_41C130+217↑p
+.idata:0047314C                                         ; sub_4250D0+12D↑p ...
+.idata:00473150 ; HANDLE (__stdcall *GetCurrentProcess)()
+.idata:00473150                 extrn GetCurrentProcess:dword
+.idata:00473150                                         ; CODE XREF: ___report_gsfailure+F7↑p
+.idata:00473150                                         ; __invoke_watson+16↑p
+.idata:00473150                                         ; DATA XREF: ...
+.idata:00473154 ; BOOL (__stdcall *CloseHandle)(HANDLE hObject)
+.idata:00473154                 extrn CloseHandle:dword ; CODE XREF: sub_43EF30+FB↑p
+.idata:00473154                                         ; sub_43EF30+3EC↑p ...
+.idata:00473158 ; BOOL (__stdcall *GetVersionExA)(LPOSVERSIONINFOA lpVersionInformation)
+.idata:00473158                 extrn GetVersionExA:dword
+.idata:00473158                                         ; CODE XREF: sub_438210+5F↑p
+.idata:00473158                                         ; DATA XREF: sub_438210+5F↑r
+.idata:0047315C ; DWORD (__stdcall *ExpandEnvironmentStringsW)(LPCWSTR lpSrc, LPWSTR lpDst, DWORD nSize)
+.idata:0047315C                 extrn ExpandEnvironmentStringsW:dword
+.idata:0047315C                                         ; CODE XREF: sub_4389F0+23↑p
+.idata:0047315C                                         ; DATA XREF: sub_4389F0+23↑r
+.idata:00473160 ; DWORD (__stdcall *GetFileAttributesW)(LPCWSTR lpFileName)
+.idata:00473160                 extrn GetFileAttributesW:dword
+.idata:00473160                                         ; CODE XREF: sub_4389F0+48↑p
+.idata:00473160                                         ; DATA XREF: sub_4389F0+48↑r
+.idata:00473164 ; HANDLE (__stdcall *CreateFileW)(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
+.idata:00473164                 extrn CreateFileW:dword ; CODE XREF: sub_43EF30+D9↑p
+.idata:00473164                                         ; sub_43EF30+3CA↑p ...
+.idata:00473168 ; int (__stdcall *WideCharToMultiByte)(UINT CodePage, DWORD dwFlags, LPCWCH lpWideCharStr, int cchWideChar, LPSTR lpMultiByteStr, int cbMultiByte, LPCCH lpDefaultChar, LPBOOL lpUsedDefaultChar)
+.idata:00473168                 extrn WideCharToMultiByte:dword
+.idata:00473168                                         ; CODE XREF: __Wcrtomb+65↑p
+.idata:00473168                                         ; __crtLCMapStringA_stat(localeinfo_struct *,ulong,ulong,char const *,int,char *,int,int,int)+1B9↑p ...
+.idata:0047316C ; BOOL (__stdcall *ReadFile)(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
+.idata:0047316C                 extrn ReadFile:dword    ; CODE XREF: sub_43EF30+F4↑p
+.idata:0047316C                                         ; __read_nolock+1F4↑p ...
+.idata:00473170 ; BOOL (__stdcall *CreateDirectoryW)(LPCWSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes)
+.idata:00473170                 extrn CreateDirectoryW:dword
+.idata:00473170                                         ; CODE XREF: sub_43EF30+370↑p
+.idata:00473170                                         ; sub_452220+289↑p
+.idata:00473170                                         ; DATA XREF: ...
+.idata:00473174 ; BOOL (__stdcall *WriteFile)(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped)
+.idata:00473174                 extrn WriteFile:dword   ; CODE XREF: sub_43EF30+3E5↑p
+.idata:00473174                                         ; __NMSG_WRITE+19A↑p ...
+.idata:00473178 ; HANDLE (__stdcall *FindFirstFileW)(LPCWSTR lpFileName, LPWIN32_FIND_DATAW lpFindFileData)
+.idata:00473178                 extrn FindFirstFileW:dword
+.idata:00473178                                         ; CODE XREF: sub_452220+299↑p
+.idata:00473178                                         ; DATA XREF: sub_452220+299↑r
+.idata:0047317C ; BOOL (__stdcall *FindNextFileW)(HANDLE hFindFile, LPWIN32_FIND_DATAW lpFindFileData)
+.idata:0047317C                 extrn FindNextFileW:dword
+.idata:0047317C                                         ; CODE XREF: sub_452220+2D7↑p
+.idata:0047317C                                         ; DATA XREF: sub_452220+2AC↑r
+.idata:00473180 ; BOOL (__stdcall *FlushFileBuffers)(HANDLE hFile)
+.idata:00473180                 extrn FlushFileBuffers:dword
+.idata:00473180                                         ; CODE XREF: __commit+81↑p
+.idata:00473180                                         ; DATA XREF: __commit+81↑r
+.idata:00473184
+.idata:00473188 ;
+.idata:00473188 ; Imports from SHELL32.dll
+.idata:00473188 ;
+.idata:00473188 ; HRESULT (__stdcall *SHGetFolderPathW)(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPWSTR pszPath)
+.idata:00473188                 extrn SHGetFolderPathW:dword
+.idata:00473188                                         ; CODE XREF: sub_43EF30+7F↑p
+.idata:00473188                                         ; sub_43EF30+324↑p
+.idata:00473188                                         ; DATA XREF: ...
+.idata:0047318C ; HINSTANCE (__stdcall *ShellExecuteW)(HWND hwnd, LPCWSTR lpOperation, LPCWSTR lpFile, LPCWSTR lpParameters, LPCWSTR lpDirectory, INT nShowCmd)
+.idata:0047318C                 extrn ShellExecuteW:dword
+.idata:0047318C                                         ; CODE XREF: sub_4389F0+65↑p
+.idata:0047318C                                         ; DATA XREF: sub_4389F0+65↑r
+.idata:00473190 ; LPWSTR *(__stdcall *CommandLineToArgvW)(LPCWSTR lpCmdLine, int *pNumArgs)
+.idata:00473190                 extrn CommandLineToArgvW:dword
+.idata:00473190                                         ; CODE XREF: sub_41C3D0+21↑p
+.idata:00473190                                         ; DATA XREF: sub_41C3D0+21↑r
+.idata:00473194 ; HICON (__stdcall *ExtractIconW)(HINSTANCE hInst, LPCWSTR pszExeFileName, UINT nIconIndex)
+.idata:00473194                 extrn ExtractIconW:dword
+.idata:00473194                                         ; CODE XREF: sub_41CC30+184↑p
+.idata:00473194                                         ; sub_41CC30+190↑p
+.idata:00473194                                         ; DATA XREF: ...
+.idata:00473198
+.idata:0047319C ;
+.idata:0047319C ; Imports from USER32.dll
+.idata:0047319C ;
+.idata:0047319C ; BOOL (__stdcall *SetCursorPos)(int X, int Y)
+.idata:0047319C                 extrn SetCursorPos:dword
+.idata:0047319C                                         ; CODE XREF: sub_407BB0+269↑p
+.idata:0047319C                                         ; DATA XREF: sub_407BB0+269↑r ...
+.idata:004731A0 ; LRESULT (__stdcall *DispatchMessageW)(const MSG *lpMsg)
+.idata:004731A0                 extrn DispatchMessageW:dword
+.idata:004731A0                                         ; CODE XREF: sub_41DD60+1FF↑p
+.idata:004731A0                                         ; DATA XREF: sub_41DD60+1FF↑r
+.idata:004731A4 ; LRESULT (__stdcall *DefWindowProcW)(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+.idata:004731A4                 extrn DefWindowProcW:dword
+.idata:004731A4                                         ; CODE XREF: sub_41D000+BD7↑p
+.idata:004731A4                                         ; DATA XREF: sub_41D000+BD7↑r
+.idata:004731A8 ; BOOL (__stdcall *DestroyMenu)(HMENU hMenu)
+.idata:004731A8                 extrn DestroyMenu:dword ; CODE XREF: sub_41D000+905↑p
+.idata:004731A8                                         ; DATA XREF: sub_41D000+905↑r
+.idata:004731AC ; BOOL (__stdcall *AdjustWindowRect)(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
+.idata:004731AC                 extrn AdjustWindowRect:dword
+.idata:004731AC                                         ; CODE XREF: sub_41CC30+2EF↑p
+.idata:004731AC                                         ; sub_41E0B0+171↑p ...
+.idata:004731B0 ; LRESULT (__stdcall *SendMessageW)(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+.idata:004731B0                 extrn SendMessageW:dword
+.idata:004731B0                                         ; CODE XREF: sub_41D000+8C0↑p
+.idata:004731B0                                         ; sub_428190+1A↑p ...
+.idata:004731B4 ; BOOL (__stdcall *IsWindowVisible)(HWND hWnd)
+.idata:004731B4                 extrn IsWindowVisible:dword
+.idata:004731B4                                         ; CODE XREF: sub_41E880+C9B↑p
+.idata:004731B4                                         ; DATA XREF: sub_41E880+C9B↑r
+.idata:004731B8 ; int (__stdcall *GetSystemMetrics)(int nIndex)
+.idata:004731B8                 extrn GetSystemMetrics:dword
+.idata:004731B8                                         ; CODE XREF: sub_4256B0+F2↑p
+.idata:004731B8                                         ; sub_42B980+143↑p ...
+.idata:004731BC ; int (__stdcall *MessageBoxW)(HWND hWnd, LPCWSTR lpText, LPCWSTR lpCaption, UINT uType)
+.idata:004731BC                 extrn MessageBoxW:dword ; CODE XREF: sub_4256B0+485↑p
+.idata:004731BC                                         ; DATA XREF: sub_4256B0+485↑r
+.idata:004731C0 ; BOOL (__stdcall *UnhookWindowsHookEx)(HHOOK hhk)
+.idata:004731C0                 extrn UnhookWindowsHookEx:dword
+.idata:004731C0                                         ; CODE XREF: sub_424DB0+17C↑p
+.idata:004731C0                                         ; DATA XREF: sub_424DB0+17C↑r
+.idata:004731C4 ; HHOOK (__stdcall *SetWindowsHookExW)(int idHook, HOOKPROC lpfn, HINSTANCE hmod, DWORD dwThreadId)
+.idata:004731C4                 extrn SetWindowsHookExW:dword
+.idata:004731C4                                         ; CODE XREF: sub_424DB0+217↑p
+.idata:004731C4                                         ; DATA XREF: sub_424DB0+217↑r
+.idata:004731C8 ; HWND (__stdcall *CreateWindowExW)(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
+.idata:004731C8                 extrn CreateWindowExW:dword
+.idata:004731C8                                         ; CODE XREF: sub_41CC30+363↑p
+.idata:004731C8                                         ; DATA XREF: sub_41CC30+363↑r
+.idata:004731CC ; BOOL (__stdcall *ClipCursor)(const RECT *lpRect)
+.idata:004731CC                 extrn ClipCursor:dword  ; CODE XREF: sub_41D000+847↑p
+.idata:004731CC                                         ; sub_427250:loc_4273D8↑p
+.idata:004731CC                                         ; DATA XREF: ...
+.idata:004731D0 ; BOOL (__stdcall *SetMenu)(HWND hWnd, HMENU hMenu)
+.idata:004731D0                 extrn SetMenu:dword     ; CODE XREF: sub_41E880+284↑p
+.idata:004731D0                                         ; sub_41E880+398↑p
+.idata:004731D0                                         ; DATA XREF: ...
+.idata:004731D4 ; BOOL (__stdcall *ShowWindow)(HWND hWnd, int nCmdShow)
+.idata:004731D4                 extrn ShowWindow:dword  ; CODE XREF: sub_41E880+249↑p
+.idata:004731D4                                         ; sub_41E880+353↑p ...
+.idata:004731D8 ; BOOL (__stdcall *SetWindowPos)(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags)
+.idata:004731D8                 extrn SetWindowPos:dword
+.idata:004731D8                                         ; CODE XREF: sub_41E880+69C↑p
+.idata:004731D8                                         ; sub_41E880+AF2↑p ...
+.idata:004731DC ; LONG (__stdcall *SetWindowLongW)(HWND hWnd, int nIndex, LONG dwNewLong)
+.idata:004731DC                 extrn SetWindowLongW:dword
+.idata:004731DC                                         ; CODE XREF: sub_41E880+22B↑p
+.idata:004731DC                                         ; sub_41E880+362↑p
+.idata:004731DC                                         ; DATA XREF: ...
+.idata:004731E0 ; int (__stdcall *ReleaseDC)(HWND hWnd, HDC hDC)
+.idata:004731E0                 extrn ReleaseDC:dword   ; CODE XREF: sub_421370+335↑p
+.idata:004731E0                                         ; DATA XREF: sub_421370+335↑r
+.idata:004731E4 ; BOOL (__stdcall *PeekMessageW)(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg)
+.idata:004731E4                 extrn PeekMessageW:dword
+.idata:004731E4                                         ; CODE XREF: sub_41DD60+1D1↑p
+.idata:004731E4                                         ; sub_41DD60+1ED↑p
+.idata:004731E4                                         ; DATA XREF: ...
+.idata:004731E8 ; BOOL (__stdcall *SystemParametersInfoW)(UINT uiAction, UINT uiParam, PVOID pvParam, UINT fWinIni)
+.idata:004731E8                 extrn SystemParametersInfoW:dword
+.idata:004731E8                                         ; CODE XREF: sub_41C130+76↑p
+.idata:004731E8                                         ; sub_41C130+D6↑p ...
+.idata:004731EC ; LONG (__stdcall *GetWindowLongW)(HWND hWnd, int nIndex)
+.idata:004731EC                 extrn GetWindowLongW:dword
+.idata:004731EC                                         ; CODE XREF: sub_41E880+2DD↑p
+.idata:004731EC                                         ; sub_41E880+300↑p ...
+.idata:004731F0 ; BOOL (__stdcall *SetRect)(LPRECT lprc, int xLeft, int yTop, int xRight, int yBottom)
+.idata:004731F0                 extrn SetRect:dword     ; CODE XREF: sub_41CC30+2DD↑p
+.idata:004731F0                                         ; sub_41E0B0+125↑p ...
+.idata:004731F4 ; BOOL (__stdcall *GetWindowPlacement)(HWND hWnd, WINDOWPLACEMENT *lpwndpl)
+.idata:004731F4                 extrn GetWindowPlacement:dword
+.idata:004731F4                                         ; CODE XREF: sub_41E880+2C9↑p
+.idata:004731F4                                         ; sub_41E880+3CB↑p ...
+.idata:004731F8 ; ATOM (__stdcall *RegisterClassExW)(const WNDCLASSEXW *)
+.idata:004731F8                 extrn RegisterClassExW:dword
+.idata:004731F8                                         ; CODE XREF: sub_41CC30+1F3↑p
+.idata:004731F8                                         ; DATA XREF: sub_41CC30+1F3↑r
+.idata:004731FC ; HMENU (__stdcall *GetMenu)(HWND hWnd)
+.idata:004731FC                 extrn GetMenu:dword     ; CODE XREF: sub_41D000+8FA↑p
+.idata:004731FC                                         ; sub_41E0B0+157↑p ...
+.idata:00473200 ; BOOL (__stdcall *TranslateMessage)(const MSG *lpMsg)
+.idata:00473200                 extrn TranslateMessage:dword
+.idata:00473200                                         ; CODE XREF: sub_41DD60+1F8↑p
+.idata:00473200                                         ; DATA XREF: sub_41DD60+1DA↑r
+.idata:00473204 ; HDC (__stdcall *GetDC)(HWND hWnd)
+.idata:00473204                 extrn GetDC:dword       ; CODE XREF: sub_421370+12D↑p
+.idata:00473204                                         ; DATA XREF: sub_421370+12D↑r
+.idata:00473208 ; BOOL (__stdcall *GetIconInfo)(HICON hIcon, PICONINFO piconinfo)
+.idata:00473208                 extrn GetIconInfo:dword ; CODE XREF: sub_421370+5C↑p
+.idata:00473208                                         ; DATA XREF: sub_421370+5C↑r
+.idata:0047320C ; DWORD (__stdcall *GetClassLongW)(HWND hWnd, int nIndex)
+.idata:0047320C                 extrn GetClassLongW:dword
+.idata:0047320C                                         ; CODE XREF: sub_427250+AF↑p
+.idata:0047320C                                         ; DATA XREF: sub_427250+AF↑r
+.idata:00473210 ; BOOL (__stdcall *GetClientRect)(HWND hWnd, LPRECT lpRect)
+.idata:00473210                 extrn GetClientRect:dword
+.idata:00473210                                         ; CODE XREF: sub_41D000+608↑p
+.idata:00473210                                         ; sub_41E880+740↑p ...
+.idata:00473214 ; LRESULT (__stdcall *CallNextHookEx)(HHOOK hhk, int nCode, WPARAM wParam, LPARAM lParam)
+.idata:00473214                 extrn CallNextHookEx:dword ; CODE XREF: fn+59↑p
+.idata:00473214                                         ; fn+A5↑p
+.idata:00473214                                         ; DATA XREF: ...
+.idata:00473218 ; HCURSOR (__stdcall *LoadCursorW)(HINSTANCE hInstance, LPCWSTR lpCursorName)
+.idata:00473218                 extrn LoadCursorW:dword ; CODE XREF: sub_41CC30+1C8↑p
+.idata:00473218                                         ; DATA XREF: sub_41CC30+1C8↑r
+.idata:0047321C ; BOOL (__stdcall *IsZoomed)(HWND hWnd)
+.idata:0047321C                 extrn IsZoomed:dword    ; CODE XREF: sub_41E880+8FE↑p
+.idata:0047321C                                         ; sub_41E880+93B↑p
+.idata:0047321C                                         ; DATA XREF: ...
+.idata:00473220 ; BOOL (__stdcall *ClientToScreen)(HWND hWnd, LPPOINT lpPoint)
+.idata:00473220                 extrn ClientToScreen:dword
+.idata:00473220                                         ; CODE XREF: sub_407BB0+259↑p
+.idata:00473220                                         ; DATA XREF: sub_407BB0+259↑r
+.idata:00473224 ; BOOL (__stdcall *IsIconic)(HWND hWnd)
+.idata:00473224                 extrn IsIconic:dword    ; CODE XREF: sub_41E880+6C7↑p
+.idata:00473224                                         ; sub_41E880+866↑p ...
+.idata:00473228 ; void (__stdcall *PostQuitMessage)(int nExitCode)
+.idata:00473228                 extrn PostQuitMessage:dword
+.idata:00473228                                         ; CODE XREF: sub_41D000+95E↑p
+.idata:00473228                                         ; sub_426190+515↑p
+.idata:00473228                                         ; DATA XREF: ...
+.idata:0047322C ; BOOL (__stdcall *GetWindowRect)(HWND hWnd, LPRECT lpRect)
+.idata:0047322C                 extrn GetWindowRect:dword
+.idata:0047322C                                         ; CODE XREF: sub_41E880+8AE↑p
+.idata:0047322C                                         ; sub_41E880+9E2↑p ...
+.idata:00473230 ; HCURSOR (__stdcall *SetCursor)(HCURSOR hCursor)
+.idata:00473230                 extrn SetCursor:dword   ; CODE XREF: sub_41D000+75A↑p
+.idata:00473230                                         ; sub_427250+A1↑p ...
+.idata:00473234 ; BOOL (__stdcall *SetWindowPlacement)(HWND hWnd, const WINDOWPLACEMENT *lpwndpl)
+.idata:00473234                 extrn SetWindowPlacement:dword
+.idata:00473234                                         ; CODE XREF: sub_41E880+400↑p
+.idata:00473234                                         ; sub_41E880+670↑p
+.idata:00473234                                         ; DATA XREF: ...
+.idata:00473238 ; BOOL (__stdcall *DestroyWindow)(HWND hWnd)
+.idata:00473238                 extrn DestroyWindow:dword
+.idata:00473238                                         ; CODE XREF: sub_41D000+90C↑p
+.idata:00473238                                         ; DATA XREF: sub_41D000+90C↑r
+.idata:0047323C ; HWND (__stdcall *SetCapture)(HWND hWnd)
+.idata:0047323C                 extrn SetCapture:dword  ; CODE XREF: sub_42F490+161↑p
+.idata:0047323C                                         ; sub_4329B0+AB↑p ...
+.idata:00473240 ; BOOL (__stdcall *ReleaseCapture)()
+.idata:00473240                 extrn ReleaseCapture:dword
+.idata:00473240                                         ; CODE XREF: sub_42E570:loc_42E610↑p
+.idata:00473240                                         ; sub_42F490+100↑p ...
+.idata:00473244 ; BOOL (__stdcall *PtInRect)(const RECT *lprc, POINT pt)
+.idata:00473244                 extrn PtInRect:dword    ; CODE XREF: sub_432E30+18↑p
+.idata:00473244                                         ; sub_432E30+2F↑p ...
+.idata:00473248 ; BOOL (__stdcall *EnumDisplaySettingsW)(LPCWSTR lpszDeviceName, DWORD iModeNum, DEVMODEW *lpDevMode)
+.idata:00473248                 extrn EnumDisplaySettingsW:dword
+.idata:00473248                                         ; CODE XREF: sub_42B980+164↑p
+.idata:00473248                                         ; sub_4383E0+1AE↑p
+.idata:00473248                                         ; DATA XREF: ...
+.idata:0047324C ; BOOL (__stdcall *GetMonitorInfoW)(HMONITOR hMonitor, LPMONITORINFO lpmi)
+.idata:0047324C                 extrn GetMonitorInfoW:dword
+.idata:0047324C                                         ; CODE XREF: sub_42D640+65↑p
+.idata:0047324C                                         ; DATA XREF: sub_42D640+65↑r
+.idata:00473250 ; SHORT (__stdcall *GetKeyState)(int nVirtKey)
+.idata:00473250                 extrn GetKeyState:dword ; CODE XREF: sub_42F490+362↑p
+.idata:00473250                                         ; sub_435AE0+51↑p ...
+.idata:00473254 ; BOOL (__stdcall *OffsetRect)(LPRECT lprc, int dx, int dy)
+.idata:00473254                 extrn OffsetRect:dword  ; CODE XREF: sub_4302D0+53↑p
+.idata:00473254                                         ; sub_4302D0+69↑p ...
+.idata:00473258 ; BOOL (__stdcall *InflateRect)(LPRECT lprc, int dx, int dy)
+.idata:00473258                 extrn InflateRect:dword ; CODE XREF: sub_435860+47↑p
+.idata:00473258                                         ; sub_435860+135↑p
+.idata:00473258                                         ; DATA XREF: ...
+.idata:0047325C ; UINT (__stdcall *GetCaretBlinkTime)()
+.idata:0047325C                 extrn GetCaretBlinkTime:dword
+.idata:0047325C                                         ; CODE XREF: sub_435450+B4↑p
+.idata:0047325C                                         ; DATA XREF: sub_435450+B4↑r
+.idata:00473260 ; BOOL (__stdcall *OpenClipboard)(HWND hWndNewOwner)
+.idata:00473260                 extrn OpenClipboard:dword
+.idata:00473260                                         ; CODE XREF: sub_4359A0+19↑p
+.idata:00473260                                         ; sub_435A60+A↑p
+.idata:00473260                                         ; DATA XREF: ...
+.idata:00473264 ; BOOL (__stdcall *EmptyClipboard)()
+.idata:00473264                 extrn EmptyClipboard:dword
+.idata:00473264                                         ; CODE XREF: sub_4359A0+28↑p
+.idata:00473264                                         ; DATA XREF: sub_4359A0+28↑r
+.idata:00473268 ; HANDLE (__stdcall *SetClipboardData)(UINT uFormat, HANDLE hMem)
+.idata:00473268                 extrn SetClipboardData:dword
+.idata:00473268                                         ; CODE XREF: sub_4359A0+A0↑p
+.idata:00473268                                         ; DATA XREF: sub_4359A0+A0↑r
+.idata:0047326C ; BOOL (__stdcall *CloseClipboard)()
+.idata:0047326C                 extrn CloseClipboard:dword
+.idata:0047326C                                         ; CODE XREF: sub_4359A0:loc_435A47↑p
+.idata:0047326C                                         ; DATA XREF: sub_4359A0:loc_435A47↑r ...
+.idata:00473270 ; HANDLE (__stdcall *GetClipboardData)(UINT uFormat)
+.idata:00473270                 extrn GetClipboardData:dword
+.idata:00473270                                         ; CODE XREF: sub_435A60+17↑p
+.idata:00473270                                         ; DATA XREF: sub_435A60+17↑r
+.idata:00473274 ; BOOL (__stdcall *IntersectRect)(LPRECT lprcDst, const RECT *lprcSrc1, const RECT *lprcSrc2)
+.idata:00473274                 extrn IntersectRect:dword
+.idata:00473274                                         ; CODE XREF: sub_4361B0+1D9↑p
+.idata:00473274                                         ; DATA XREF: sub_4361B0+1D9↑r
+.idata:00473278 ; BOOL (__stdcall *SetRectEmpty)(LPRECT lprc)
+.idata:00473278                 extrn SetRectEmpty:dword
+.idata:00473278                                         ; CODE XREF: sub_4371F0+2A↑p
+.idata:00473278                                         ; DATA XREF: sub_4371F0+2A↑r
+.idata:0047327C ; BOOL (__stdcall *SystemParametersInfoA)(UINT uiAction, UINT uiParam, PVOID pvParam, UINT fWinIni)
+.idata:0047327C                 extrn SystemParametersInfoA:dword
+.idata:0047327C                                         ; CODE XREF: sub_438210+BD↑p
+.idata:0047327C                                         ; DATA XREF: sub_438210+BD↑r
+.idata:00473280 ; INT_PTR (__stdcall *DialogBoxIndirectParamW)(HINSTANCE hInstance, LPCDLGTEMPLATEW hDialogTemplate, HWND hWndParent, DLGPROC lpDialogFunc, LPARAM dwInitParam)
+.idata:00473280                 extrn DialogBoxIndirectParamW:dword
+.idata:00473280                                         ; CODE XREF: sub_43EF30+2F5↑p
+.idata:00473280                                         ; DATA XREF: sub_43EF30+2F5↑r
+.idata:00473284 ; BOOL (__stdcall *SetWindowTextW)(HWND hWnd, LPCWSTR lpString)
+.idata:00473284                 extrn SetWindowTextW:dword
+.idata:00473284                                         ; CODE XREF: DialogFunc+116↑p
+.idata:00473284                                         ; DATA XREF: DialogFunc+116↑r
+.idata:00473288 ; HICON (__stdcall *LoadIconW)(HINSTANCE hInstance, LPCWSTR lpIconName)
+.idata:00473288                 extrn LoadIconW:dword   ; CODE XREF: DialogFunc+123↑p
+.idata:00473288                                         ; DATA XREF: DialogFunc+123↑r
+.idata:0047328C ; HWND (__stdcall *GetDlgItem)(HWND hDlg, int nIDDlgItem)
+.idata:0047328C                 extrn GetDlgItem:dword  ; CODE XREF: DialogFunc+7D↑p
+.idata:0047328C                                         ; DialogFunc+137↑p
+.idata:0047328C                                         ; DATA XREF: ...
+.idata:00473290 ; BOOL (__stdcall *SetDlgItemTextW)(HWND hDlg, int nIDDlgItem, LPCWSTR lpString)
+.idata:00473290                 extrn SetDlgItemTextW:dword
+.idata:00473290                                         ; CODE XREF: DialogFunc+175↑p
+.idata:00473290                                         ; DialogFunc+17F↑p ...
+.idata:00473294 ; BOOL (__stdcall *CheckDlgButton)(HWND hDlg, int nIDButton, UINT uCheck)
+.idata:00473294                 extrn CheckDlgButton:dword
+.idata:00473294                                         ; CODE XREF: DialogFunc+67↑p
+.idata:00473294                                         ; DATA XREF: DialogFunc+67↑r
+.idata:00473298 ; UINT (__stdcall *IsDlgButtonChecked)(HWND hDlg, int nIDButton)
+.idata:00473298                 extrn IsDlgButtonChecked:dword
+.idata:00473298                                         ; CODE XREF: DialogFunc+5A↑p
+.idata:00473298                                         ; DialogFunc+70↑p ...
+.idata:0047329C ; BOOL (__stdcall *EnableWindow)(HWND hWnd, BOOL bEnable)
+.idata:0047329C                 extrn EnableWindow:dword
+.idata:0047329C                                         ; CODE XREF: DialogFunc+84↑p
+.idata:0047329C                                         ; DATA XREF: DialogFunc+84↑r
+.idata:004732A0 ; BOOL (__stdcall *EndDialog)(HWND hDlg, INT_PTR nResult)
+.idata:004732A0                 extrn EndDialog:dword   ; CODE XREF: DialogFunc+A7↑p
+.idata:004732A0                                         ; DialogFunc+CF↑p
+.idata:004732A0                                         ; DATA XREF: ...
+.idata:004732A4 ; int (__stdcall *ShowCursor)(BOOL bShow)
+.idata:004732A4                 extrn ShowCursor:dword  ; CODE XREF: sub_407BB0+280↑p
+.idata:004732A4                                         ; sub_407BB0+299↑p
+.idata:004732A4                                         ; DATA XREF: ...
+.idata:004732A8 ; BOOL (__stdcall *ScreenToClient)(HWND hWnd, LPPOINT lpPoint)
+.idata:004732A8                 extrn ScreenToClient:dword
+.idata:004732A8                                         ; CODE XREF: sub_407BB0+83↑p
+.idata:004732A8                                         ; sub_407BB0+1B4↑p ...
+.idata:004732AC ; BOOL (__stdcall *GetCursorPos)(LPPOINT lpPoint)
+.idata:004732AC                 extrn GetCursorPos:dword
+.idata:004732AC                                         ; CODE XREF: sub_407BB0+72↑p
+.idata:004732AC                                         ; sub_407BB0+1A3↑p ...
+.idata:004732B0 ; HWND (__stdcall *GetFocus)()
+.idata:004732B0                 extrn GetFocus:dword    ; CODE XREF: sub_407BB0+32↑p
+.idata:004732B0                                         ; DATA XREF: sub_407BB0+32↑r
+.idata:004732B4 ; BOOL (__stdcall *UnregisterClassW)(LPCWSTR lpClassName, HINSTANCE hInstance)
+.idata:004732B4                 extrn UnregisterClassW:dword
+.idata:004732B4                                         ; CODE XREF: sub_41D000+919↑p
+.idata:004732B4                                         ; DATA XREF: sub_41D000+919↑r
+.idata:004732B8
+.idata:004732BC ;
+.idata:004732BC ; Imports from WINMM.dll
+.idata:004732BC ;
+.idata:004732BC ; DWORD (__stdcall *timeGetTime)()
+.idata:004732BC                 extrn timeGetTime:dword ; CODE XREF: sub_451D70+23↑p
+.idata:004732BC                                         ; DATA XREF: sub_451D70+23↑r ...
+.idata:004732C0
+.idata:004732C4 ;
+.idata:004732C4 ; Imports from d3dx10_43.dll
+.idata:004732C4 ;
+.idata:004732C4                 extrn D3DX10CreateFontW:dword
+.idata:004732C4                                         ; CODE XREF: sub_42F130+1B2↑p
+.idata:004732C4                                         ; DATA XREF: sub_42F130+1B2↑r ...
+.idata:004732C8
+.idata:004732CC ;
+.idata:004732CC ; Imports from d3dx9_43.dll
+.idata:004732CC ;
+.idata:004732CC                 extrn D3DXCreateTextureFromResourceW:dword
+.idata:004732CC                                         ; CODE XREF: sub_44F480+57↑p
+.idata:004732CC                                         ; DATA XREF: sub_44F480+57↑r ...
+.idata:004732D0                 extrn D3DXSaveSurfaceToFileW:dword
+.idata:004732D0                                         ; CODE XREF: sub_43FA40+6F↑p
+.idata:004732D0                                         ; DATA XREF: sub_43FA40+6F↑r
+.idata:004732D4                 extrn D3DXCreateTextureFromFileW:dword
+.idata:004732D4                                         ; CODE XREF: sub_44F3F0+55↑p
+.idata:004732D4                                         ; DATA XREF: sub_44F3F0+55↑r
+.idata:004732D8                 extrn D3DXCreateTextureFromFileInMemoryEx:dword
+.idata:004732D8                                         ; CODE XREF: sub_431860+60↑p
+.idata:004732D8                                         ; DATA XREF: sub_431860+60↑r
+.idata:004732DC                 extrn D3DXCreateTextureFromFileExW:dword
+.idata:004732DC                                         ; CODE XREF: sub_431860+FB↑p
+.idata:004732DC                                         ; DATA XREF: sub_431860+FB↑r
+.idata:004732E0                 extrn D3DXCreateTextureFromResourceExW:dword
+.idata:004732E0                                         ; CODE XREF: sub_431860+B0↑p
+.idata:004732E0                                         ; DATA XREF: sub_431860+B0↑r
+.idata:004732E4                 extrn D3DXCreateFontW:dword
+.idata:004732E4                                         ; CODE XREF: sub_42E270+6B↑p
+.idata:004732E4                                         ; sub_42F130+15C↑p ...
+.idata:004732E8                 extrn D3DXMatrixOrthoOffCenterLH:dword
+.idata:004732E8                                         ; CODE XREF: sub_430C90+231↑p
+.idata:004732E8                                         ; sub_431380+D9↑p ...
+.idata:004732EC                 extrn D3DXCreateSprite:dword
+.idata:004732EC                                         ; CODE XREF: sub_42E270+A7↑p
+.idata:004732EC                                         ; sub_452090+79↑p
+.idata:004732EC                                         ; DATA XREF: ...
+.idata:004732F0                 extrn D3DXMatrixRotationQuaternion:dword
+.idata:004732F0                                         ; CODE XREF: sub_4146F0+58↑p
+.idata:004732F0                                         ; sub_417300+2E↑p
+.idata:004732F0                                         ; DATA XREF: ...
+.idata:004732F4                 extrn D3DXQuaternionNormalize:dword
+.idata:004732F4                                         ; CODE XREF: sub_417C90+9F↑p
+.idata:004732F4                                         ; DATA XREF: sub_417C90+9F↑r
+.idata:004732F8                 extrn D3DXQuaternionMultiply:dword
+.idata:004732F8                                         ; CODE XREF: sub_415C10+1A8↑p
+.idata:004732F8                                         ; sub_416510+7E8↑p
+.idata:004732F8                                         ; DATA XREF: ...
+.idata:004732FC                 extrn D3DXQuaternionSlerp:dword
+.idata:004732FC                                         ; CODE XREF: sub_414A70+122↑p
+.idata:004732FC                                         ; sub_414BB0+103↑p ...
+.idata:00473300                 extrn D3DXQuaternionRotationAxis:dword
+.idata:00473300                                         ; CODE XREF: sub_414A70+A2↑p
+.idata:00473300                                         ; sub_416510+6E4↑p ...
+.idata:00473304                 extrn D3DXMatrixOrthoLH:dword
+.idata:00473304                                         ; CODE XREF: sub_413350+5A9↑p
+.idata:00473304                                         ; DATA XREF: sub_413350+5A9↑r
+.idata:00473308                 extrn D3DXCreateSphere:dword
+.idata:00473308                                         ; CODE XREF: sub_412480+61↑p
+.idata:00473308                                         ; DATA XREF: sub_412480+61↑r
+.idata:0047330C                 extrn D3DXMatrixLookAtLH:dword
+.idata:0047330C                                         ; CODE XREF: sub_411000+8D6↑p
+.idata:0047330C                                         ; sub_411000+A17↑p ...
+.idata:00473310                 extrn D3DXMatrixRotationAxis:dword
+.idata:00473310                                         ; CODE XREF: sub_411000+761↑p
+.idata:00473310                                         ; DATA XREF: sub_411000+761↑r
+.idata:00473314                 extrn D3DXQuaternionRotationYawPitchRoll:dword
+.idata:00473314                                         ; CODE XREF: sub_40DB60+D0↑p
+.idata:00473314                                         ; sub_413F50+DD↑p ...
+.idata:00473318                 extrn D3DXVec3TransformCoord:dword
+.idata:00473318                                         ; CODE XREF: sub_4085B0+19↑p
+.idata:00473318                                         ; sub_40AC70+D3↑p ...
+.idata:0047331C                 extrn D3DXMatrixTranslation:dword
+.idata:0047331C                                         ; CODE XREF: sub_40A0E0+8A↑p
+.idata:0047331C                                         ; sub_40F140+57C↑p ...
+.idata:00473320                 extrn D3DXMatrixScaling:dword
+.idata:00473320                                         ; CODE XREF: sub_40A0E0+B8↑p
+.idata:00473320                                         ; sub_40B380+4A↑p ...
+.idata:00473324                 extrn D3DXMatrixInverse:dword
+.idata:00473324                                         ; CODE XREF: sub_408A30+2CF↑p
+.idata:00473324                                         ; sub_40A320+E6↑p ...
+.idata:00473328                 extrn D3DXMatrixPerspectiveFovLH:dword
+.idata:00473328                                         ; CODE XREF: sub_402AA0+EE↑p
+.idata:00473328                                         ; sub_44DF50+A7↑p
+.idata:00473328                                         ; DATA XREF: ...
+.idata:0047332C                 extrn D3DXVec3TransformNormal:dword
+.idata:0047332C                                         ; CODE XREF: sub_401540+19↑p
+.idata:0047332C                                         ; sub_40AC70+E6↑p ...
+.idata:00473330                 extrn D3DXMatrixRotationYawPitchRoll:dword
+.idata:00473330                                         ; CODE XREF: sub_402040+1FA↑p
+.idata:00473330                                         ; sub_402880+42↑p ...
+.idata:00473334                 extrn D3DXMatrixMultiply:dword
+.idata:00473334                                         ; CODE XREF: sub_402AA0+96↑p
+.idata:00473334                                         ; sub_40A0E0+D3↑p ...
+.idata:00473338                 extrn D3DXVec3Normalize:dword
+.idata:00473338                                         ; CODE XREF: sub_401070+2↑p
+.idata:00473338                                         ; sub_401190+9D↑p ...
+.idata:0047333C
+.idata:0047333C

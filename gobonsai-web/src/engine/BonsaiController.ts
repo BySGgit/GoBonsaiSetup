@@ -3,11 +3,19 @@ import { TreeSection } from './TreeSection';
 import { TreeRoot } from './TreeRoot';
 import { MSVCRand } from './MSVCRand';
 import { GrowthController, GrowthStats } from './GrowthController';
+import { TransformService } from './math/TransformService';
+import { Sub416510Rotation } from './math/Sub416510Rotation';
+import { WorldGrowthState } from './world/WorldGrowthState';
+import { GrowthFramePipeline } from './growth/GrowthFramePipeline';
+import { SectionRuntimeType } from './SectionRuntimeType';
 
 export class BonsaiController {
     private scene: THREE.Scene;
     public rng: MSVCRand;
     private growthController: GrowthController;
+    /** Глобальные величины мира (день симуляции, пул энергии) — см. world/WorldGrowthState */
+    public readonly worldGrowth: WorldGrowthState;
+    private readonly growthFrame: GrowthFramePipeline;
     
     private stats: GrowthStats;
     public gameTime: number = 0;
@@ -24,9 +32,26 @@ export class BonsaiController {
         this.scene = scene;
         this.rng = new MSVCRand(seed);
         this.growthController = new GrowthController(this.rng);
+        this.worldGrowth = new WorldGrowthState();
+        this.growthFrame = new GrowthFramePipeline(this.growthController);
         
         this.stats = this.growthController.initStats();
         this.root = new TreeSection(null, 0, this.rng);
+        // sub_417220 TreeSectionSeed: *(this+4)=8, *(float*)(this+428)=1.0
+        this.root.sectionRuntimeType4 = SectionRuntimeType.TreeSectionSeed;
+        this.root.sub414CE0SeedBudget428 = 1.0;
+        
+        // Root initial lean based on stats (toned down for realism)
+        TransformService.rotationYawPitchRoll(
+            this.root.targetRotation,
+            this.stats.trunkRotationY,
+            this.stats.trunkRotationX * 0.2,
+            this.stats.trunkRotationZ * 0.2
+        );
+        this.root.rotationQuaternion.copy(this.root.targetRotation);
+        this.root.rotation.copy(this.root.targetRotation);
+        Sub416510Rotation.syncBlob80FromQuaternion(this.root);
+
         this.scene.add(this.root.group);
         
         this.initRoots();
@@ -43,34 +68,32 @@ export class BonsaiController {
 
     public update(deltaTime: number): void {
         this.updateClock(deltaTime);
-        
-        this.growthController.animateGrowth(this.stats, deltaTime, this.timeSpeed);
-        const metabolismLogs = this.growthController.updateMetabolism(this.stats, this.lightIntensity, deltaTime);
-        metabolismLogs.forEach(msg => this.addLog(msg, 'warning'));
-        
-        this.updateEnvironment();
-        
-        const ageFactor = this.stats.age / 10.0; 
-        const dayOfYear = this.gameTime % 365;
-        
-        this.root.update(ageFactor, this.lightIntensity, {
-            thickness: this.stats.trunkThickness,
-            bend: this.stats.trunkBend,
-            color: new THREE.Color(this.stats.colorR, this.stats.colorG, this.stats.colorB)
-        }, this.stats.health, this.wind, dayOfYear, deltaTime);
 
-        this.treeRoots.forEach(root => root.update(ageFactor, deltaTime));
+        this.worldGrowth.syncEnergyFromStats(this.stats.energy);
+
+        const metabolismLogs = this.growthFrame.run({
+            deltaTime,
+            timeSpeed: this.timeSpeed,
+            stats: this.stats,
+            root: this.root,
+            worldGrowth: this.worldGrowth,
+            onSimulationYearCrossed: () => {
+                this.saveState();
+                this.addLog("Прошел игровой год. Рост продолжается.", "info");
+            },
+            lightIntensity: this.lightIntensity,
+            wind: this.wind,
+            treeRoots: this.treeRoots,
+            tickEnvironment: () => this.updateEnvironment(),
+            rng: this.rng,
+        });
+        metabolismLogs.forEach(msg => this.addLog(msg, 'warning'));
+
+        this.worldGrowth.syncEnergyFromStats(this.stats.energy);
     }
 
     private updateClock(deltaTime: number): void {
-        const prevTime = this.gameTime;
-        this.gameTime += deltaTime * this.timeSpeed * 5; 
-        
-        if (Math.floor(this.gameTime / 365.0) > Math.floor(prevTime / 365.0)) {
-            this.growthController.updateYearlyTargets(this.stats, this.root);
-            this.saveState();
-            this.addLog("Прошел игровой год. Рост продолжается.", 'info');
-        }
+        this.gameTime += deltaTime * this.timeSpeed * 5;
 
         if (this.stats.health > 0.7 && this.stats.energy > 0.5) {
             this.stats.targetAge += 0.05 * deltaTime * this.timeSpeed;
@@ -85,7 +108,8 @@ export class BonsaiController {
 
     public prune(target: THREE.Object3D): boolean {
         if (this.root.prune(target)) {
-            this.stats.energy = Math.min(1.0, this.stats.energy + 0.1); 
+            this.stats.energy = Math.min(1.0, this.stats.energy + 0.1);
+            this.root.energy = this.stats.energy;
             this.addLog("Ветка обрезана. Энергия перераспределена.", 'info');
             this.saveState();
             return true;
@@ -104,6 +128,7 @@ export class BonsaiController {
 
     public interact(): void {
         this.stats.energy = Math.min(1.0, this.stats.energy + 0.2);
+        this.root.energy = this.stats.energy;
         this.stats.health = Math.min(1.0, this.stats.health + 0.05);
         this.addLog("Дерево полито.", 'info');
         this.saveState();
@@ -129,6 +154,7 @@ export class BonsaiController {
         const state = {
             stats: this.stats,
             gameTime: this.gameTime,
+            simulationDay: this.worldGrowth.simulationDay,
             tree: this.root.serialize(),
             roots: this.treeRoots.map(r => r.serialize())
         };
@@ -142,6 +168,9 @@ export class BonsaiController {
                 const data = JSON.parse(saved);
                 this.stats = data.stats;
                 this.gameTime = data.gameTime;
+                if (typeof data.simulationDay === "number") {
+                    this.worldGrowth.simulationDay = data.simulationDay;
+                }
                 
                 if (this.root && this.root.group.parent) {
                     this.scene.remove(this.root.group);
