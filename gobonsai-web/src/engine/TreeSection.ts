@@ -22,6 +22,12 @@ import { TransformService } from "./math/TransformService";
 import { Sub416510Rotation } from "./math/Sub416510Rotation";
 import { SectionRuntimeType } from "./SectionRuntimeType";
 
+/** Debug: show wireframe skeleton instead of solid meshes */
+export let DEBUG_WIREFRAME = false;
+export function setDebugWireframe(on: boolean): void {
+  DEBUG_WIREFRAME = on;
+}
+
 export class TreeSection
   implements ITreeSectionData, IVisualState, ITransformState, IWorkingBuffers
 {
@@ -113,6 +119,45 @@ export class TreeSection
   /** Кадровый вклад в +480 при sub_4188E0 (не сериализуется — обнуляется каждый кадр) */
   public spawnDelta480: number = 0;
 
+  /** this+512 — byte flag: true = length growing (sub_418BD0), false = branching (sub_417F40) */
+  public growthFlag512: boolean = true;
+  /** this+456 — smoothed health energy (sub_417C90: += (prod/20 - this)*0.1) */
+  public healthEnergy456: Float32 = 0.5;
+  /** this+516 — leaf count (sub_415AB0 increments) */
+  public leafCount516: number = 0;
+  /** this+236 — marked for detach (vtable slot +44 → sub_40EEE0) */
+  public markedForDetach236: boolean = false;
+  /** Bud: accumulated leaf spawn angle (sub_415AB0 uses this+512 as float on bud) */
+  public leafSpawnAngle: number = 0;
+
+  // ─── Light tracing fields (sub_40E460 / sub_4143E0) ─────────────
+  /** this+196..+204 — light response direction (updated by ray-march sub_40E460) */
+  public lightResponseVec: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
+  /** this+208 — smoothed scalar: (dot*intensity + old*10)/11 from sub_40E460 */
+  public smoothedLightA: Float32 = 0.1;
+  /** this+212 — smoothed scalar: (intensity + old*20)/21 from sub_40E460 */
+  public smoothedLightB: Float32 = 0.1;
+  /** this+216..+224 — previous direction, slerps toward +196 in sub_4143E0 */
+  public prevDirectionVec: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
+  /** this+228 — slow copy of +208 (coeff 0.1) from sub_4143E0 */
+  public smoothTargetA: Float32 = 0.1;
+  /** this+232 — slow copy of +212 (coeff 0.1) from sub_4143E0 */
+  public smoothTargetB: Float32 = 0.1;
+
+  // ─── Physics fields (sub_414870 / sub_414A70 / sub_414BB0) ──────
+  /** this+460 — total weight of subtree (mass + children) */
+  public totalWeight460: number = 0;
+  /** this+464 — stored mass of this section alone */
+  public storedMass464: number = 0;
+  /** this+468..+476 — center of mass in local coords */
+  public centroid468: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+
+  // ─── World object fields (sub_40F140) ───────────────────────────
+  /** this+488..+496 — linear velocity for detached sections */
+  public velocity488: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+  /** this+500..+508 — angular velocity for detached sections */
+  public angularVelocity500: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+
   /** sub_416510 v34 — отклик секции на свет (0..1), обновляется метаболизмом */
   public lastLightFactor: Float32 = 1.0;
   /** sub_416510 *((float*)this+52) — множитель в v34 (синхронизируется с baseGrowth в росте) */
@@ -152,7 +197,6 @@ export class TreeSection
     level: number = 0,
     rng: MSVCRand,
     overrideBaseRadius?: number,
-    opts?: { skipFoliage?: boolean },
   ) {
     this.parent = parent;
     this.level = level;
@@ -204,7 +248,6 @@ export class TreeSection
     this.mesh.add(segmentMesh);
 
     if (parent) parent.group.add(this.group);
-    if (level > 0 && !opts?.skipFoliage) this.initFoliage();
     Sub416510Rotation.initBlob80Identity(this);
   }
 
@@ -223,7 +266,6 @@ export class TreeSection
       parent.level + 1,
       rng,
       0.01,
-      { skipFoliage: true },
     );
     bud.sectionRuntimeType4 = SectionRuntimeType.TreeSectionBud;
     bud.twigRadius444 = 0.01 as Float32;
@@ -256,29 +298,6 @@ export class TreeSection
     }
   }
 
-  private initFoliage(): void {
-    const leafCount = Math.floor(this.rng.randFloat() * 50) + 100; // Оригинальное количество
-    for (let i = 0; i < leafCount; i++) {
-      const leaf = new TreeLeaf(this.group, this.rng);
-      leaf.targetSize = 0.25 + this.rng.randFloat() * 0.25; // Оригинальный размер
-      leaf.mesh.position.y = this.rng.randFloat();
-      leaf.mesh.position.x += (this.rng.randFloat() - 0.5) * 0.6;
-      leaf.mesh.position.z += (this.rng.randFloat() - 0.5) * 0.6;
-      this.leaves.push(leaf);
-    }
-
-    if (this.rng.randFloat() > 0.15) {
-      const flowerCount = Math.floor(this.rng.randFloat() * 15) + 10;
-      for (let i = 0; i < flowerCount; i++) {
-        const flower = new TreeFlower(this.group, this.rng);
-        flower.group.position.y = this.rng.randFloat();
-        flower.group.position.x += (this.rng.randFloat() - 0.5) * 0.3;
-        flower.group.position.z += (this.rng.randFloat() - 0.5) * 0.3;
-        this.flowers.push(flower);
-      }
-    }
-  }
-
   public getRadiusAt(t: number): number {
     // sub_4093B0.c:127 - Линейное затухание радиуса от основания к вершине
     // В оригинале затухание идет по всей длине структуры, здесь аппроксимируем для секции
@@ -290,15 +309,10 @@ export class TreeSection
   /** Позиция дочерней секции вдоль локальной оси Y родителя (sub_415C10 / иерархия сцены). */
   public updateAttachmentPosition(parent: TreeSection): void {
     const { GEOMETRY } = TREE_CONSTANTS;
-    const gp =
-      parent.maxGrowth > 0
-        ? Math.min(1.0, parent.growthRate / parent.maxGrowth)
-        : 1.0;
-    const eff = Math.max(gp, 0.06);
-    const parentShowsFullStem = parent.children.some((c) => c.isContinuation);
-    const lengthScale = parentShowsFullStem ? 1.0 : eff;
-    const parentLen = GEOMETRY.HEIGHT_FACTOR * lengthScale;
-    this.group.position.y = this.branchPosition * parentLen;
+    // Match the visual top of the parent mesh: base height * mesh scaleY.
+    // parent.mesh.scale.y is set in update() BEFORE children call this.
+    const visualHeight = GEOMETRY.HEIGHT_FACTOR * parent.mesh.scale.y;
+    this.group.position.y = (this.branchPosition as number) * visualHeight;
   }
 
   public update(
@@ -344,23 +358,35 @@ export class TreeSection
     this.group.rotateX(swayX);
     this.group.rotateZ(swayZ);
 
-    const growthProgress =
-      this.maxGrowth > 0
-        ? Math.min(1.0, this.growthRate / this.maxGrowth)
-        : 1.0;
-    const hasContinuationChild = this.children.some((c) => c.isContinuation);
-    const currentHeightScale = hasContinuationChild
-      ? 1.0
-      : Math.max(0.01, growthProgress);
+    const { GEOMETRY } = TREE_CONSTANTS;
+
+    // Height: prefer C-truth twigLength448 when available, fall back to growthRate-based
+    const baseHeight = GEOMETRY.HEIGHT_FACTOR;
+    const twigLen = this.twigLength448 as number;
+    let currentHeightScale: number;
+    if (twigLen > 0.001 && twigLen !== baseHeight) {
+      // Section length was set by C-parity growth engine
+      currentHeightScale = Math.max(0.05, twigLen / baseHeight);
+    } else {
+      // Legacy path: length from growthRate progress
+      const growthProgress = this.maxGrowth > 0
+        ? Math.min(1.0, this.growthRate / this.maxGrowth) : 1.0;
+      const hasContinuation = this.children.some((c) => c.isContinuation);
+      currentHeightScale = hasContinuation ? 1.0 : Math.max(0.01, growthProgress);
+      // Root/initial sections: always show full height
+      if (twigLen >= baseHeight - 0.01) currentHeightScale = 1.0;
+    }
+
+    // Radius: trunkParams.thickness is the global visual scale (from stats, ~10).
+    // templateRadius gives per-level taper. Divide by branchBaseRadius to normalize.
+    const templateRadius =
+      GEOMETRY.BASE_RADIUS_FACTOR *
+      Math.pow(GEOMETRY.RADIUS_DECAY, this.level);
+    const radScale =
+      (trunkParams.thickness * templateRadius) /
+      Math.max(1e-6, this.branchBaseRadius as number);
 
     if (trunkParams.thickness > 0.01) {
-      const { GEOMETRY } = TREE_CONSTANTS;
-      const templateRadius =
-        GEOMETRY.BASE_RADIUS_FACTOR *
-        Math.pow(GEOMETRY.RADIUS_DECAY, this.level);
-      const radScale =
-        (trunkParams.thickness * templateRadius) /
-        Math.max(1e-6, this.branchBaseRadius);
       this.mesh.scale.set(radScale, currentHeightScale, radScale);
       this.group.visible = true;
 
@@ -391,7 +417,22 @@ export class TreeSection
         ? (this.mesh.children[0].material as THREE.MeshStandardMaterial)
         : null;
     if (mat) {
-      mat.color.setRGB(tr, tg, tb);
+      if (DEBUG_WIREFRAME) {
+        mat.wireframe = true;
+        mat.opacity = 0.9;
+        mat.transparent = true;
+        const t = this.sectionRuntimeType4;
+        if (t === SectionRuntimeType.TreeSectionLeaf) mat.color.setHex(0x00ff00);
+        else if (t === SectionRuntimeType.TreeSectionBud) mat.color.setHex(0xff00ff);
+        else if (t === SectionRuntimeType.TreeSectionTwig) mat.color.setHex(0xffaa00);
+        else if (t === SectionRuntimeType.TreeSectionSeed) mat.color.setHex(0xff0000);
+        else mat.color.setHex(0x00aaff);
+      } else {
+        mat.wireframe = false;
+        mat.opacity = 1.0;
+        mat.transparent = false;
+        mat.color.setRGB(tr, tg, tb);
+      }
       mat.roughness = 0.72 + (1.0 - globalHealth) * 0.22;
       mat.metalness = 0.02;
     }
@@ -510,10 +551,6 @@ export class TreeSection
       data.level,
       rng,
       data.branchBaseRadius,
-      {
-        skipFoliage:
-          (data.sectionRuntimeType4 ?? 0) === SectionRuntimeType.TreeSectionBud,
-      },
     );
     section.branchPosition = data.branchPosition ?? 1.0;
     if (data.branchTipRadius !== undefined)

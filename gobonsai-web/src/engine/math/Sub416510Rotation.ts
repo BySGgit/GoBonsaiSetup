@@ -42,72 +42,20 @@ export class Sub416510Rotation {
     public static apply(section: TreeSection, _trunkBend: number, _v34: number, deltaTime: number): void {
         Sub416510Rotation.snapshotPrevDataFromBlob80(section);
 
+        // Gently slerp current orientation toward targetRotation.
+        // targetRotation is set by growth (branching angles, light response, physics).
+        // This replaces the broken sub_416510 rotation block that incorrectly used
+        // direction vector components as Euler angles (causing 57° per-frame tilt).
+        // TODO(original): fully reconstruct sub_416510.c:226-273 with correct semantics.
         const simTicks = Math.min(2, deltaTime * 60);
         const t = Math.min(1, GrowthConstants.FLT_4D63C0 * simTicks) as number;
 
-        const M = section.transformMatrix;
-
-        // sub_401540(this+352): D3DXVec3TransformNormal((0,1,0), M) → v46,v47,v48
-        _u.set(0, 1, 0).transformDirection(M);
-
-        // 227-230: *(float*)&v44=0; HIDWORD(v44)=v49; v45=v50 — без v49/v50 в декомпиляции:
-        // вектор в плоскости YZ, ортогональный U: (0, -uz, uy)
-        _v44.set(0, -_u.z, _u.y);
-        if (_v44.lengthSq() < 1e-20) {
-            _v44.set(0, 1, 0);
-        } else {
-            _v44.normalize();
-        }
-
-        // sub_401180(&v44): sub_401120 → v51 = v44 × U (sub_401120: result = a3×a2 = v44×U)
-        _v51.crossVectors(_v44, _u);
-
-        // 232-236: только v51[0] → ±1
-        _v51.x = _v51.x >= 0.0 ? 1.0 : -1.0;
-
-        // 237: sub_4010C0(&v44, &v46)
-        let v25 = sub4010C0(_v44, _u);
-
-        // 238-248
-        if (v25 >= ANGLE_MIN) {
-            if (v25 > ANGLE_MAX) v25 = ANGLE_MAX;
-            TransformService.rotationAxis(_q42, _v51, v25);
-        } else {
-            v25 = ANGLE_MIN;
-            TransformService.rotationAxis(_q42, _v51, ANGLE_MIN);
-        }
-
-        const v31 = -v25;
-        // 250: D3DXMatrixRotationYawPitchRoll(v52, v31, 0, 0)
-        _matRy.makeRotationY(v31);
-
-        // 251: sub_401540(v52) — выход в v38[0..2], v46..v48 остаются U
-        _w.set(0, 1, 0).transformDirection(_matRy);
-
-        // 252: sub_4010C0(v38, v46) — угол между W и U
-        let v26 = sub4010C0(_w, _u);
-
-        // 253-263
-        if (v26 >= V26_NEG) {
-            if (v26 > V26_POS_CMP) {
-                v26 = V26_CLAMP_HI;
-            }
-        } else {
-            v26 = V26_NEG;
-        }
-
-        // 265-266: sub_401180(v38); sub_408470() — результат не попадает в multiply (268 перезаписывает v38)
-
-        // 267: D3DXQuaternionRotationAxis(v43, &v46, v26) — в C не участвует в multiply
-
-        // 268: D3DXQuaternionRotationYawPitchRoll(v38, Ux, Uy, Uz)
-        TransformService.rotationYawPitchRoll(_q38, _u.x, _u.y, _u.z);
-
-        // 269: D3DXQuaternionMultiply(&v35, v42, v38)
-        TransformService.multiply(_qCombined, _q42, _q38);
-
-        // 273: D3DXQuaternionSlerp(this+320, this+320, &v39, flt_4D63C0)
-        TransformService.slerp(section.rotationQuaternion, section.rotationQuaternion, _qCombined, t);
+        TransformService.slerp(
+            section.rotationQuaternion,
+            section.rotationQuaternion,
+            section.targetRotation,
+            t,
+        );
         section.rotation.copy(section.rotationQuaternion);
 
         Sub416510Rotation.storeQuatToBlob80(section);

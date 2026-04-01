@@ -29,12 +29,14 @@ export {
     runVirtualSlot36Tree,
     maybeSeedSpawnSub417440,
 } from './growth/virtualSlot36';
-
-/** Альтернативный путь дерева — см. ENGINE.md раздел v2 */
-export {
-    BonsaiConfig,
-    NodeType,
-    BonsaiNode,
-    BonsaiTree,
-    BonsaiMeshBuilder,
-} from './v2';
+export { setSlot36SimulationDay } from './growth/frameState';
+export { twigUpdateSub417C90 } from './growth/twigUpdateSub417C90';
+export { twigLengthGrowthSub418BD0 } from './growth/twigLengthGrowthSub418BD0';
+export { branchingDispatcherSub417F40 } from './growth/branchingDispatcherSub417F40';
+export { serviceLightTraceQueue, rebuildLeafQueue } from './growth/lightTracingSub40E460';
+export { perFramePhysicsSub4143E0 } from './growth/perFramePhysicsSub4143E0';
+export { processDetachFlags, getWorldObjects, clearWorldObjects } from './growth/detachPipelineSub40EEE0';
+export { updateWorldObjectsSub40F140 } from './growth/worldObjectPipelineSub40F140';
+export { resolveMaterialColor, setMaterialColorMode } from './growth/materialCurveSub4151B0';
+export { propagateTransformsSub450BD0 } from './growth/transformChainSub450BD0';
+export { processLeafMetabolism } from './growth/leafMetabolismSub416510';

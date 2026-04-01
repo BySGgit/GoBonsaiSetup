@@ -27,6 +27,7 @@ export class BonsaiController {
     public timeSpeed: number = 1.0;
     
     private onLog?: (message: string, type: 'info' | 'warning' | 'error' | 'success') => void;
+    private _dbgFrame: number = 0;
 
     constructor(scene: THREE.Scene, seed: number = Date.now()) {
         this.scene = scene;
@@ -41,12 +42,12 @@ export class BonsaiController {
         this.root.sectionRuntimeType4 = SectionRuntimeType.TreeSectionSeed;
         this.root.sub414CE0SeedBudget428 = 1.0;
         
-        // Root initial lean based on stats (toned down for realism)
+        // Root initial lean — subtle tilt only (±5°)
         TransformService.rotationYawPitchRoll(
             this.root.targetRotation,
-            this.stats.trunkRotationY,
-            this.stats.trunkRotationX * 0.2,
-            this.stats.trunkRotationZ * 0.2
+            this.stats.trunkRotationY * 0.05,
+            this.stats.trunkRotationX * 0.05,
+            this.stats.trunkRotationZ * 0.05
         );
         this.root.rotationQuaternion.copy(this.root.targetRotation);
         this.root.rotation.copy(this.root.targetRotation);
@@ -88,6 +89,43 @@ export class BonsaiController {
             rng: this.rng,
         });
         metabolismLogs.forEach(msg => this.addLog(msg, 'warning'));
+
+        // DEBUG: log tree state every 120 frames
+        if (!this._dbgFrame) this._dbgFrame = 0;
+        if (++this._dbgFrame % 120 === 0) {
+            const count = (s: TreeSection): number => {
+                let n = 1;
+                for (const c of s.children) n += count(c);
+                return n;
+            };
+            const dumpTree = (s: TreeSection, depth: number): string => {
+                const pad = '  '.repeat(depth);
+                const t = s.sectionRuntimeType4;
+                const b432 = (s.energyBudget432 as number).toFixed(4);
+                const p420 = (s.energyProduction420 as number).toFixed(4);
+                const tR = (s.twigRadius444 as number).toFixed(5);
+                const tL = (s.twigLength448 as number).toFixed(5);
+                const mg = (s.maxGrowth as number).toFixed(4);
+                const gf = s.growthFlag512 ? 'T' : 'F';
+                const bg = (s.baseGrowth as number).toFixed(4);
+                const det = s.markedForDetach236 ? 'D!' : '';
+                const w428 = (s.energyWeight428 as number).toFixed(4);
+                const gR = (s.growthRate as number).toFixed(4);
+                const lf = (s.lastLightFactor as number).toFixed(3);
+                let line = `${pad}[t${t}] bud432=${b432} prod420=${p420} tR=${tR} tL=${tL} max=${mg} gf=${gf} bg=${bg} w=${w428} gR=${gR} lf=${lf} ${det}`;
+                for (const c of s.children) line += '\n' + dumpTree(c, depth + 1);
+                return line;
+            };
+            const sf = this.worldGrowth.seasonFactor().toFixed(3);
+            console.log(
+                `[Bonsai] sections=${count(this.root)}`
+                + ` day=${this.worldGrowth.simulationDay}`
+                + ` season=${sf}`
+                + ` E=${this.stats.energy.toFixed(3)}`
+                + ` age=${this.stats.age.toFixed(2)}`
+                + `\n` + dumpTree(this.root, 0)
+            );
+        }
 
         this.worldGrowth.syncEnergyFromStats(this.stats.energy);
     }
@@ -166,7 +204,27 @@ export class BonsaiController {
         if (saved) {
             try {
                 const data = JSON.parse(saved);
-                this.stats = data.stats;
+
+                // Validate stats integrity — reject corrupted saves
+                const s = data.stats;
+                if (!s || typeof s.energy !== 'number') {
+                    console.warn("Corrupted save state detected, starting fresh");
+                    localStorage.removeItem('gobonsai_state');
+                    return false;
+                }
+
+                // Repair targets that fell behind current values (old save compat)
+                if (typeof s.targetThickness !== 'number' || s.targetThickness < 0.1) {
+                    s.targetThickness = (s.trunkThickness || 0) + 5.0;
+                }
+                if (typeof s.targetAge !== 'number' || s.targetAge < (s.age || 0)) {
+                    s.targetAge = (s.age || 0) + 1.0;
+                }
+                if (typeof s.targetBend !== 'number') {
+                    s.targetBend = s.trunkBend || 3.0;
+                }
+
+                this.stats = s;
                 this.gameTime = data.gameTime;
                 if (typeof data.simulationDay === "number") {
                     this.worldGrowth.simulationDay = data.simulationDay;
@@ -189,6 +247,7 @@ export class BonsaiController {
                 return true;
             } catch (e) {
                 console.error("Failed to load state", e);
+                localStorage.removeItem('gobonsai_state');
             }
         }
         return false;

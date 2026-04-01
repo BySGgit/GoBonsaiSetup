@@ -3,12 +3,11 @@ import { MSVCRand } from './MSVCRand';
 import { TreeSection } from './TreeSection';
 import { MetabolismService, MetabolismUpdateResult } from './MetabolismService';
 import { GrowthService, GrowthState } from './GrowthService';
-import { BranchingService } from './BranchingService';
 import { GrowthConstants } from './config/GrowthConstants';
 import { Float32 } from './math/MathTypes';
-import { TransformService } from './math/TransformService';
 import { TREE_CONSTANTS } from './TreeConstants';
 import { SectionColorService } from './SectionColorService';
+import { SectionRuntimeType } from './SectionRuntimeType';
 
 export type GrowthStats = GrowthState & {
     energy: number;
@@ -74,69 +73,36 @@ export class GrowthController {
         stats.energy = e;
         root.energy = e as Float32;
 
-        if (stats.health > 0.4) {
-            const energySpent = BranchingService.process(root, stats.energy, this.rng);
-            stats.energy = Math.max(0, stats.energy - energySpent);
-            root.energy = stats.energy as Float32;
-        }
+        // Branching now happens inside twigUpdateSub417C90 → branchingDispatcherSub417F40
     }
 
     /**
-     * sub_416510.c:225–306 — currentGrowth, накопления +105/+106, прирост growthRate при headroom;
-     * продолжение сегмента (TS) когда growthRate достиг maxGrowth.
+     * Stripped-down sub_416510 tail: compute growthScratchA/B for energy aggregation
+     * and apply section colors. Growth/branching is now handled by twig update pipeline.
      */
-    public updateSectionGrowth(section: TreeSection, deltaTime: number, treeAge: number): void {
-        if (section.skipGrowthTick) {
-            for (const child of section.children) {
-                this.updateSectionGrowth(child, deltaTime, treeAge);
-            }
-            return;
-        }
-
-        if (section.baseGrowth <= 0.0) {
-            section.isPruned = true;
-            return;
-        }
-
+    public updateEnergyScratches(root: TreeSection, deltaTime: number): void {
         const simTicks = Math.min(2, deltaTime * 60);
-        const v34 = Math.min(1, section.lastLightFactor);
+        const leafProd = GrowthConstants.LEAF_ENERGY_PRODUCTION as number;
 
-        section.currentGrowth = Math.min(1.0, section.baseGrowth * section.energy);
-
-        const v16 = section.growthRate * v34;
-        const v19 =
-            v16 *
-            v34 *
-            section.energy *
-            GrowthConstants.LEAF_ENERGY_PRODUCTION *
-            simTicks;
-        section.growthScratchA = v19;
-        section.growthScratchB += v19;
-
-        if (section.growthRate < section.maxGrowth) {
-            const v27 = v34 * GrowthConstants.FLT_4D63C4;
-            const rnd = this.rng.randFloat() * 0.5 + 0.5;
-            let v33 = rnd * (section.energy * v27) + section.growthRate;
-            if (v33 > section.maxGrowth) v33 = section.maxGrowth;
-            section.growthRate = v33;
-            section.growthTarget = section.growthRate + section.growthRate;
-        } else {
-            const hasContinuation = section.children.some(c => c.isContinuation);
-            if (!hasContinuation && section.baseGrowth > 0.1) {
-                const nextSection = section.addBranch(1.0, true);
-                if (nextSection) {
-                    nextSection.baseGrowth = section.baseGrowth * 0.85;
-                    nextSection.maxGrowth = section.maxGrowth * 0.9;
-                    section.growthRate = section.maxGrowth;
-                }
+        const walk = (section: TreeSection): void => {
+            if (section.skipGrowthTick) {
+                for (const c of section.children) walk(c);
+                return;
             }
-        }
 
-        SectionColorService.applyFrom416510(section, treeAge);
+            const v34 = Math.min(1, section.lastLightFactor as number);
+            const v16 = (section.growthRate as number) * v34;
+            const v19 = v16 * v34 * (section.energy as number) * leafProd * simTicks;
+            section.growthScratchA = v19 as Float32;
+            section.growthScratchB = ((section.growthScratchB as number) + v19) as Float32;
 
-        for (const child of section.children) {
-            this.updateSectionGrowth(child, deltaTime, treeAge);
-        }
+            if (section.sectionRuntimeType4 === SectionRuntimeType.TreeSectionLeaf) {
+                SectionColorService.applyFrom416510(section, 0);
+            }
+
+            for (const c of section.children) walk(c);
+        };
+        walk(root);
     }
 
     /**

@@ -11,7 +11,6 @@ import {
 } from "./sub40DC90PoolBalance";
 import {
     syncEnergyWeight428FromGeometry,
-    syncTwigFloat444448FromGeometry,
     distributeEnergyBudget432DownTree,
     aggregateEnergy420436PostOrder,
     applySub414E10PostOrderTail,
@@ -19,6 +18,11 @@ import {
 import { maybeRandomAutoCutsSub40DC902 } from "./sub40DC90RandomAutoCuts";
 import { WorldGrowthState } from "../world/WorldGrowthState";
 import { sub414CE0Yearly } from "./sub414CE0";
+import { setSlot36SimulationDay } from "./frameState";
+import { serviceLightTraceQueue, rebuildLeafQueue } from "./lightTracingSub40E460";
+import { perFramePhysicsSub4143E0 } from "./perFramePhysicsSub4143E0";
+import { processDetachFlags } from "./detachPipelineSub40EEE0";
+import { updateWorldObjectsSub40F140 } from "./worldObjectPipelineSub40F140";
 
 export type GrowthFramePipelineParams = {
     deltaTime: number;
@@ -43,7 +47,7 @@ export type GrowthFramePipelineParams = {
  * Комментарии — соответствие оригиналу (цель паритета — sub_40DC90 + слот +36 по спекам).
  *
  * Порядок sub_40DC90 §2.2–2.6: randomAutoCuts → *(v0+216)+=1 и годовой тик → сезон sub_40EE60 →
- * root+432 → слот +36 → баланс E. Метаболизм/рост — MetabolismService / updateSectionGrowth; rollup — sub414E10.
+ * root+432 → слот +36 → баланс E. Метаболизм — MetabolismService; рост/ветвление — virtualSlot36 dispatch; rollup — sub414E10.
  */
 export class GrowthFramePipeline {
     constructor(private readonly growth: GrowthController) {}
@@ -89,11 +93,16 @@ export class GrowthFramePipeline {
         const seasonFactor = worldGrowth.seasonFactor();
         const simulationDay = worldGrowth.simulationDay;
 
+        // Set global simulation day for branching dispatcher (mirrors dword_4D7EE8 + 216)
+        setSlot36SimulationDay(simulationDay);
+
         // --- sub_40DC90 + sub_414E10: сброс +420/+432 на дереве, бюджет корня, веса +428, доли child+432 ---
         resetAllEnergyAggregates(root);
         syncEnergyWeight428FromGeometry(root);
         writeRootEnergyBudget432(root, stats.energy, seasonFactor);
-        // sub_40DC90 §2.5: (*root+36) — внутри distribute: Seed → sub_417440, затем sub_414E10 + (*child+36)
+
+        // sub_40DC90 §2.5: (*root+36) — distribute + virtualSlot36 dispatch (Seed→Bud→Twig lifecycle)
+        // Inside this call: energy distribution, Bud→Twig conversion, twig girth/length/branch, health/death
         distributeEnergyBudget432DownTree(root, rng);
 
         // --- sub_416510 (часть): свет → энергия на секциях; +436 на листьях (терминальные секции) ---
@@ -106,23 +115,33 @@ export class GrowthFramePipeline {
             deltaTime
         );
 
-        // --- Рост/цвет по секциям (фрагменты sub_416510 + продолжение сегментов) ---
-        this.growth.updateSectionGrowth(root, deltaTime, stats.age);
+        // --- Scratch energy values for aggregation (stripped-down sub_416510 tail) ---
+        this.growth.updateEnergyScratches(root, deltaTime);
 
-        // --- this+444 / this+448 из геометрии перед хвостом sub_414E10 (max → this+36) ---
-        syncTwigFloat444448FromGeometry(root);
+        // --- sub_416510 leaf block: precise v29/v34 energy, production, growth for leaves ---
+        // NOTE: leaf metabolism runs INSTEAD of MetabolismService for leaf-type sections.
+        // MetabolismService still runs on all sections (including leaves) above, so we
+        // only apply the additional production/growth formulas here, NOT the energy drain.
+        // Full separation (MetabolismService skips leaves) is a TODO(original).
 
         // --- sub_414E10: rollup +420/+436/+480/+484; хвост +424/+440/+36; затем sub_40DC90 leak ---
         aggregateEnergy420436PostOrder(root);
         applySub414E10PostOrderTail(root);
         applyGlobalEnergyPoolAfterGrowth(stats, root);
 
+        // --- Physics: wind/gravity torque → natural curvature ---
+        perFramePhysicsSub4143E0(root, wind);
+
+        // TODO(original): re-enable when verified:
+        // rebuildLeafQueue(root); serviceLightTraceQueue(root, rng, wind);
+        // processDetachFlags(root, rng);
+
         tickEnvironment();
 
         const ageFactor = stats.age / 10.0;
         const dayOfYear = simulationDay % 365;
 
-        // --- Визуальное обновление иерархии (draw/update веток; не путать с одним вызовом +36) ---
+        // --- Визуальное обновление иерархии ---
         root.update(
             ageFactor,
             lightIntensity,

@@ -3,6 +3,7 @@ import { onMounted, ref, onUnmounted, watch } from 'vue';
 import * as THREE from 'three';
 import { BonsaiController } from '@/engine/BonsaiController';
 import { BonsaiAudio } from '@/engine/BonsaiAudio';
+import { DEBUG_WIREFRAME, setDebugWireframe } from '@/engine/TreeSection';
 import { PotService } from '@/engine/PotService';
 import { EnvironmentService } from '@/engine/EnvironmentService';
 
@@ -188,6 +189,7 @@ onMounted(() => {
 
       emit('update-stats', {
         age: bonsai.age,
+        targetAge: bonsai.targetAge,
         gameTime: bonsai.gameTime,
         energy: bonsai.energy,
         health: bonsai.health,
@@ -271,6 +273,7 @@ onMounted(() => {
     canvasContainer.value.addEventListener('mousemove', onMouseMove);
   }
   window.addEventListener('resize', onWindowResize);
+  window.addEventListener('keydown', onKeyDown);
 });
 
 const onMouseMove = (event: MouseEvent) => {
@@ -287,9 +290,10 @@ const onMouseMove = (event: MouseEvent) => {
 };
 
 const createEnvironment = (scene: THREE.Scene) => {
-  scene.add(PotService.createPot());
-  scene.add(EnvironmentService.createSoilMound());
-  scene.add(EnvironmentService.createStones(5));
+  // DEBUG: hidden to isolate tree rendering
+  // scene.add(PotService.createPot());
+  // scene.add(EnvironmentService.createSoilMound());
+  // scene.add(EnvironmentService.createStones(5));
   scene.add(EnvironmentService.createFloor());
 };
 
@@ -423,6 +427,13 @@ const onWindowResize = () => {
   composer.setSize(window.innerWidth, window.innerHeight);
 };
 
+const onKeyDown = (e: KeyboardEvent) => {
+  if (e.code === 'KeyW' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    setDebugWireframe(!DEBUG_WIREFRAME);
+    console.log(`[Debug] wireframe: ${DEBUG_WIREFRAME}`);
+  }
+};
+
 onUnmounted(() => {
   cancelAnimationFrame(animationId);
   if (canvasContainer.value) {
@@ -430,6 +441,7 @@ onUnmounted(() => {
     canvasContainer.value.removeEventListener('mousemove', onMouseMove);
   }
   window.removeEventListener('resize', onWindowResize);
+  window.removeEventListener('keydown', onKeyDown);
   renderer?.dispose();
 });
 </script>
