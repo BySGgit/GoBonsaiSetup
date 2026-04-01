@@ -3,7 +3,6 @@ import { TreeSection } from './TreeSection';
 import { TreeRoot } from './TreeRoot';
 import { MSVCRand } from './MSVCRand';
 import { GrowthController, GrowthStats } from './GrowthController';
-import { TransformService } from './math/TransformService';
 import { Sub416510Rotation } from './math/Sub416510Rotation';
 import { WorldGrowthState } from './world/WorldGrowthState';
 import { GrowthFramePipeline } from './growth/GrowthFramePipeline';
@@ -23,7 +22,8 @@ export class BonsaiController {
     public treeRoots: TreeRoot[] = [];
     
     public lightIntensity: number = 1.0;
-    public wind: THREE.Vector3 = new THREE.Vector3(0.02, 0, 0.01); 
+    /** Базовый ветер (м/с условно); держать слабым — иначе крутящий момент sub_414A70 валит всё в одну сторону. */
+    public wind: THREE.Vector3 = new THREE.Vector3(0.004, 0, 0.002); 
     public timeSpeed: number = 1.0;
     
     private onLog?: (message: string, type: 'info' | 'warning' | 'error' | 'success') => void;
@@ -42,15 +42,11 @@ export class BonsaiController {
         this.root.sectionRuntimeType4 = SectionRuntimeType.TreeSectionSeed;
         this.root.sub414CE0SeedBudget428 = 1.0;
         
-        // Root initial lean — subtle tilt only (±5°)
-        TransformService.rotationYawPitchRoll(
-            this.root.targetRotation,
-            this.stats.trunkRotationY * 0.05,
-            this.stats.trunkRotationX * 0.05,
-            this.stats.trunkRotationZ * 0.05
-        );
-        this.root.rotationQuaternion.copy(this.root.targetRotation);
-        this.root.rotation.copy(this.root.targetRotation);
+        // Семя/корень: без начального наклона — наклон задаётся ростом веток и физикой.
+        // (раньше: trunkRotation * 0.05 давало заметный угол «с первого кадра».)
+        this.root.targetRotation.identity();
+        this.root.rotationQuaternion.identity();
+        this.root.rotation.identity();
         Sub416510Rotation.syncBlob80FromQuaternion(this.root);
 
         this.scene.add(this.root.group);
@@ -87,6 +83,7 @@ export class BonsaiController {
             treeRoots: this.treeRoots,
             tickEnvironment: () => this.updateEnvironment(),
             rng: this.rng,
+            scene: this.scene,
         });
         metabolismLogs.forEach(msg => this.addLog(msg, 'warning'));
 
@@ -140,8 +137,9 @@ export class BonsaiController {
 
     private updateEnvironment(): void {
         const timeScale = (Date.now() * 0.001) % (Math.PI * 2);
-        this.wind.x = 0.02 + Math.sin(timeScale) * 0.01;
-        this.wind.z = 0.01 + Math.cos(timeScale * 0.5) * 0.01;
+        // Слабая модуляция — иначе sub_414A70 накапливает крен «в сторону» за тысячи кадров
+        this.wind.x = 0.004 + Math.sin(timeScale) * 0.002;
+        this.wind.z = 0.002 + Math.cos(timeScale * 0.5) * 0.002;
     }
 
     public prune(target: THREE.Object3D): boolean {

@@ -3,6 +3,7 @@ import { TreeSection } from "../TreeSection";
 import { GrowthConstants, byte4D8226ForSectionType } from "../config/GrowthConstants";
 import { Float32 } from "../math/MathTypes";
 import { TransformService } from "../math/TransformService";
+import { SectionRuntimeType } from "../SectionRuntimeType";
 
 /**
  * sub_4143E0 — per-frame physics/smoothing (vtable slot +12).
@@ -26,6 +27,10 @@ const _tmpVec2 = new THREE.Vector3();
 const _tmpAxis = new THREE.Vector3();
 const _tmpQuat = new THREE.Quaternion();
 const _tmpMat = new THREE.Matrix4();
+const _parentWorldQuat = new THREE.Quaternion();
+const _worldQuat = new THREE.Quaternion();
+const _yUp = new THREE.Vector3(0, 1, 0);
+const _alignLight = new THREE.Quaternion();
 
 /**
  * Entry point: call once per frame on the root section.
@@ -61,6 +66,10 @@ function walkPhysics(section: TreeSection, wind: THREE.Vector3): void {
 
     // Step 5: smooth light direction vectors
     smoothLightDirections(section);
+
+    // Step 5b: nudge twig targetRotation toward smoothed light (sub_40E460 + sub_4143E0)
+    // APPROX: минимальный поворот локальной оси +Y к prevDirectionVec; без полного sub_416510.
+    applyTwigLightSeeking(section);
 
     // Step 6: exponential smoothing of accumulators
     section.smoothTargetA = ((section.smoothTargetA as number)
@@ -120,7 +129,8 @@ function applyWindTorqueSub414A70(section: TreeSection, wind: THREE.Vector3): vo
     if (Math.abs(det) < 1e-8) return;
     _tmpMat.copy(section.group.matrixWorld).invert();
 
-    _tmpVec.copy(GRAVITY_DIRECTION).addScaledVector(wind, 0.1);
+    // В exe ветер из INI обычно мал; сильный wind → постоянный изгиб в сторону
+    _tmpVec.copy(GRAVITY_DIRECTION).addScaledVector(wind, 0.012);
     _tmpVec.transformDirection(_tmpMat);
     if (_tmpVec.lengthSq() < 1e-10) return;
     _tmpVec.normalize();
@@ -144,7 +154,9 @@ function applyWindTorqueSub414A70(section: TreeSection, wind: THREE.Vector3): vo
     let factor = Math.abs(Math.sin(angle)) * section.totalWeight460 * centroidLen;
     factor *= Math.pow(radius, accelPow);
     factor *= GRAVITY_LENGTH;
-    factor = Math.max(0, Math.min(0.15, factor));
+    // Меньше кручение на толстых/низких уровнях — иначе всё дерево «в одну сторону» и валится
+    factor *= 1.0 / (1.0 + section.level * 0.85);
+    factor = Math.max(0, Math.min(0.014, factor));
 
     section.targetRotation.slerp(_tmpQuat, factor);
 }
@@ -177,4 +189,31 @@ function smoothLightDirections(section: TreeSection): void {
     if (section.prevDirectionVec.lengthSq() > 1e-12) {
         section.prevDirectionVec.normalize();
     }
+}
+
+/**
+ * Локально поворачивает targetRotation ветки так, чтобы ось +Y приближалась к prevDirectionVec (мир).
+ * Вызывается после smoothLightDirections; сила от smoothedLightA (sub_40E460).
+ */
+function applyTwigLightSeeking(section: TreeSection): void {
+    if (section.sectionRuntimeType4 !== SectionRuntimeType.TreeSectionTwig) return;
+    const w = section.smoothedLightA as number;
+    if (w < 0.08 || section.prevDirectionVec.lengthSq() < 1e-10) return;
+
+    if (section.parent) {
+        section.parent.group.getWorldQuaternion(_parentWorldQuat);
+    } else {
+        _parentWorldQuat.identity();
+    }
+    _worldQuat.copy(_parentWorldQuat).multiply(section.targetRotation);
+    _tmpQuat.copy(_worldQuat).invert();
+    _tmpVec.copy(section.prevDirectionVec).applyQuaternion(_tmpQuat);
+    _tmpVec.normalize();
+    if (_tmpVec.lengthSq() < 1e-10) return;
+
+    _alignLight.setFromUnitVectors(_yUp, _tmpVec);
+    // Слабее «подтягивание к свету», чтобы не суммировалось с ветром в один заметный крен
+    const t = Math.min(0.035, 0.012 + 0.028 * Math.min(1, w));
+    section.targetRotation.slerp(_alignLight, t);
+    section.targetRotation.normalize();
 }

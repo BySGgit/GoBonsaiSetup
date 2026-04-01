@@ -29,7 +29,7 @@ const _tmpEuler = new THREE.Euler();
  * Adds them to the provided scene group so they're visible.
  */
 export function updateWorldObjectsSub40F140(
-    sceneGroup: THREE.Group,
+    sceneGroup: THREE.Object3D,
     wind: THREE.Vector3,
     rng: MSVCRand,
 ): void {

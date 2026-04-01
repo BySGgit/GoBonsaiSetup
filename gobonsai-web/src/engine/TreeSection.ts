@@ -144,6 +144,13 @@ export class TreeSection
   /** this+232 — slow copy of +212 (coeff 0.1) from sub_4143E0 */
   public smoothTargetB: Float32 = 0.1;
 
+  /**
+   * sub_450BD0 + sub_450A80: объединённая сфера поддерева для broad-phase sub_450860
+   * (this+8..+16 центр, this+20 радиус). Узкий тест sub_450970 остаётся по this+24 и +36.
+   */
+  public lightSpatialCenter8: THREE.Vector3 = new THREE.Vector3();
+  public lightSpatialRadius20: number = 0;
+
   // ─── Physics fields (sub_414870 / sub_414A70 / sub_414BB0) ──────
   /** this+460 — total weight of subtree (mass + children) */
   public totalWeight460: number = 0;
@@ -345,9 +352,16 @@ export class TreeSection
       deltaTime,
     );
 
+    // sub_40D6D0 (лист): нормаль пластины для sub_40E460 lightDecay — локальная +Y в мир.
+    if (this.sectionRuntimeType4 === SectionRuntimeType.TreeSectionLeaf) {
+      this.directionVector.set(0, 1, 0).applyQuaternion(this.rotationQuaternion);
+      this.directionVector.normalize();
+    }
+
     const stabilityFactor = Math.pow(4.0, 6 - this.level);
+    // Слабее покачивание — иначе все сегменты визуально «качаются в одну фазу» с физикой
     const swayFactor =
-      (0.002 + (1.0 - globalHealth) * 0.005) *
+      (0.0007 + (1.0 - globalHealth) * 0.002) *
       (wind.length() / stabilityFactor);
     const swayX =
       Math.sin(Date.now() * 0.0005 + this.level) * wind.x * swayFactor;

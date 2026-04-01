@@ -98,6 +98,11 @@ export const GrowthConstants = {
 
   LIGHT_VECTOR: new THREE.Vector3(0.0, 1.0, 0.0) as D3DXVECTOR3,
 
+  /** sub_40E230: INI directLightPercent → flt_4D8CF0 (lazy в exe; дефолт APPROX) */
+  FLT_4D8CF0_DIRECT_LIGHT_PERCENT: 0.5 as Float32,
+  /** sub_40E460: INI lightDecayAmount → flt_4D62EC (full.c .data) */
+  FLT_4D62EC_LIGHT_DECAY_AMOUNT: 0.40000001 as Float32,
+
   FLT_4D63B0: 0.5 as Float32,
   FLT_4D63B4: 0.2 as Float32,
   FLT_4D63B8: 1.0 as Float32,

@@ -28,7 +28,10 @@ function yearsSinceBranch(section: TreeSection): number {
     return Math.floor(worldTime / 365) - Math.floor(birthTime / 365);
 }
 
-let _branchDbgCounter = 0;
+/** sub_415470.c — та же метрика «лет», что в sub_417F40, для дочерней секции (условие апикального ветвления). */
+function sub415470Years(section: TreeSection): number {
+    return yearsSinceBranch(section);
+}
 
 export function branchingDispatcherSub417F40(
     section: TreeSection,
@@ -38,25 +41,20 @@ export function branchingDispatcherSub417F40(
     if (years < 1) return;
 
     if (years > 3 && (section.twigRadius444 as number) > 0.2) {
-        const prevChildren = section.children.length;
         lateralBranchSub4188E0(section, rng);
-        if (section.children.length > prevChildren) {
-            console.log(`[Branch] LATERAL: tR=${(section.twigRadius444 as number).toFixed(3)} yrs=${years} children=${section.children.length}`);
-        } else if (++_branchDbgCounter % 500 === 0) {
-            const avail = (section.energyBudget432 as number) - (section.energySpent436 as number);
-            console.log(`[Branch] lateral attempt #${_branchDbgCounter}: yrs=${years} tR=${(section.twigRadius444 as number).toFixed(3)} avail=${avail.toFixed(4)}`);
-        }
     } else {
+        // sub_417F40.c: v2<=1 && (v2!=1 || (sub_416300(first)&&sub_415470(first))) → sub_417FF0
+        // Иначе ветвление не выполняется (не упрощённое sub_418660 напрямую).
         const childCount = section.children.length;
         if (childCount <= 1) {
             if (childCount === 0) {
-                simplifiedBranchSub418660(section, rng);
+                apicalBranchSub417FF0(section, rng);
             } else {
                 const firstTwig = sub416300Filter(section.children[0]);
-                if (firstTwig) {
+                const okChild =
+                    firstTwig !== null && sub415470Years(firstTwig) !== 0;
+                if (okChild) {
                     apicalBranchSub417FF0(section, rng);
-                } else {
-                    simplifiedBranchSub418660(section, rng);
                 }
             }
         }
@@ -80,7 +78,13 @@ function lateralBranchSub4188E0(
 
     if (available < minE) return;
 
-    let v14 = (available - minE) / (maxE - minE) * 0.003;
+    // sub_4188E0.c: v14 = v13 / flt_4D8630 * 0.0003000000142492354; затем clamp [0, 0.003]
+    // Сравнение: if (v14 > rand/32767) — у нас randFloat() ∈ [0,1] как rand/32767
+    //
+    // Важно: этот шанс влияет только на sub_4188E0 (боковой побег). Рост 5→8 секций у молодого
+    // дерева идёт через sub_417FF0 (апикальное / пара), не через v14 — поэтому убрать веб-множитель
+    // у v14 часто «не видно» в логах/форме, пока латераль ни разу не прошёл rand.
+    let v14 = (available / maxE) * 0.0003;
     v14 = Math.max(0, Math.min(0.003, v14));
 
     if (rng.randFloat() >= v14) return;
@@ -91,7 +95,17 @@ function lateralBranchSub4188E0(
     const bud = createBudChild(section, yaw, pitch, rng);
     if (!bud) return;
 
-    section.energySpent436 = ((section.energySpent436 as number) + minE) as Float32;
+    section.spawnDelta480 = (section.spawnDelta480 + 1) >>> 0;
+
+    // APPROX(sub_4188E0): позиция вдоль ствола — иначе боковой побег визуально у «корня» короткого сегмента.
+    bud.branchPosition = (0.22 + rng.randFloat() * 0.72) as Float32;
+    bud.updateAttachmentPosition(section);
+
+    // sub_4188E0.c: v23 = minE + (min(available,maxE)-minE)*rand; +436 += v23
+    let v5 = available;
+    if (maxE <= available) v5 = maxE;
+    const v23 = minE + (v5 - minE) * rng.randFloat();
+    section.energySpent436 = ((section.energySpent436 as number) + v23) as Float32;
 
     normalizeChildWeights(section);
 }
@@ -111,26 +125,34 @@ function apicalBranchSub417FF0(
     const apicalStr = GrowthConstants.FLT_4D8638 as number;
     const available = (section.energyBudget432 as number) - (section.energySpent436 as number);
 
-    if (available < minE) return;
+    // sub_417FF0.c: v33 = (1 - flt_4D8638)^(rollup484 - 1)
+    let v33 = 1.0;
+    const roll = section.rollupDword484 >>> 0;
+    for (let i = 0; i < Math.max(0, roll - 1); i++) {
+        v33 *= 1.0 - apicalStr;
+    }
 
-    const tickFactor = Math.max(1, section.rollupDword484 - 1);
-    const v33 = Math.pow(tickFactor, apicalStr);
-    const cost = apicalStr * available * Math.min(1, 1.0 / v33);
+    // sub_417FF0.c: v17 = flt_4D8638 * (available * v33); только при v17 >= minBud
+    const v17 = apicalStr * available * v33;
+    if (v17 < minE) return;
+
+    section.energySpent436 = ((section.energySpent436 as number) + v17) as Float32;
 
     if (section.children.length === 0) {
-        simplifiedBranchSub418660(section, rng);
+        simplifiedBranchSub418660(section, rng, false);
         return;
     }
 
-    // Paired branching: two buds at slight angles from parent axis
+    // Paired branching: два побега; стоимость уже списана (v17)
     const baseYaw = rng.randFloat() * Math.PI * 2;
     const spreadAngle = 0.3 + rng.randFloat() * 0.4;
 
     const bud1 = createBudChild(section, baseYaw + spreadAngle, -0.3, rng);
+    if (bud1) section.spawnDelta480 = (section.spawnDelta480 + 1) >>> 0;
     const bud2 = createBudChild(section, baseYaw - spreadAngle + Math.PI, -0.3, rng);
+    if (bud2) section.spawnDelta480 = (section.spawnDelta480 + 1) >>> 0;
 
     if (bud1 || bud2) {
-        section.energySpent436 = ((section.energySpent436 as number) + cost) as Float32;
         normalizeChildWeights(section);
     }
 }
@@ -141,13 +163,20 @@ function apicalBranchSub417FF0(
  * sub_418660.c: simple branch — one bud, maybe a second opposite.
  * Random yaw, one child segment; if energy sufficient AND rand() < 0.2 → second bud.
  */
+/**
+ * sub_418660.c — упрощённое ветвление.
+ * @param debit436 — если false, не трогаем +436 (энергия уже списана в sub_417FF0 перед вызовом).
+ */
 function simplifiedBranchSub418660(
     section: TreeSection,
     rng: MSVCRand,
+    debit436: boolean = true,
 ): void {
     const minE = GrowthConstants.FLT_4D862C as number;
-    const available = (section.energyBudget432 as number) - (section.energySpent436 as number);
-    if (available < minE) return;
+    const budget = section.energyBudget432 as number;
+    const available = budget - (section.energySpent436 as number);
+    // Одиночный вызов sub_418660: нужен запас энергии. Из sub_417FF0: порог уже проверен (v17), +436 обновлён.
+    if (debit436 && available < minE) return;
 
     const yaw = rng.randFloat() * Math.PI * 2 - Math.PI;
     const pitch = rng.randFloat() * 0.8 - 0.2;
@@ -155,11 +184,19 @@ function simplifiedBranchSub418660(
     const bud1 = createBudChild(section, yaw, pitch, rng);
     if (!bud1) return;
 
-    section.energySpent436 = ((section.energySpent436 as number) + minE * 0.5) as Float32;
+    section.spawnDelta480 = (section.spawnDelta480 + 1) >>> 0;
 
-    if (available > minE * 2 && rng.randFloat() < 0.2) {
-        createBudChild(section, yaw + Math.PI, pitch, rng);
+    if (debit436) {
         section.energySpent436 = ((section.energySpent436 as number) + minE * 0.5) as Float32;
+    }
+
+    // sub_418660.c: второй побег — при minBud < +432 и rand < 0.2 (не «двойной запас» как в старом TS)
+    if (minE < budget && rng.randFloat() < 0.2) {
+        const bud2 = createBudChild(section, yaw + Math.PI, pitch, rng);
+        if (bud2) section.spawnDelta480 = (section.spawnDelta480 + 1) >>> 0;
+        if (debit436) {
+            section.energySpent436 = ((section.energySpent436 as number) + minE * 0.5) as Float32;
+        }
     }
 
     normalizeChildWeights(section);

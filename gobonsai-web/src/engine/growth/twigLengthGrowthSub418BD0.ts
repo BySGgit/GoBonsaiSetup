@@ -59,9 +59,9 @@ function slerpTowardLight(section: TreeSection): void {
     const slerpFactor = GrowthConstants.FLT_4D8610 as number;
     if (slerpFactor <= 0) return;
 
-    // Use the group's world matrix inverse to transform the light vector into local space
+    // sub_418BD0.c: sub_401540(+196, …, +352) — локальный вектор из lightResponse (+196), не глобальный свет.
     const worldInverse = new THREE.Matrix4().copy(section.group.matrixWorld).invert();
-    _tmpVec.copy(GrowthConstants.LIGHT_VECTOR).applyMatrix4(worldInverse).normalize();
+    _tmpVec.copy(section.lightResponseVec).applyMatrix4(worldInverse).normalize();
 
     if (_tmpVec.lengthSq() < 1e-10) return;
 

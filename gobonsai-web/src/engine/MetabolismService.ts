@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { TreeSection } from './TreeSection';
 import { GrowthConstants } from './config/GrowthConstants';
 import { MSVCRand } from './MSVCRand';
+import { SectionRuntimeType } from './SectionRuntimeType';
+import { processLeafMetabolism } from './growth/leafMetabolismSub416510';
 
 const _inv = new THREE.Matrix4();
 const _normalMat = new THREE.Matrix3();
@@ -34,11 +36,14 @@ export class MetabolismService {
         lightDirection: THREE.Vector3,
         lightIntensity: number,
         deltaTime: number,
-        rng: MSVCRand
+        rng: MSVCRand,
+        treeAge: number,
     ): MetabolismUpdateResult {
         const logs: string[] = [];
         MetabolismService.syncMetabolismLightScales(root);
         MetabolismService.clearGrowthSkipFlags(root);
+        // sub_416510: листья — отдельный блок; generic visit ниже их не трогает (нет двойного drain +436).
+        processLeafMetabolism(root, lightDirection, lightIntensity, rng, treeAge, deltaTime);
         const totalEnergySpent = MetabolismService.updateBranchEnergyTree(
             root,
             lightDirection,
@@ -114,6 +119,13 @@ export class MetabolismService {
         let totalSpent = 0;
 
         const visit = (section: TreeSection, isRoot: boolean): void => {
+            if (section.sectionRuntimeType4 === SectionRuntimeType.TreeSectionLeaf) {
+                for (const child of section.children) {
+                    visit(child, false);
+                }
+                return;
+            }
+
             const energyBeforeVisit = section.energy;
 
             if (lightDirection.lengthSq() > 1e-12) {

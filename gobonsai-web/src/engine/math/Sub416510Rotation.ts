@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { TreeSection } from '../TreeSection';
 import { GrowthConstants } from '../config/GrowthConstants';
+import { SectionRuntimeType } from '../SectionRuntimeType';
 import { TransformService } from './TransformService';
 
 const _u = new THREE.Vector3();
@@ -42,11 +43,16 @@ export class Sub416510Rotation {
     public static apply(section: TreeSection, _trunkBend: number, _v34: number, deltaTime: number): void {
         Sub416510Rotation.snapshotPrevDataFromBlob80(section);
 
-        // Gently slerp current orientation toward targetRotation.
-        // targetRotation is set by growth (branching angles, light response, physics).
-        // This replaces the broken sub_416510 rotation block that incorrectly used
-        // direction vector components as Euler angles (causing 57° per-frame tilt).
-        // TODO(original): fully reconstruct sub_416510.c:226-273 with correct semantics.
+        // TreeSectionTwig: vtable +36 — sub_417C90 (twigUpdateSub417C90), не sub_416510.
+        // Там уже slerp (+304)→(+320) с flt_4D8624; повторный slerp с flt_4D63C0 давал двойной поворот.
+        if (section.sectionRuntimeType4 === SectionRuntimeType.TreeSectionTwig) {
+            section.rotation.copy(section.rotationQuaternion);
+            Sub416510Rotation.storeQuatToBlob80(section);
+            return;
+        }
+
+        // Лист и прочие: мягкий slerp к targetRotation (замена блока sub_416510.c:226–273).
+        // TODO(original): полностью восстановить sub_416510.c:226-273 для листа по декомпилу.
         const simTicks = Math.min(2, deltaTime * 60);
         const t = Math.min(1, GrowthConstants.FLT_4D63C0 * simTicks) as number;
 

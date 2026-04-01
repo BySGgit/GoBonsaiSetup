@@ -6,9 +6,6 @@ import { GrowthService, GrowthState } from './GrowthService';
 import { GrowthConstants } from './config/GrowthConstants';
 import { Float32 } from './math/MathTypes';
 import { TREE_CONSTANTS } from './TreeConstants';
-import { SectionColorService } from './SectionColorService';
-import { SectionRuntimeType } from './SectionRuntimeType';
-
 export type GrowthStats = GrowthState & {
     energy: number;
     health: number;
@@ -77,8 +74,7 @@ export class GrowthController {
     }
 
     /**
-     * Stripped-down sub_416510 tail: compute growthScratchA/B for energy aggregation
-     * and apply section colors. Growth/branching is now handled by twig update pipeline.
+     * Stripped-down sub_416510 tail: growthScratchA/B для aggregate (+420); цвет листьев — в processLeafMetabolism.
      */
     public updateEnergyScratches(root: TreeSection, deltaTime: number): void {
         const simTicks = Math.min(2, deltaTime * 60);
@@ -96,9 +92,7 @@ export class GrowthController {
             section.growthScratchA = v19 as Float32;
             section.growthScratchB = ((section.growthScratchB as number) + v19) as Float32;
 
-            if (section.sectionRuntimeType4 === SectionRuntimeType.TreeSectionLeaf) {
-                SectionColorService.applyFrom416510(section, 0);
-            }
+            // Цвет листьев — в processLeafMetabolism (treeAge); дублировать здесь нельзя.
 
             for (const c of section.children) walk(c);
         };
@@ -125,8 +119,16 @@ export class GrowthController {
         root: TreeSection,
         lightDirection: THREE.Vector3,
         lightIntensity: number,
-        deltaTime: number
+        deltaTime: number,
     ): MetabolismUpdateResult {
-        return MetabolismService.update(stats, root, lightDirection, lightIntensity, deltaTime, this.rng);
+        return MetabolismService.update(
+            stats,
+            root,
+            lightDirection,
+            lightIntensity,
+            deltaTime,
+            this.rng,
+            stats.age,
+        );
     }
 }

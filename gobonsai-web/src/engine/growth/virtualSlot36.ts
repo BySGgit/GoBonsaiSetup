@@ -117,42 +117,9 @@ function postDispatchByType(
       twigUpdateSub417C90(section, rng);
       break;
     case SectionRuntimeType.TreeSectionLeaf:
-      leafProductionInSlot36(section, rng);
+      // sub_416510 для листьев выполняется в MetabolismService.processLeafMetabolism (после matrixWorld).
       break;
   }
-}
-
-/**
- * Simplified sub_416510 leaf metabolism within the slot-36 dispatch.
- * Sets energyProduction420 (from growthRate * light * energy * leafProd)
- * and increments growthRate towards maxGrowth (§7 of sub_416510).
- *
- * Energy drain is handled separately by MetabolismService to avoid double-drain.
- * lastLightFactor comes from the previous frame (MetabolismService hasn't run yet).
- */
-function leafProductionInSlot36(
-  section: TreeSection,
-  rng: MSVCRand | undefined,
-): void {
-  const v34 = Math.max(0, Math.min(1, section.lastLightFactor as number));
-  const energyVal = section.energy as number;
-  const leafProd = GrowthConstants.FLT_4D8634 as number;
-  const c4 = GrowthConstants.FLT_4D63C4 as number;
-  let gr = section.growthRate as number;
-
-  // §7: grow growthRate towards maxGrowth when headroom exists
-  const maxG = section.maxGrowth as number;
-  if (maxG > gr && rng) {
-    const v27 = v34 * c4;
-    const increment = (rng.randFloat() * 0.5 + 0.5) * (energyVal * v27);
-    gr = Math.min(gr + increment, maxG);
-    section.growthRate = gr as Float32;
-    section.growthTarget = (gr + gr) as Float32;
-  }
-
-  // §6: production +420
-  const v16 = gr * v34;
-  section.energyProduction420 = (v16 * v34 * energyVal * leafProd) as Float32;
 }
 
 // ─── sub_415EF0: Bud +36 post-dispatch ─────────────────────────────
@@ -180,9 +147,8 @@ function budAfterSub414E10From415EF0(
 
   // C uses *(this+168) = HEAD of linked list (most recently prepended child).
   // TS uses push() (append), so the newest child is children[last].
-  const newestChild = bud.children.length > 0
-    ? bud.children[bud.children.length - 1]
-    : null;
+  const newestChild =
+    bud.children.length > 0 ? bud.children[bud.children.length - 1] : null;
   const activeTwig = sub416300FilterTwig(newestChild);
 
   if (activeTwig === null || !activeTwig.growthFlag512) {

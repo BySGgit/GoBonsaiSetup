@@ -67,7 +67,5 @@ export function twigUpdateSub417C90(
     }
     section.healthEnergy456 = Math.max(0, Math.min(1, health)) as Float32;
 
-    // §7: death / detach conditions — only effective when detach pipeline is active.
-    // TODO(original): re-enable when processDetachFlags is turned on in GrowthFramePipeline.
-    // Without the pipeline, markedForDetach236 is never consumed but poisons the D! debug flag.
+    // §7: death — помечает +236; съедается в GrowthFramePipeline через processDetachFlags → sub_40EEE0.
 }

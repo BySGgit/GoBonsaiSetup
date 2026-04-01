@@ -19,6 +19,22 @@ const _tmpMat = new THREE.Matrix4();
 const _tmpVec = new THREE.Vector3();
 
 /**
+ * После virtual slot +36 (slerp +320→+304 в sub_417C90 и т.д.), до sub_416510:
+ * в exe мировая матрица уже отражает текущий кватернион; в TS `group` иначе обновляется
+ * только в `TreeSection.update` в конце кадра — свет/метаболизм видели бы старую ориентацию.
+ */
+export function syncGroupQuaternionsFromRotationForMetabolism(root: TreeSection): void {
+    const walk = (section: TreeSection): void => {
+        if (section.worldDetached188) return;
+        section.group.quaternion.copy(section.rotationQuaternion);
+        for (const child of section.children) {
+            walk(child);
+        }
+    };
+    walk(root);
+}
+
+/**
  * sub_4146F0 equivalent: rebuild section's local transform from quaternion.
  * Call before updateMatrixWorld to ensure the local matrix reflects
  * the current targetQuat/rotationQuaternion.

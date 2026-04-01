@@ -19,10 +19,15 @@ import { maybeRandomAutoCutsSub40DC902 } from "./sub40DC90RandomAutoCuts";
 import { WorldGrowthState } from "../world/WorldGrowthState";
 import { sub414CE0Yearly } from "./sub414CE0";
 import { setSlot36SimulationDay } from "./frameState";
-import { serviceLightTraceQueue, rebuildLeafQueue } from "./lightTracingSub40E460";
+import {
+    serviceLightTraceQueue,
+    rebuildLeafQueue,
+    updateLightSpatialBoundsSub450BD0,
+} from "./lightTracingSub40E460";
 import { perFramePhysicsSub4143E0 } from "./perFramePhysicsSub4143E0";
 import { processDetachFlags } from "./detachPipelineSub40EEE0";
 import { updateWorldObjectsSub40F140 } from "./worldObjectPipelineSub40F140";
+import { syncGroupQuaternionsFromRotationForMetabolism } from "./transformChainSub450BD0";
 
 export type GrowthFramePipelineParams = {
     deltaTime: number;
@@ -40,6 +45,8 @@ export type GrowthFramePipelineParams = {
     tickEnvironment: () => void;
     /** sub_40DC90 §2.2 randomAutoCuts — при включённом флаге INI */
     rng?: MSVCRand;
+    /** Сцена: отсоединённые секции (sub_40EEE0 → sub_40F140) */
+    scene: THREE.Scene;
 };
 
 /**
@@ -47,7 +54,7 @@ export type GrowthFramePipelineParams = {
  * Комментарии — соответствие оригиналу (цель паритета — sub_40DC90 + слот +36 по спекам).
  *
  * Порядок sub_40DC90 §2.2–2.6: randomAutoCuts → *(v0+216)+=1 и годовой тик → сезон sub_40EE60 →
- * root+432 → слот +36 → баланс E. Метаболизм — MetabolismService; рост/ветвление — virtualSlot36 dispatch; rollup — sub414E10.
+ * root+432 → слот +36 → баланс E. Метаболизм — MetabolismService (листья: processLeafMetabolism внутри); rollup — sub414E10; detach + world objects.
  */
 export class GrowthFramePipeline {
     constructor(private readonly growth: GrowthController) {}
@@ -70,6 +77,7 @@ export class GrowthFramePipeline {
             treeRoots,
             tickEnvironment,
             rng,
+            scene,
         } = p;
 
         // --- sub_408D60: интерполяция целей ствола / возраста (UI-статы) ---
@@ -105,6 +113,11 @@ export class GrowthFramePipeline {
         // Inside this call: energy distribution, Bud→Twig conversion, twig girth/length/branch, health/death
         distributeEnergyBudget432DownTree(root, rng);
 
+        // После слота +36: кватернион роста → Object3D (иначе sub_416510 / листья до конца кадра со старым matrixWorld)
+        syncGroupQuaternionsFromRotationForMetabolism(root);
+        // Актуальные matrixWorld для метаболизма (sub_416510) и лучей
+        root.group.updateMatrixWorld(true);
+
         // --- sub_416510 (часть): свет → энергия на секциях; +436 на листьях (терминальные секции) ---
         const lightDirection = GrowthConstants.LIGHT_VECTOR.clone().normalize();
         const metabolism = this.growth.updateMetabolism(
@@ -112,29 +125,30 @@ export class GrowthFramePipeline {
             root,
             lightDirection,
             lightIntensity,
-            deltaTime
+            deltaTime,
         );
 
         // --- Scratch energy values for aggregation (stripped-down sub_416510 tail) ---
         this.growth.updateEnergyScratches(root, deltaTime);
-
-        // --- sub_416510 leaf block: precise v29/v34 energy, production, growth for leaves ---
-        // NOTE: leaf metabolism runs INSTEAD of MetabolismService for leaf-type sections.
-        // MetabolismService still runs on all sections (including leaves) above, so we
-        // only apply the additional production/growth formulas here, NOT the energy drain.
-        // Full separation (MetabolismService skips leaves) is a TODO(original).
 
         // --- sub_414E10: rollup +420/+436/+480/+484; хвост +424/+440/+36; затем sub_40DC90 leak ---
         aggregateEnergy420436PostOrder(root);
         applySub414E10PostOrderTail(root);
         applyGlobalEnergyPoolAfterGrowth(stats, root);
 
-        // --- Physics: wind/gravity torque → natural curvature ---
+        // sub_40E230 + sub_40E460: очередь листьев → лучи, обновление +196..+212 (lightResponseVec / smoothedLight*)
+        root.group.updateMatrixWorld(true);
+        updateLightSpatialBoundsSub450BD0(root);
+        rebuildLeafQueue(root);
+        serviceLightTraceQueue(root, wind, rng);
+
+        // --- Physics: wind/gravity torque → natural curvature; сглаживание +216..+232; light-seek на twigs ---
         perFramePhysicsSub4143E0(root, wind);
 
-        // TODO(original): re-enable when verified:
-        // rebuildLeafQueue(root); serviceLightTraceQueue(root, rng, wind);
-        // processDetachFlags(root, rng);
+        if (rng) {
+            processDetachFlags(root, rng);
+            updateWorldObjectsSub40F140(scene, wind, rng);
+        }
 
         tickEnvironment();
 

@@ -1,29 +1,29 @@
 <script setup lang="ts">
-import { onMounted, ref, onUnmounted, watch } from 'vue';
-import * as THREE from 'three';
-import { BonsaiController } from '@/engine/BonsaiController';
-import { BonsaiAudio } from '@/engine/BonsaiAudio';
-import { DEBUG_WIREFRAME, setDebugWireframe } from '@/engine/TreeSection';
-import { PotService } from '@/engine/PotService';
-import { EnvironmentService } from '@/engine/EnvironmentService';
+import { onMounted, ref, onUnmounted, watch } from "vue";
+import * as THREE from "three";
+import { BonsaiController } from "@/engine/BonsaiController";
+import { BonsaiAudio } from "@/engine/BonsaiAudio";
+import { DEBUG_WIREFRAME, setDebugWireframe } from "@/engine/TreeSection";
+import { PotService } from "@/engine/PotService";
+import { EnvironmentService } from "@/engine/EnvironmentService";
 
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 
 const props = defineProps<{
   settings: {
     timeSpeed: number;
     manualLight: boolean;
     manualLightValue: number;
-    interactionMode: 'water' | 'prune' | 'wire';
-  }
+    interactionMode: "water" | "prune" | "wire";
+  };
 }>();
 
 const canvasContainer = ref<HTMLElement | null>(null);
-const emit = defineEmits(['update-stats']);
+const emit = defineEmits(["update-stats"]);
 
 let renderer: THREE.WebGLRenderer;
 let scene: THREE.Scene;
@@ -33,7 +33,7 @@ let composer: EffectComposer;
 let bonsai: BonsaiController;
 let audio: BonsaiAudio;
 let animationId: number;
-const clock = new THREE.Clock(); 
+const clock = new THREE.Clock();
 let particles: THREE.Points;
 let particleGeometry: THREE.BufferGeometry;
 let particlePositions: Float32Array;
@@ -47,11 +47,11 @@ const raycaster = new THREE.Raycaster();
 const exportBonsai = () => {
   if (bonsai) {
     bonsai.saveState();
-    const data = localStorage.getItem('gobonsai_state');
+    const data = localStorage.getItem("gobonsai_state");
     if (data) {
-      const blob = new Blob([data], { type: 'application/json' });
+      const blob = new Blob([data], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = `bonsai_${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
@@ -61,9 +61,9 @@ const exportBonsai = () => {
 };
 
 const importBonsai = () => {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.json';
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
   input.onchange = (e: any) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -71,8 +71,8 @@ const importBonsai = () => {
     reader.onload = (e: any) => {
       const json = e.target.result as string;
       try {
-        localStorage.setItem('gobonsai_state', json);
-        window.location.reload(); 
+        localStorage.setItem("gobonsai_state", json);
+        window.location.reload();
       } catch (err) {
         console.error("Failed to import", err);
       }
@@ -84,16 +84,22 @@ const importBonsai = () => {
 
 defineExpose({
   exportBonsai,
-  importBonsai
+  importBonsai,
 });
 
-watch(() => props.settings.timeSpeed, (val) => {
-  if (bonsai) bonsai.setTimeSpeed(val);
-});
+watch(
+  () => props.settings.timeSpeed,
+  (val) => {
+    if (bonsai) bonsai.setTimeSpeed(val);
+  },
+);
 
-watch(() => props.settings.manualLightValue, (val) => {
-  if (bonsai) bonsai.setLightIntensity(val);
-});
+watch(
+  () => props.settings.manualLightValue,
+  (val) => {
+    if (bonsai) bonsai.setLightIntensity(val);
+  },
+);
 
 onMounted(() => {
   if (!canvasContainer.value) return;
@@ -101,7 +107,12 @@ onMounted(() => {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0a0a0a);
 
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera = new THREE.PerspectiveCamera(
+    75,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000,
+  );
   camera.position.set(0, 3, 8);
   camera.lookAt(0, 2, 0);
 
@@ -127,7 +138,7 @@ onMounted(() => {
     new THREE.Vector2(window.innerWidth, window.innerHeight),
     0.22,
     0.35,
-    0.92
+    0.92,
   );
 
   composer = new EffectComposer(renderer);
@@ -162,8 +173,8 @@ onMounted(() => {
   audio = new BonsaiAudio();
 
   bonsai.setLogCallback((msg, type) => {
-    emit('update-stats', {
-      logEntry: { message: msg, time: Date.now(), type }
+    emit("update-stats", {
+      logEntry: { message: msg, time: Date.now(), type },
     });
   });
 
@@ -176,24 +187,28 @@ onMounted(() => {
 
     if (bonsai) {
       bonsai.update(deltaTime);
-      
+
       directionalLight.intensity = Math.max(0.1, bonsai.lightIntensity * 2);
       ambientLight.intensity = Math.max(0.18, bonsai.lightIntensity * 0.42);
       fillLight.intensity = Math.max(0.08, bonsai.lightIntensity * 0.4);
-      if (pointLight) pointLight.intensity = Math.max(0, (1 - bonsai.lightIntensity) * 0.45);
-      
-      const bgColorVal = new THREE.Color(0x050505).lerp(new THREE.Color(0x1a1a2e), bonsai.lightIntensity);
+      if (pointLight)
+        pointLight.intensity = Math.max(0, (1 - bonsai.lightIntensity) * 0.45);
+
+      const bgColorVal = new THREE.Color(0x050505).lerp(
+        new THREE.Color(0x1a1a2e),
+        bonsai.lightIntensity,
+      );
       scene.background = bgColorVal;
 
       audio.updateWind(bonsai.lightIntensity, props.settings.timeSpeed);
 
-      emit('update-stats', {
+      emit("update-stats", {
         age: bonsai.age,
         targetAge: bonsai.targetAge,
         gameTime: bonsai.gameTime,
         energy: bonsai.energy,
         health: bonsai.health,
-        light: bonsai.lightIntensity
+        light: bonsai.lightIntensity,
       });
     }
 
@@ -204,21 +219,28 @@ onMounted(() => {
   };
 
   const updateHighlight = () => {
-    if (!bonsai || (props.settings.interactionMode !== 'prune' && props.settings.interactionMode !== 'wire')) {
+    if (
+      !bonsai ||
+      (props.settings.interactionMode !== "prune" &&
+        props.settings.interactionMode !== "wire")
+    ) {
       resetHighlight();
       return;
     }
 
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(scene.children, true);
-    
+
     let found: THREE.Group | null = null;
     for (const intersect of intersects) {
       let current: THREE.Object3D | null = intersect.object;
 
       if (current.userData.isSegment && current.userData.parentSection) {
         const section = current.userData.parentSection;
-        if (props.settings.interactionMode === 'prune' && section === bonsai.root) {
+        if (
+          props.settings.interactionMode === "prune" &&
+          section === bonsai.root
+        ) {
           // Корень не режем
         } else {
           found = section.group;
@@ -228,7 +250,10 @@ onMounted(() => {
 
       while (current && current !== scene) {
         if (current.userData.isTreeSection) {
-          if (props.settings.interactionMode === 'prune' && current === bonsai.root.group) {
+          if (
+            props.settings.interactionMode === "prune" &&
+            current === bonsai.root.group
+          ) {
             // Корень не подсвечиваем для обрезки
           } else {
             found = current as THREE.Group;
@@ -257,9 +282,13 @@ onMounted(() => {
   };
 
   const setBranchHighlight = (group: THREE.Group, active: boolean) => {
-    const color = props.settings.interactionMode === 'wire' ? 0x44ff44 : 0x444444;
+    const color =
+      props.settings.interactionMode === "wire" ? 0x44ff44 : 0x444444;
     group.traverse((obj) => {
-      if (obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial) {
+      if (
+        obj instanceof THREE.Mesh &&
+        obj.material instanceof THREE.MeshStandardMaterial
+      ) {
         obj.material.emissive.setHex(active ? color : 0x000000);
         obj.material.emissiveIntensity = active ? 0.5 : 0;
       }
@@ -269,11 +298,11 @@ onMounted(() => {
   animate();
 
   if (canvasContainer.value) {
-    canvasContainer.value.addEventListener('click', handleCanvasClick);
-    canvasContainer.value.addEventListener('mousemove', onMouseMove);
+    canvasContainer.value.addEventListener("click", handleCanvasClick);
+    canvasContainer.value.addEventListener("mousemove", onMouseMove);
   }
-  window.addEventListener('resize', onWindowResize);
-  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener("resize", onWindowResize);
+  window.addEventListener("keydown", onKeyDown);
 });
 
 const onMouseMove = (event: MouseEvent) => {
@@ -282,10 +311,12 @@ const onMouseMove = (event: MouseEvent) => {
   mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-  if (props.settings.interactionMode === 'prune') {
-    canvasContainer.value.style.cursor = highlightedBranch ? 'crosshair' : 'default';
+  if (props.settings.interactionMode === "prune") {
+    canvasContainer.value.style.cursor = highlightedBranch
+      ? "crosshair"
+      : "default";
   } else {
-    canvasContainer.value.style.cursor = 'pointer';
+    canvasContainer.value.style.cursor = "pointer";
   }
 };
 
@@ -301,20 +332,20 @@ const handleCanvasClick = (event: MouseEvent) => {
   if (!bonsai || !renderer || !camera) return;
   audio.init();
 
-  if (props.settings.interactionMode === 'water') {
+  if (props.settings.interactionMode === "water") {
     bonsai.interact();
     spawnParticles();
     audio.playWater();
-  } else if (props.settings.interactionMode === 'prune') {
+  } else if (props.settings.interactionMode === "prune") {
     const rect = renderer.domElement.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
     const intersects = raycaster.intersectObjects(scene.children, true);
-    
+
     for (const intersect of intersects) {
       let current: THREE.Object3D | null = intersect.object;
-      
+
       // Check for direct segment hit
       if (current.userData.isSegment && current.userData.parentSection) {
         if (bonsai.prune(current)) {
@@ -323,7 +354,7 @@ const handleCanvasClick = (event: MouseEvent) => {
           return;
         }
       }
-      
+
       // Check hierarchy
       while (current && current !== scene) {
         if (current.userData.isTreeSection) {
@@ -336,7 +367,7 @@ const handleCanvasClick = (event: MouseEvent) => {
         current = current.parent;
       }
     }
-  } else if (props.settings.interactionMode === 'wire') {
+  } else if (props.settings.interactionMode === "wire") {
     const rect = renderer.domElement.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -372,12 +403,15 @@ const initParticles = (scene: THREE.Scene) => {
     particlePositions[i * 3 + 2] = 0;
     particleVelocities.push(new THREE.Vector3());
   }
-  particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+  particleGeometry.setAttribute(
+    "position",
+    new THREE.BufferAttribute(particlePositions, 3),
+  );
   const particleMaterial = new THREE.PointsMaterial({
     color: 0x44aaff,
     size: 0.05,
     transparent: true,
-    blending: THREE.AdditiveBlending
+    blending: THREE.AdditiveBlending,
   });
   particles = new THREE.Points(particleGeometry, particleMaterial);
   scene.add(particles);
@@ -388,7 +422,11 @@ const spawnParticles = () => {
     particlePositions[i * 3] = (Math.random() - 0.5) * 0.5;
     particlePositions[i * 3 + 1] = 4 + Math.random() * 2;
     particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 0.5;
-    particleVelocities[i].set((Math.random() - 0.5) * 0.02, -0.05 - Math.random() * 0.05, (Math.random() - 0.5) * 0.02);
+    particleVelocities[i].set(
+      (Math.random() - 0.5) * 0.02,
+      -0.05 - Math.random() * 0.05,
+      (Math.random() - 0.5) * 0.02,
+    );
   }
   particleGeometry.attributes.position.needsUpdate = true;
 };
@@ -398,12 +436,18 @@ const spawnPruningParticles = (position: THREE.Vector3) => {
     particlePositions[i * 3] = position.x + (Math.random() - 0.5) * 0.1;
     particlePositions[i * 3 + 1] = position.y + (Math.random() - 0.5) * 0.1;
     particlePositions[i * 3 + 2] = position.z + (Math.random() - 0.5) * 0.1;
-    particleVelocities[i].set((Math.random() - 0.5) * 0.1, (Math.random() - 0.5) * 0.1, (Math.random() - 0.5) * 0.1);
+    particleVelocities[i].set(
+      (Math.random() - 0.5) * 0.1,
+      (Math.random() - 0.5) * 0.1,
+      (Math.random() - 0.5) * 0.1,
+    );
   }
   const mat = particles.material as THREE.PointsMaterial;
   const originalColor = mat.color.clone();
   mat.color.setHex(0x5d4037);
-  setTimeout(() => { mat.color.copy(originalColor); }, 1000);
+  setTimeout(() => {
+    mat.color.copy(originalColor);
+  }, 1000);
   particleGeometry.attributes.position.needsUpdate = true;
 };
 
@@ -428,7 +472,7 @@ const onWindowResize = () => {
 };
 
 const onKeyDown = (e: KeyboardEvent) => {
-  if (e.code === 'KeyW' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+  if (e.code === "KeyW" && !e.ctrlKey && !e.altKey && !e.metaKey) {
     setDebugWireframe(!DEBUG_WIREFRAME);
     console.log(`[Debug] wireframe: ${DEBUG_WIREFRAME}`);
   }
@@ -437,11 +481,11 @@ const onKeyDown = (e: KeyboardEvent) => {
 onUnmounted(() => {
   cancelAnimationFrame(animationId);
   if (canvasContainer.value) {
-    canvasContainer.value.removeEventListener('click', handleCanvasClick);
-    canvasContainer.value.removeEventListener('mousemove', onMouseMove);
+    canvasContainer.value.removeEventListener("click", handleCanvasClick);
+    canvasContainer.value.removeEventListener("mousemove", onMouseMove);
   }
-  window.removeEventListener('resize', onWindowResize);
-  window.removeEventListener('keydown', onKeyDown);
+  window.removeEventListener("resize", onWindowResize);
+  window.removeEventListener("keydown", onKeyDown);
   renderer?.dispose();
 });
 </script>
