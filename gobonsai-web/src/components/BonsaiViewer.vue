@@ -322,9 +322,9 @@ const onMouseMove = (event: MouseEvent) => {
 
 const createEnvironment = (scene: THREE.Scene) => {
   // DEBUG: hidden to isolate tree rendering
-  // scene.add(PotService.createPot());
-  // scene.add(EnvironmentService.createSoilMound());
-  // scene.add(EnvironmentService.createStones(5));
+  scene.add(PotService.createPot());
+  scene.add(EnvironmentService.createSoilMound());
+  scene.add(EnvironmentService.createStones(5));
   scene.add(EnvironmentService.createFloor());
 };
 
