@@ -76,9 +76,11 @@ export function syncTwigFloat444448FromGeometry(root: TreeSection): void {
 export function distributeEnergyBudget432DownTree(
     root: TreeSection,
     rng?: MSVCRand,
+    /** *(_BYTE *)(dword_4D7EE8 + 220) — см. WorldGrowthState.worldFlagByte220, sub_415C10 */
+    worldFlagByte220 = false,
 ): void {
     maybeRunLazy4079C0Once(root);
-    runVirtualSlot36Tree(root, rng);
+    runVirtualSlot36Tree(root, rng, worldFlagByte220);
 }
 
 /**

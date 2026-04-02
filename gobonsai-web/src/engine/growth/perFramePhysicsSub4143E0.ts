@@ -20,13 +20,12 @@ import { SectionRuntimeType } from "../SectionRuntimeType";
 const PHYSICS_ENABLED = true;                    // byte_4D6356
 const PHYSICS_WEIGHT_THRESHOLD = 0.001;          // flt_4D6358
 const GRAVITY_DIRECTION = new THREE.Vector3(0, -1, 0);
-const GRAVITY_LENGTH = 1.0;                      // flt_4D5310
-
 const _tmpVec = new THREE.Vector3();
 const _tmpVec2 = new THREE.Vector3();
 const _tmpAxis = new THREE.Vector3();
 const _tmpQuat = new THREE.Quaternion();
-const _tmpMat = new THREE.Matrix4();
+const _tmpNorm3 = new THREE.Matrix3();
+const _centNorm = new THREE.Vector3();
 const _parentWorldQuat = new THREE.Quaternion();
 const _worldQuat = new THREE.Quaternion();
 const _yUp = new THREE.Vector3(0, 1, 0);
@@ -36,19 +35,29 @@ const _alignLight = new THREE.Quaternion();
  * Entry point: call once per frame on the root section.
  * Mirrors sub_4143E0 recursive call pattern.
  */
+export type PerFramePhysicsOptions = {
+    /** false в strict-exe режиме: в C в sub_4143E0 нет блока «twig → свет» */
+    twigPhototropismApprox?: boolean;
+};
+
 export function perFramePhysicsSub4143E0(
     root: TreeSection,
     wind: THREE.Vector3,
+    options?: PerFramePhysicsOptions,
 ): void {
-    walkPhysics(root, wind);
+    walkPhysics(root, wind, options);
 }
 
-function walkPhysics(section: TreeSection, wind: THREE.Vector3): void {
+function walkPhysics(
+    section: TreeSection,
+    wind: THREE.Vector3,
+    options?: PerFramePhysicsOptions,
+): void {
     if (section.worldDetached188) return;
 
     // Step 1: recurse children first
     for (const child of section.children) {
-        walkPhysics(child, wind);
+        walkPhysics(child, wind, options);
     }
 
     // Step 2: compute centroid + totalWeight (sub_414870)
@@ -67,9 +76,11 @@ function walkPhysics(section: TreeSection, wind: THREE.Vector3): void {
     // Step 5: smooth light direction vectors
     smoothLightDirections(section);
 
-    // Step 5b: nudge twig targetRotation toward smoothed light (sub_40E460 + sub_4143E0)
-    // APPROX: минимальный поворот локальной оси +Y к prevDirectionVec; без полного sub_416510.
-    applyTwigLightSeeking(section);
+    // В sub_4143E0.c отдельного блока «twig → свет» нет; ориентация twig — sub_416510 / слот +36.
+    // APPROX(original): мягкий разворот targetRotation к prevDirectionVec (после smoothLightDirections).
+    if (options?.twigPhototropismApprox !== false) {
+        applyTwigLightSeeking(section);
+    }
 
     // Step 6: exponential smoothing of accumulators
     section.smoothTargetA = ((section.smoothTargetA as number)
@@ -97,16 +108,17 @@ function computeCentroidSub414870(section: TreeSection): void {
         section.totalWeight460 = 0;
     }
 
-    section.centroid468.set(0, 0, (section.twigLength448 as number) * 0.5);
+    // sub_414870.c: центр одной секции — середина «палки» вдоль оси роста.
+    // В C половина +448 кладётся в +476 (3-я компонента, ось роста в exe); у нас сегмент — +Y (GeometryService).
+    section.centroid468.set(0, (section.twigLength448 as number) * 0.5, 0);
 
     if (section.children.length > 0) {
         section.centroid468.multiplyScalar(section.totalWeight460);
 
         for (const child of section.children) {
             _tmpVec.copy(child.centroid468);
-            // Transform child centroid by child's local position/rotation
-            _tmpVec.applyQuaternion(child.rotationQuaternion);
-            _tmpVec.y += (child.twigLength448 as number) * (child.branchPosition as number);
+            // sub_4085B0: D3DXVec3TransformCoord(child+468, out, child+40) — полная локальная матрица ребёнка
+            _tmpVec.applyMatrix4(child.group.matrix);
             _tmpVec.multiplyScalar(child.totalWeight460);
             section.centroid468.add(_tmpVec);
             section.totalWeight460 += child.totalWeight460;
@@ -118,47 +130,62 @@ function computeCentroidSub414870(section: TreeSection): void {
     }
 }
 
-// ─── sub_414A70: wind/gravity torque → targetQuat ───────────────────
+/**
+ * sub_4084F0.c — нормализация; при |v|≈0 → (0,0,1); возвращает исходную длину (или 0).
+ */
+function sub4084F0NormalizeReturnLen(v: THREE.Vector3): number {
+    const lenSq = v.x * v.x + v.y * v.y + v.z * v.z;
+    const len = Math.sqrt(lenSq);
+    if (len <= 1.000000013351432e-10) {
+        v.set(0, 0, 1);
+        return 0;
+    }
+    const inv = 1 / len;
+    v.multiplyScalar(inv);
+    return len;
+}
 
-function applyWindTorqueSub414A70(section: TreeSection, wind: THREE.Vector3): void {
-    const centroidLen = section.centroid468.length();
-    if (centroidLen < 1e-6) return;
+// ─── sub_414A70: wind/gravity torque → targetQuat (+320) ─────────────
 
-    // Gravity + wind in local space via inverse world
-    const det = section.group.matrixWorld.determinant();
-    if (Math.abs(det) < 1e-8) return;
-    _tmpMat.copy(section.group.matrixWorld).invert();
+function applyWindTorqueSub414A70(section: TreeSection, _wind: THREE.Vector3): void {
+    _centNorm.copy(section.centroid468);
+    const centroidLen = sub4084F0NormalizeReturnLen(_centNorm);
+    if (centroidLen < 1e-10) return;
 
-    // В exe ветер из INI обычно мал; сильный wind → постоянный изгиб в сторону
-    _tmpVec.copy(GRAVITY_DIRECTION).addScaledVector(wind, 0.012);
-    _tmpVec.transformDirection(_tmpMat);
+    // sub_401540(&dword_4D5314, out, this+352): D3DXVec3TransformNormal; +352 = inverse(world)
+    _tmpNorm3.getNormalMatrix(section.transformMatrix);
+
+    // sub_414A70.c: sub_401540(&dword_4D5314, …, +352) — только гравитация INI, без ветра в этом сабе.
+    // Ветер сцены остаётся в TreeSection.update (sway) и в лучах sub_40E460.
+    _tmpVec.copy(GRAVITY_DIRECTION);
+    _tmpVec.applyNormalMatrix(_tmpNorm3);
     if (_tmpVec.lengthSq() < 1e-10) return;
     _tmpVec.normalize();
 
-    // Axis = cross(centroid, localGravity)
-    _tmpAxis.crossVectors(section.centroid468, _tmpVec);
+    // sub_414A70.c: sub_401120(out, gravity_local, centroid_norm) → result = -(gL × cN) = cN × gL
+    _tmpAxis.crossVectors(_centNorm, _tmpVec);
     if (_tmpAxis.lengthSq() < 1e-10) return;
     _tmpAxis.normalize();
 
-    // Angle between centroid and gravity direction
-    _tmpVec2.copy(section.centroid468).normalize();
-    const dot = Math.max(-1, Math.min(1, _tmpVec2.dot(_tmpVec)));
+    const dot = Math.max(-1, Math.min(1, _centNorm.dot(_tmpVec)));
     const angle = Math.acos(dot);
     if (!isFinite(angle)) return;
 
     _tmpQuat.setFromAxisAngle(_tmpAxis, angle);
 
-    // Weight factor — clamped conservatively
     const accelPow = GrowthConstants.FLT_4D8600 as number;
+    const gScale = GrowthConstants.FLT_4D5310 as number;
     const radius = Math.max(0.001, section.twigRadius444 as number);
-    let factor = Math.abs(Math.sin(angle)) * section.totalWeight460 * centroidLen;
-    factor *= Math.pow(radius, accelPow);
-    factor *= GRAVITY_LENGTH;
-    // Меньше кручение на толстых/низких уровнях — иначе всё дерево «в одну сторону» и валится
-    factor *= 1.0 / (1.0 + section.level * 0.85);
-    factor = Math.max(0, Math.min(0.014, factor));
+    let factor =
+        Math.abs(Math.sin(angle))
+        * (section.totalWeight460 as number)
+        * centroidLen
+        * Math.pow(radius, accelPow)
+        * gScale;
+    if (factor > 1.0) factor = 1.0; // sub_414A70.c
 
     section.targetRotation.slerp(_tmpQuat, factor);
+    section.targetRotation.normalize();
 }
 
 // ─── sub_414BB0: resistance damping ─────────────────────────────────
@@ -180,20 +207,33 @@ function applyResistanceSub414BB0(section: TreeSection): void {
 // ─── Light direction smoothing (sub_4143E0 step 5–6) ───────────────
 
 function smoothLightDirections(section: TreeSection): void {
-    const dot = section.prevDirectionVec.dot(section.lightResponseVec);
-    const v10 = (dot + 1.0) * 0.5;
-    const t = v10 * 0.1;
-
-    // Lerp prevDirection toward lightResponse
-    section.prevDirectionVec.lerp(section.lightResponseVec, t);
-    if (section.prevDirectionVec.lengthSq() > 1e-12) {
-        section.prevDirectionVec.normalize();
+    // sub_4143E0.c:57-68 — dot(+196..+204, +216..+224), v10/v11/v12, sub_401500 scale + sub_4013F0 add + sub_40CF00
+    const lx = section.lightResponseVec.x;
+    const ly = section.lightResponseVec.y;
+    const lz = section.lightResponseVec.z;
+    const px = section.prevDirectionVec.x;
+    const py = section.prevDirectionVec.y;
+    const pz = section.prevDirectionVec.z;
+    const v9 = lx * px + ly * py + lz * pz;
+    const v10 = (v9 + 1.0) * 0.5;
+    const v11 = v10 * 0.10000000149011612;
+    const v12 = 1.0 - v11;
+    _tmpVec.set(px * v12 + lx * v11, py * v12 + ly * v11, pz * v12 + lz * v11);
+    const lenSq = _tmpVec.x * _tmpVec.x + _tmpVec.y * _tmpVec.y + _tmpVec.z * _tmpVec.z;
+    if (lenSq <= 1.000000013351432e-10) {
+        section.prevDirectionVec.set(0, 0, 1);
+    } else {
+        const inv = 1 / Math.sqrt(lenSq);
+        section.prevDirectionVec.set(_tmpVec.x * inv, _tmpVec.y * inv, _tmpVec.z * inv);
     }
 }
 
 /**
  * Локально поворачивает targetRotation ветки так, чтобы ось +Y приближалась к prevDirectionVec (мир).
  * Вызывается после smoothLightDirections; сила от smoothedLightA (sub_40E460).
+ *
+ * Мировая ориентация до догонки +320 в sub_417C90 = parentWorld · rotationQuaternion (+304), не · targetRotation.
+ * Смешение «факт родителя» с «цель ребёнка» давало неверный локальный вектор света → вечное кручение и рывки.
  */
 function applyTwigLightSeeking(section: TreeSection): void {
     if (section.sectionRuntimeType4 !== SectionRuntimeType.TreeSectionTwig) return;
@@ -205,15 +245,15 @@ function applyTwigLightSeeking(section: TreeSection): void {
     } else {
         _parentWorldQuat.identity();
     }
-    _worldQuat.copy(_parentWorldQuat).multiply(section.targetRotation);
+    _worldQuat.copy(_parentWorldQuat).multiply(section.rotationQuaternion);
     _tmpQuat.copy(_worldQuat).invert();
     _tmpVec.copy(section.prevDirectionVec).applyQuaternion(_tmpQuat);
     _tmpVec.normalize();
     if (_tmpVec.lengthSq() < 1e-10) return;
 
     _alignLight.setFromUnitVectors(_yUp, _tmpVec);
-    // Слабее «подтягивание к свету», чтобы не суммировалось с ветром в один заметный крен
-    const t = Math.min(0.035, 0.012 + 0.028 * Math.min(1, w));
+    // APPROX: меньший шаг — меньше дрожания от шума лучей после исправления кадра
+    const t = Math.min(0.018, 0.008 + 0.014 * Math.min(1, w));
     section.targetRotation.slerp(_alignLight, t);
     section.targetRotation.normalize();
 }

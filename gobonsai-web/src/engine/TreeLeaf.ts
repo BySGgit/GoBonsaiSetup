@@ -53,7 +53,15 @@ export class TreeLeaf {
         parentGroup.add(this.mesh);
     }
 
-    update(lightIntensity: number, globalGrowthFactor: number, globalHealth: number, wind: THREE.Vector3, dayOfYear: number, deltaTime: number): void {
+    update(
+        lightIntensity: number,
+        globalGrowthFactor: number,
+        globalHealth: number,
+        wind: THREE.Vector3,
+        dayOfYear: number,
+        deltaTime: number,
+        strictExeSimVisuals: boolean = false,
+    ): void {
         const { METABOLISM } = TREE_CONSTANTS;
         const leafMat = this.mesh.material as THREE.MeshStandardMaterial;
 
@@ -83,9 +91,11 @@ export class TreeLeaf {
             return;
         }
 
-        const time = Date.now() * 0.002;
-        this.mesh.rotation.z = Math.sin(time + this.swayOffset) * (wind.length() * 0.2 + 0.1);
-        this.mesh.rotation.x = Math.cos(time * 0.8 + this.swayOffset) * (wind.length() * 0.1 + 0.05);
+        if (!strictExeSimVisuals) {
+            const time = Date.now() * 0.002;
+            this.mesh.rotation.z = Math.sin(time + this.swayOffset) * (wind.length() * 0.2 + 0.1);
+            this.mesh.rotation.x = Math.cos(time * 0.8 + this.swayOffset) * (wind.length() * 0.1 + 0.05);
+        }
 
         if (lightIntensity <= METABOLISM.LIGHT_THRESHOLD) {
             this.energy -= 0.0005 * deltaTime * 60; 

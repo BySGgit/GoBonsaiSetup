@@ -1,22 +1,15 @@
-import * as THREE from "three";
 import { TreeSection } from "../TreeSection";
-import { GrowthConstants } from "../config/GrowthConstants";
 
 /**
  * sub_450BD0 (slot +16) + sub_4146F0 (slot +32): transform chain.
  *
  * Three.js handles world matrix propagation natively via updateMatrixWorld().
  * This module adds the C-specific steps:
- * - Rebuild local matrix from targetQuat (+320) × template (+240)
+ * - Rebuild local matrix from rotationQuaternion (+320) × template (+240)
  * - Compute inverse world matrix (+352)
- * - Compute section endpoint world position (+24..+32)
  *
- * In TS, we map these to Three.js Object3D quaternion/position and store
- * the inverse separately in section.transformMatrix.
+ * In TS, `section.transformMatrix` = inverse(world) как qmemcpy(this+352, v13) в sub_4146F0 (full.c:16819–16825).
  */
-
-const _tmpMat = new THREE.Matrix4();
-const _tmpVec = new THREE.Vector3();
 
 /**
  * После virtual slot +36 (slerp +320→+304 в sub_417C90 и т.д.), до sub_416510:
@@ -36,20 +29,22 @@ export function syncGroupQuaternionsFromRotationForMetabolism(root: TreeSection)
 
 /**
  * sub_4146F0 equivalent: rebuild section's local transform from quaternion.
- * Call before updateMatrixWorld to ensure the local matrix reflects
- * the current targetQuat/rotationQuaternion.
+ *
+ * IDA decompile (sub_4146F0): *(float*)(this+296) is temporarily set to
+ * parent.twigLength448 × branchPosition for the matrix multiply, then restored.
+ * flt_4D63B0 (0.5) is used ONLY for the endpoint midpoint (this+24..+32),
+ * NOT for the attachment position.
  */
 export function rebuildLocalTransformSub4146F0(section: TreeSection): void {
     if (!section.parent) return;
 
-    // Apply the current rotation quaternion to the Object3D
     section.group.quaternion.copy(section.rotationQuaternion);
 
-    // Position: along parent's Y axis based on branchPosition * parent twig length
     const parentLength = section.parent.twigLength448 as number;
-    const attachY = parentLength * (section.branchPosition as number)
-        * GrowthConstants.FLT_4D63B0 as number;
-    section.group.position.set(0, Math.max(0, attachY), 0);
+    const attachY = parentLength * (section.branchPosition as number);
+    const lat = section.lateralTransY4158 as number;
+    const attachZ = Math.abs(lat) > 1e-8 ? lat * parentLength : 0;
+    section.group.position.set(0, Math.max(0, attachY), attachZ);
 }
 
 /**

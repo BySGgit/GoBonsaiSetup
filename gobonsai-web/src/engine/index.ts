@@ -14,6 +14,7 @@ export { TreeFlower } from "./TreeFlower";
 
 export { GrowthController, type GrowthStats } from "./GrowthController";
 export { GrowthFramePipeline } from "./growth/GrowthFramePipeline";
+export { resolveStrictExeSimPath } from "./growth/strictExeSimPath";
 export { sub414CE0Yearly } from "./growth/sub414CE0";
 export { maybeRandomAutoCutsSub40DC902 } from "./growth/sub40DC90RandomAutoCuts";
 export { MSVCRand } from "./MSVCRand";

@@ -1,11 +1,19 @@
+import * as THREE from "three";
 import { TreeSection } from "../TreeSection";
 import { MSVCRand } from "../MSVCRand";
 import { SectionRuntimeType } from "../SectionRuntimeType";
-import { GrowthConstants, byte4D822AForSectionType } from "../config/GrowthConstants";
+import {
+    GrowthConstants,
+    byte4D822AForSectionType,
+    sampleMaxGrowth452Sub4159C0,
+} from "../config/GrowthConstants";
 import { Float32 } from "../math/MathTypes";
 import { TransformService } from "../math/TransformService";
 import { Sub416510Rotation } from "../math/Sub416510Rotation";
 import { getSlot36SimulationDay } from "./frameState";
+
+const _rollAxisZ = new THREE.Vector3(0, 0, 1);
+const _rollQ4158 = new THREE.Quaternion();
 
 /**
  * sub_417F40.c — branching dispatcher for TreeSectionTwig.
@@ -89,17 +97,26 @@ function lateralBranchSub4188E0(
 
     if (rng.randFloat() >= v14) return;
 
-    const yaw = rng.randFloat() * Math.PI * 2 - Math.PI;
-    const pitch = rng.randFloat() * 1.2 - 0.6;
+    // full.c sub_4188E0: порядок rand после прохождения v14 — как в exe (детерминизм сидов).
+    const v15 = rng.randFloat() * (Math.PI * 2) - Math.PI;
+    const v19 = rng.randFloat() * 1.1 - 1.6;
+    const v20 = rng.randFloat() * 0.1000000014901161 - 0.05000000074505806 + v15;
+    const v12 = v20;
+    const v11 = rng.randFloat();
+    const maxGrowth452 = sampleMaxGrowth452Sub4159C0(rng);
+    const v22 = (section.twigRadius444 as number) * 0.8500000238418579;
 
-    const bud = createBudChild(section, yaw, pitch, rng);
+    // sub_413F50: YPR (0, v19, -v15); sub_4158D0(v27, v22, v11, v12) — шаблон +240 до полного порта мат4
+    const bud = createBudChild(section, 0, v19, rng, {
+        roll: -v15,
+        branchPosition: v11,
+        maxGrowth452,
+        lateralTransY4158: v22,
+        lateralRoll4158Z: v12,
+    });
     if (!bud) return;
 
     section.spawnDelta480 = (section.spawnDelta480 + 1) >>> 0;
-
-    // APPROX(sub_4188E0): позиция вдоль ствола — иначе боковой побег визуально у «корня» короткого сегмента.
-    bud.branchPosition = (0.22 + rng.randFloat() * 0.72) as Float32;
-    bud.updateAttachmentPosition(section);
 
     // sub_4188E0.c: v23 = minE + (min(available,maxE)-minE)*rand; +436 += v23
     let v5 = available;
@@ -144,6 +161,7 @@ function apicalBranchSub417FF0(
     }
 
     // Paired branching: два побега; стоимость уже списана (v17)
+    // TODO(original): sub_417FF0.c — цепочка inverse/light/acos и несколько rand до каждой sub_4159C0; здесь упрощённые углы, но +452 как в sub_4159C0 (createBudChild).
     const baseYaw = rng.randFloat() * Math.PI * 2;
     const spreadAngle = 0.3 + rng.randFloat() * 0.4;
 
@@ -160,11 +178,9 @@ function apicalBranchSub417FF0(
 // ─── sub_418660: simplified branching ───────────────────────────────
 
 /**
- * sub_418660.c: simple branch — one bud, maybe a second opposite.
- * Random yaw, one child segment; if energy sufficient AND rand() < 0.2 → second bud.
- */
-/**
- * sub_418660.c — упрощённое ветвление.
+ * sub_418660.c — упрощённое ветвление (full.c ~19059–19122).
+ * Первая почка: v11 = rand·2π−π; v7 = rand·0.3; кватернион v13,v14,v15 = (0, v7, −v11); roll матрицы sub_4158D0 — rand·0.1−0.05+v11 (только выравнивание RNG).
+ * Вторая почка: при flt_4D862C < +432 и rand<0.2 — v9 = rand·0.9+0.4, roll −(v11+π), вес +428 = (rand·0.1+0.9)·(v7/0.3).
  * @param debit436 — если false, не трогаем +436 (энергия уже списана в sub_417FF0 перед вызовом).
  */
 function simplifiedBranchSub418660(
@@ -178,10 +194,12 @@ function simplifiedBranchSub418660(
     // Одиночный вызов sub_418660: нужен запас энергии. Из sub_417FF0: порог уже проверен (v17), +436 обновлён.
     if (debit436 && available < minE) return;
 
-    const yaw = rng.randFloat() * Math.PI * 2 - Math.PI;
-    const pitch = rng.randFloat() * 0.8 - 0.2;
+    const v11 = rng.randFloat() * (Math.PI * 2) - Math.PI;
+    const v7 = rng.randFloat() * 0.300000011920929;
+    const v8Roll4158D0 = rng.randFloat() * 0.1000000014901161 - 0.05000000074505806 + v11;
+    void v8Roll4158D0;
 
-    const bud1 = createBudChild(section, yaw, pitch, rng);
+    const bud1 = createBudChild(section, 0, v7, rng, { roll: -v11 });
     if (!bud1) return;
 
     section.spawnDelta480 = (section.spawnDelta480 + 1) >>> 0;
@@ -190,10 +208,20 @@ function simplifiedBranchSub418660(
         section.energySpent436 = ((section.energySpent436 as number) + minE * 0.5) as Float32;
     }
 
-    // sub_418660.c: второй побег — при minBud < +432 и rand < 0.2 (не «двойной запас» как в старом TS)
+    const v17 = v7 / 0.300000011920929;
     if (minE < budget && rng.randFloat() < 0.2) {
-        const bud2 = createBudChild(section, yaw + Math.PI, pitch, rng);
-        if (bud2) section.spawnDelta480 = (section.spawnDelta480 + 1) >>> 0;
+        const v12 = v11 + Math.PI;
+        const v9 = rng.randFloat() * 0.9 + 0.4;
+        const v10Roll4158D0 =
+            rng.randFloat() * 0.1000000014901161 - 0.05000000074505806 + v12;
+        void v10Roll4158D0;
+
+        const bud2 = createBudChild(section, 0, v9, rng, { roll: -v12 });
+        if (bud2) {
+            section.spawnDelta480 = (section.spawnDelta480 + 1) >>> 0;
+            const w428 = (rng.randFloat() * 0.1 + 0.9) * v17;
+            bud2.energyWeight428 = w428 as Float32;
+        }
         if (debit436) {
             section.energySpent436 = ((section.energySpent436 as number) + minE * 0.5) as Float32;
         }
@@ -204,12 +232,26 @@ function simplifiedBranchSub418660(
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
+/** Опции почки после sub_4159C0 / sub_413F50 (латераль задаёт всё из full.c). */
+type CreateBudChildOpts = {
+    roll?: number;
+    branchPosition?: number;
+    /** C sub_4158D0: второй аргумент Translation (twigRadius*0.85 родителя). */
+    lateralTransY4158?: number;
+    /** C sub_4158D0: roll (четвёртый аргумент). */
+    lateralRoll4158Z?: number;
+    /** C this+452: sub_4159C0 — rand в [0.8*maxBudSize, maxBudSize] */
+    maxGrowth452?: number;
+};
+
 function createBudChild(
     parent: TreeSection,
     yaw: number,
     pitch: number,
     rng: MSVCRand,
+    opts?: CreateBudChildOpts,
 ): TreeSection | null {
+    opts ??= {};
     const bud = new TreeSection(
         parent,
         parent.level + 1,
@@ -223,10 +265,30 @@ function createBudChild(
     bud.sub414CE0SeedBudget428 = 1.0 as Float32;
     bud.growthFlag512 = true;
 
-    TransformService.rotationYawPitchRoll(bud.targetRotation, yaw, pitch, 0);
+    const roll = opts.roll ?? 0;
+    TransformService.rotationYawPitchRoll(bud.targetRotation, yaw, pitch, roll);
+    const roll4158 = opts.lateralRoll4158Z;
+    if (roll4158 !== undefined && Math.abs(roll4158) > 1e-8) {
+        _rollQ4158.setFromAxisAngle(_rollAxisZ, roll4158);
+        bud.targetRotation.multiply(_rollQ4158);
+    }
     bud.rotationQuaternion.copy(bud.targetRotation);
     bud.rotation.copy(bud.targetRotation);
     Sub416510Rotation.syncBlob80FromQuaternion(bud);
+
+    if (opts.branchPosition !== undefined) {
+        bud.branchPosition = opts.branchPosition as Float32;
+    }
+    if (opts.lateralTransY4158 !== undefined) {
+        bud.lateralTransY4158 = opts.lateralTransY4158 as Float32;
+    }
+    if (opts.lateralRoll4158Z !== undefined) {
+        bud.lateralRoll4158Z = opts.lateralRoll4158Z as Float32;
+    }
+    bud.maxGrowth =
+        opts.maxGrowth452 !== undefined
+            ? (opts.maxGrowth452 as Float32)
+            : sampleMaxGrowth452Sub4159C0(rng);
 
     parent.children.push(bud);
     bud.updateAttachmentPosition(parent);

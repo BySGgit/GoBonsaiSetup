@@ -10,7 +10,9 @@ import { MSVCRand } from "../MSVCRand";
  * 2. Transfers it to the world object list (for falling animation)
  * 3. Sets worldDetached188 = true
  *
- * Called from sub_414270 (vtable slot +48) after processing children.
+ * **sub_414270** (`decompiled/sub_414270.c`, vtable **+48** на `TreeSectionSeed` / Leaf и др.):
+ * обход детей `this+168`, на каждом ребёнке `(*(child->vftable+48))(child)`; в конце, если `this+236`,
+ * `sub_40EEE0(this)`. У нас массив `children` и тот же пост-обход.
  */
 
 /** Global list of detached sections for world-object animation */
@@ -28,8 +30,8 @@ export function clearWorldObjects(): void {
 }
 
 /**
- * Process detach flags on the entire tree (sub_414270 equivalent).
- * Post-order: process children first, then check this section.
+ * Хвост кадра `sub_4130D0`: после второго `vtable+16` (`sub_450BD0`) на сцене — `vtable+48` → `sub_414270`.
+ * Post-order: дети, затем отсоединение при `markedForDetach236`.
  */
 export function processDetachFlags(root: TreeSection, rng: MSVCRand): void {
     processDetachRecursive(root, rng);

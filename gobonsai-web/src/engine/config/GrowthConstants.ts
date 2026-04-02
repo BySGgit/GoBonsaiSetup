@@ -27,7 +27,13 @@ export const GrowthConstants = {
   ] as const,
 
   ENERGY_USE_RATE: 1.0 as Float32,
-  ENERGY_LEAK: 1.0 as Float32,
+  /**
+   * exe trace: pool_new / (pool_old - spent + prod) ≈ 0.998 on childless days.
+   * Equivalent to `1.0f - 0.002f` in MSVC float arithmetic.
+   */
+  ENERGY_LEAK: 0.998 as Float32,
+  /** exe trace seq 1: energyPool196 at day 0 (initial pool from sub_408880 / INI). */
+  INITIAL_ENERGY_POOL_196: 74.60920715 as Float32,
   FLT_4D7EF4: 0.0 as Float32,
 
   // --- Type flag tables (spec_type_tables_sub_40FAD0.md) ---
@@ -53,12 +59,19 @@ export const GrowthConstants = {
   FLT_4D85F0: 1.5 as Float32,
   /** a4 → flt_4D85F4: maxLeafSize */
   FLT_4D85F4: 4.0 as Float32,
-  /** a5 → flt_4D85F8: maxBudSize */
+  /** a5 → flt_4D85F8: INI L"maxBudSize" (sub_406AE0, full.c ~5387); sub_4159C0 → +452 ∈ [0.8×…1.0×] */
   FLT_4D85F8: 0.45 as Float32,
   /** a6 → flt_4D85FC: density / weightCoeff */
   FLT_4D85FC: 40.0 as Float32,
   /** a7 → flt_4D8600: accelerationRadiusPow (wind torque) */
   FLT_4D8600: -2.0 as Float32,
+  /**
+   * flt_4D5310 — масштаб крутящего момента после нормализации гравитации из INI (sub_414A70.c:31).
+   * IDA: get_global_value(0x4D5310) = 0x3356bf95 ≈ 5.0e-8.
+   * sub_40D1A0 вычисляет длину обработанного вектора (light+gravity blend),
+   * в дефолте результат практически нулевой → гравитация НЕ крутит дерево.
+   */
+  FLT_4D5310: 5.0e-8 as Float32,
   /** a8 → flt_4D8604: resistanceRadiusPow */
   FLT_4D8604: 1.0 as Float32,
   /** a9 → flt_4D8608: resistanceCoeff */
@@ -98,7 +111,7 @@ export const GrowthConstants = {
 
   LIGHT_VECTOR: new THREE.Vector3(0.0, 1.0, 0.0) as D3DXVECTOR3,
 
-  /** sub_40E230: INI directLightPercent → flt_4D8CF0 (lazy в exe; дефолт APPROX) */
+  /** sub_40E230: INI key L"directLightPercent" → flt_4D8CF0 (sub_4032D0 + sub_408600; см. ida_extracted_truth_log § sub_40E230) */
   FLT_4D8CF0_DIRECT_LIGHT_PERCENT: 0.5 as Float32,
   /** sub_40E460: INI lightDecayAmount → flt_4D62EC (full.c .data) */
   FLT_4D62EC_LIGHT_DECAY_AMOUNT: 0.40000001 as Float32,
@@ -107,6 +120,8 @@ export const GrowthConstants = {
   FLT_4D63B4: 0.2 as Float32,
   FLT_4D63B8: 1.0 as Float32,
   FLT_4D63BC: 0.02 as Float32,
+  /** sub_416510: верхний зажим второго угла при v26 > π/2 (full.c flt_4D6388) */
+  FLT_4D6388: 1.5707964 as Float32,
   FLT_4D63C0: 0.059999999 as Float32,
   FLT_4D63C4: 0.2 as Float32,
   /** sub_40D0B0 a20 = 0.35 (leafEnergyProduction); alias for FLT_4D8634 */
@@ -129,6 +144,24 @@ export const GrowthConstants = {
   BRANCH_GROWTH_RATE: 0.05 as Float32,
 
   METABOLISM_ROOT_THICKNESS_GATE: 0.01 as Float32,
+
+  /**
+   * sub_412700.c → `flt_4DBEE4`: шаг накопления до вызова `sub_4130D0` (~30 Гц логики роста).
+   */
+  SIM_FRAME_DT_SUB_412700: 0.03333333507180214 as Float32,
+  /**
+   * full.c `flt_4D526C` (по умолчанию 50): за один `sub_4130D0` в `flt_4D7EF8` добавляется `this * SIM_FRAME_DT_SUB_412700`.
+   */
+  FLT_4D526C_GAME_SPEED: 50.0 as Float32,
+  /** sub_412700.c: верхняя граница `a1` перед `sub_4130D0` */
+  MAX_DELTA_SUB_412700: 0.06666667 as Float32,
+  /** Защита от бесконечного цикла при огромном `flt_4D7EF8` */
+  MAX_SUB_40DC90_ITERATIONS_PER_4130D0: 32,
+  /**
+   * `sub_4130D0.c`: если `dword_4D8C14 > dword_4D52DC`, прирост `flt_4D7EF8` обнуляется.
+   * Грубый прокси: число Object3D в сцене; `0` = не применять гейт.
+   */
+  DWORD_4D52DC_SCENE_OBJECT_THRESHOLD: 6000,
 
   /** INI: resistanceRadiusBias (sub_414BB0) */
   FLT_4D635C: 0.1 as Float32,
@@ -167,4 +200,13 @@ export function byte4D8225ForSectionType(typeIndex: number): boolean {
   const i = 11 * typeIndex;
   const a = GrowthConstants.BYTE_4D8225_STRIDE11;
   return i >= 0 && i < a.length && a[i] !== 0;
+}
+
+/**
+ * sub_4159C0.c: `*(bud+452) = flt_4D85F8 * 0.8 + (flt_4D85F8 - …) * (rand/32767)` — см. full.c.
+ * Любая почка из `sub_4159C0` (417FF0, 418660, 4188E0, 417440, …) должна пройти один вызов на создание.
+ */
+export function sampleMaxGrowth452Sub4159C0(rng: { randFloat(): number }): Float32 {
+  const hi = GrowthConstants.FLT_4D85F8 as number;
+  return (hi * 0.8 + hi * 0.2 * rng.randFloat()) as Float32;
 }

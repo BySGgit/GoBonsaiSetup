@@ -34,7 +34,8 @@ export interface IVisualState {
 
 export interface ITransformState {
     rotationQuaternion: D3DXQUATERNION; // this + 320
-    transformMatrix: D3DXMATRIX;        // this + 352
+    /** sub_4146F0 +352: inverse(world), см. TreeSection.syncTransformMatricesFromWorld */
+    transformMatrix: D3DXMATRIX;
 }
 
 export interface IWorkingBuffers {

@@ -6,6 +6,7 @@ import { GrowthService, GrowthState } from './GrowthService';
 import { GrowthConstants } from './config/GrowthConstants';
 import { Float32 } from './math/MathTypes';
 import { TREE_CONSTANTS } from './TreeConstants';
+import { WorldGrowthState } from './world/WorldGrowthState';
 export type GrowthStats = GrowthState & {
     energy: number;
     health: number;
@@ -59,16 +60,23 @@ export class GrowthController {
      * sub_40DC90 §2.3 при смене года: sub_408A30 (цели), затем E *= 0.9 * (1 - flt_4D7EF4),
      * затем ветвление как часть кадра; virtual (*root+40) sub_414CE0 — отдельно от этого шага.
      */
-    public updateYearlyTargets(stats: GrowthStats, root: TreeSection): void {
+    public updateYearlyTargets(stats: GrowthStats, root: TreeSection, worldGrowth?: WorldGrowthState): void {
         GrowthService.updateYearlyTargets(stats, this.rng);
         this.applySubtleYearlyBendDrift(stats);
 
         const d = GrowthConstants.FLT_4D7EF4 as number;
-        let e = stats.energy * 0.9 * (1.0 - d);
-        if (e < 0) e = 0;
-        if (e > 1) e = 1;
-        stats.energy = e;
-        root.energy = e as Float32;
+        if (worldGrowth) {
+            worldGrowth.energyPool = worldGrowth.energyPool * 0.9 * (1.0 - d);
+            if (worldGrowth.energyPool < 0) worldGrowth.energyPool = 0;
+            root.energy = worldGrowth.normalizedEnergy as Float32;
+            stats.energy = worldGrowth.normalizedEnergy;
+        } else {
+            let e = stats.energy * 0.9 * (1.0 - d);
+            if (e < 0) e = 0;
+            if (e > 1) e = 1;
+            stats.energy = e;
+            root.energy = e as Float32;
+        }
 
         // Branching now happens inside twigUpdateSub417C90 → branchingDispatcherSub417F40
     }

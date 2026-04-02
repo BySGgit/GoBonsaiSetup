@@ -21,6 +21,7 @@ import {
 import { TransformService } from "./math/TransformService";
 import { Sub416510Rotation } from "./math/Sub416510Rotation";
 import { SectionRuntimeType } from "./SectionRuntimeType";
+import { sampleMaxGrowth452Sub4159C0 } from "./config/GrowthConstants";
 
 /** Debug: show wireframe skeleton instead of solid meshes */
 export let DEBUG_WIREFRAME = false;
@@ -39,12 +40,20 @@ export class TreeSection
 
   public currentBranchScale: Float32 = 0.0;
   public branchPosition: Float32 = 1.0;
+  /**
+   * sub_4158D0(sub_4188E0): Translation(0, v22, v11) — v22 = parent.twigRadius*0.85.
+   * В сцене родителя: отвод от оси вдоль локального Z (ось роста дочери — +Y).
+   */
+  public lateralTransY4158: Float32 = 0;
+  /** sub_4158D0: Roll (4-й аргумент v12); в TS — доп. поворот вокруг локальной Z после YPR почки. */
+  public lateralRoll4158Z: Float32 = 0;
   public branchBaseRadius: Float32;
   public branchTipRadius: Float32;
 
   // ITransformState
   public rotationQuaternion: D3DXQUATERNION = new THREE.Quaternion(); // this + 320
-  public transformMatrix: D3DXMATRIX = new THREE.Matrix4(); // this + 352
+  /** sub_4146F0: qmemcpy(this+352, D3DXMatrixInverse(world)); не прямой matrixWorld. */
+  public transformMatrix: D3DXMATRIX = new THREE.Matrix4();
 
   public rotation: D3DXQUATERNION = new THREE.Quaternion(); // Alias for rotationQuaternion
   public targetRotation: D3DXQUATERNION = new THREE.Quaternion();
@@ -70,7 +79,8 @@ export class TreeSection
   public age: Float32 = 0.0; // this + 110
   public growthRate: Float32 = 0.0; // this + 111
   public growthTarget: Float32 = 0.0; // this + 112
-  public maxGrowth: Float32 = 5.0; // this + 113 (reduced for smoother multi-segment growth)
+  /** C exe: float at this+452 (sub_4159C0 / twig cap в sub_418BD0); в TS имя историческое «maxGrowth». */
+  public maxGrowth: Float32 = 5.0;
   public energy: Float32 = 1.0; // this + 114
 
   /** this+420 — накопление «production» за кадр (агрегат как в sub_414E10 / sub_40DC90) */
@@ -289,17 +299,22 @@ export class TreeSection
     bud.rotationQuaternion.copy(bud.targetRotation);
     bud.rotation.copy(bud.targetRotation);
     Sub416510Rotation.syncBlob80FromQuaternion(bud);
+    // sub_417440 → sub_4159C0: один rand на *(bud+452)
+    bud.maxGrowth = sampleMaxGrowth452Sub4159C0(rng);
     parent.children.push(bud);
     bud.updateAttachmentPosition(parent);
     return bud;
   }
 
-  /** После updateMatrixWorld: this+352 для следующего кадра sub_401540(this+352). */
+  /**
+   * После updateMatrixWorld: this+352 как в sub_4146F0 (инверсия мировой матрицы секции).
+   * sub_401540 / D3DXVec3TransformNormal(+196, this+352) — тот же путь, что inverse+normalMatrix в метаболизме.
+   */
   public static syncTransformMatricesFromWorld(root: TreeSection): void {
     const stack: TreeSection[] = [root];
     while (stack.length) {
       const s = stack.pop()!;
-      s.transformMatrix.copy(s.group.matrixWorld);
+      s.transformMatrix.copy(s.group.matrixWorld).invert();
       for (let i = s.children.length - 1; i >= 0; i--)
         stack.push(s.children[i]);
     }
@@ -319,7 +334,10 @@ export class TreeSection
     // Match the visual top of the parent mesh: base height * mesh scaleY.
     // parent.mesh.scale.y is set in update() BEFORE children call this.
     const visualHeight = GEOMETRY.HEIGHT_FACTOR * parent.mesh.scale.y;
+    const lat = this.lateralTransY4158 as number;
+    this.group.position.x = 0;
     this.group.position.y = (this.branchPosition as number) * visualHeight;
+    this.group.position.z = Math.abs(lat) > 1e-8 ? lat * visualHeight : 0;
   }
 
   public update(
@@ -330,6 +348,8 @@ export class TreeSection
     wind: THREE.Vector3,
     dayOfYear: number,
     deltaTime: number,
+    /** strict exe: без визуального sway (Date.now + wind) — в C нет этого слоя на group */
+    strictExeSimVisuals: boolean = false,
   ): void {
     const { ANIMATION } = TREE_CONSTANTS;
 
@@ -358,19 +378,19 @@ export class TreeSection
       this.directionVector.normalize();
     }
 
-    const stabilityFactor = Math.pow(4.0, 6 - this.level);
-    // Слабее покачивание — иначе все сегменты визуально «качаются в одну фазу» с физикой
-    const swayFactor =
-      (0.0007 + (1.0 - globalHealth) * 0.002) *
-      (wind.length() / stabilityFactor);
-    const swayX =
-      Math.sin(Date.now() * 0.0005 + this.level) * wind.x * swayFactor;
-    const swayZ =
-      Math.cos(Date.now() * 0.0006 + this.level) * wind.z * swayFactor;
-
     this.group.quaternion.copy(this.rotationQuaternion);
-    this.group.rotateX(swayX);
-    this.group.rotateZ(swayZ);
+    if (!strictExeSimVisuals) {
+      const stabilityFactor = Math.pow(4.0, 6 - this.level);
+      const swayFactor =
+        (0.0007 + (1.0 - globalHealth) * 0.002) *
+        (wind.length() / stabilityFactor);
+      const swayX =
+        Math.sin(Date.now() * 0.0005 + this.level) * wind.x * swayFactor;
+      const swayZ =
+        Math.cos(Date.now() * 0.0006 + this.level) * wind.z * swayFactor;
+      this.group.rotateX(swayX);
+      this.group.rotateZ(swayZ);
+    }
 
     const { GEOMETRY } = TREE_CONSTANTS;
 
@@ -460,6 +480,7 @@ export class TreeSection
         wind,
         dayOfYear,
         deltaTime,
+        strictExeSimVisuals,
       ),
     );
 
@@ -476,6 +497,7 @@ export class TreeSection
           wind,
           dayOfYear,
           deltaTime,
+          strictExeSimVisuals,
         );
       }
     });
@@ -496,6 +518,8 @@ export class TreeSection
     return {
       level: this.level,
       branchPosition: this.branchPosition,
+      lateralTransY4158: this.lateralTransY4158,
+      lateralRoll4158Z: this.lateralRoll4158Z,
       branchBaseRadius: this.branchBaseRadius,
       branchTipRadius: this.branchTipRadius,
       targetRotation: { x: targetEuler.x, y: targetEuler.y, z: targetEuler.z },
@@ -567,6 +591,8 @@ export class TreeSection
       data.branchBaseRadius,
     );
     section.branchPosition = data.branchPosition ?? 1.0;
+    section.lateralTransY4158 = data.lateralTransY4158 ?? 0;
+    section.lateralRoll4158Z = data.lateralRoll4158Z ?? 0;
     if (data.branchTipRadius !== undefined)
       section.branchTipRadius = data.branchTipRadius;
 

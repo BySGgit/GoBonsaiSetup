@@ -52,7 +52,7 @@ export function processLeafMetabolism(
 
 /**
  * sub_416510 core logic for a single leaf section.
- * Свет: как в MetabolismService.updateBranchEnergyTree (inverse world + normal matrix).
+ * Свет: как в MetabolismService — transformMatrix (+352) + getNormalMatrix.
  */
 function updateLeafSub416510(
     section: TreeSection,
@@ -79,10 +79,12 @@ function updateLeafSub416510(
         _lightWorld.set(lv.x * lightIntensity, lv.y * lightIntensity, lv.z * lightIntensity);
     }
 
-    _inv.copy(section.group.matrixWorld).invert();
+    _inv.copy(section.transformMatrix);
     _normalMat.getNormalMatrix(_inv);
     _lightLocal.copy(_lightWorld).applyNormalMatrix(_normalMat);
 
+    // sub_416510: после sub_401540 локальный свет (v46,v47,v48); v21 = dot с (flt_4D538C,flt_4D5390,flt_4D5394).
+    // full.c дефолт (0,1,0) → v21 = v47 = тот же dot с локальным +Y (см. GUIDES/ida_extracted_truth_log.md § sub_416510).
     const v21 =
         _localUp.x * _lightLocal.x + _localUp.y * _lightLocal.y + _localUp.z * _lightLocal.z;
     const v22 = Math.abs(v21);

@@ -1,7 +1,7 @@
 import { TreeSection } from "../TreeSection";
-import { GrowthStats } from "../GrowthController";
 import { GrowthConstants } from "../config/GrowthConstants";
 import { Float32 } from "../math/MathTypes";
+import { WorldGrowthState } from "../world/WorldGrowthState";
 
 /**
  * Фрагмент логики sub_40DC90.c (§2.4–2.6): бюджет root+432, затем после «слота +36»
@@ -15,15 +15,17 @@ import { Float32 } from "../math/MathTypes";
  * после rollup `root+420` / `root+436`.
  */
 
-/** sub_40DC90: *(root+432) = E * energyUseRate * season */
+/** sub_40DC90: *(root+432) = E * energyUseRate * season
+ *  EXE: no clamping — negative pool yields negative budget, which
+ *  propagates down and naturally throttles growth without permanently
+ *  killing the tree. */
 export function writeRootEnergyBudget432(
     root: TreeSection,
     poolEnergy: number,
     seasonFactor: number
 ): void {
-    const e = Math.max(0, poolEnergy);
     const rate = GrowthConstants.ENERGY_USE_RATE as number;
-    root.energyBudget432 = e * rate * seasonFactor;
+    root.energyBudget432 = poolEnergy * rate * seasonFactor;
 }
 
 /** Сумма sub_416510 «текущего тика» growthScratchA по всему дереву — прокси для +420 до полного rollup как в C */
@@ -50,6 +52,18 @@ export function resetAllEnergyAggregates(root: TreeSection): void {
     walk(root);
 }
 
+/**
+ * Перед циклом `sub_40DC90` внутри одного `sub_4130D0`: обнуляем scratch метаболизма,
+ * чтобы N тиков не множили один и тот же вклад +420 (метаболизм идёт после цикла).
+ */
+export function clearGrowthScratchATree(root: TreeSection): void {
+    const walk = (s: TreeSection): void => {
+        s.growthScratchA = 0 as Float32;
+        for (const c of s.children) walk(c);
+    };
+    walk(root);
+}
+
 /** @deprecated Используйте resetAllEnergyAggregates — сброс только корня недостаточен для sub_414E10 */
 export function resetRootEnergyAggregates(root: TreeSection): void {
     resetAllEnergyAggregates(root);
@@ -66,20 +80,23 @@ export function rollupFrameEnergy420(root: TreeSection): void {
 }
 
 /**
- * sub_40DC90: E = E - root+436 + root+420; E *= energyLeak
- * clamp [0,1] — граница UI/старой логики (в exe масштаб может быть иным).
- * После обновления глобального E зеркалим в `root.energy` (+114 корня), как в связке UI/дерева.
+ * sub_40DC90: E = (E - root+436 + root+420) * energyLeak
+ * exe trace: energyPool196 абсолютная шкала (~74.6 при старте), leak ≈ 0.998.
+ * root.energy пишем нормализованным [0,1] для metabolism/health.
+ *
+ * NOTE: EXE does NOT clamp pool to 0 — a negative pool shrinks toward 0
+ * via the 0.998 leak factor, and leaf photosynthesis (prod) gradually
+ * recovers it.  The old `if (e < 0) e = 0` created a permanent death
+ * spiral where the tree could never recover from energy depletion.
  */
 export function applyGlobalEnergyPoolAfterGrowth(
-    stats: GrowthStats,
-    root: TreeSection
+    worldGrowth: WorldGrowthState,
+    root: TreeSection,
 ): void {
     const spent = root.energySpent436;
     const prod = root.energyProduction420;
-    let e = stats.energy - spent + prod;
+    let e = worldGrowth.energyPool - spent + prod;
     e *= GrowthConstants.ENERGY_LEAK as number;
-    if (e < 0) e = 0;
-    if (e > 1) e = 1;
-    stats.energy = e;
-    root.energy = e as Float32;
+    worldGrowth.energyPool = e;
+    root.energy = worldGrowth.normalizedEnergy as Float32;
 }

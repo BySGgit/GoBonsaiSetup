@@ -7,6 +7,7 @@ import { Sub416510Rotation } from './math/Sub416510Rotation';
 import { WorldGrowthState } from './world/WorldGrowthState';
 import { GrowthFramePipeline } from './growth/GrowthFramePipeline';
 import { SectionRuntimeType } from './SectionRuntimeType';
+import { GrowthConstants } from './config/GrowthConstants';
 
 export class BonsaiController {
     private scene: THREE.Scene;
@@ -22,12 +23,17 @@ export class BonsaiController {
     public treeRoots: TreeRoot[] = [];
     
     public lightIntensity: number = 1.0;
-    /** Базовый ветер (м/с условно); держать слабым — иначе крутящий момент sub_414A70 валит всё в одну сторону. */
+    /**
+     * Базовый ветер (для лучей sub_40E460 и неstrict sway). В strict-exe режиме (`VITE_STRICT_EXE_SIM_PATH=true`)
+     * `tickEnvironment` не крутит вектор каждый кадр — остаётся это значение.
+     */
     public wind: THREE.Vector3 = new THREE.Vector3(0.004, 0, 0.002); 
     public timeSpeed: number = 1.0;
     
     private onLog?: (message: string, type: 'info' | 'warning' | 'error' | 'success') => void;
     private _dbgFrame: number = 0;
+    /** sub_412700.c: `flt_4D8D04` — накопитель до шага `flt_4DBEE4` (~1/30 с) и вызова `sub_4130D0` */
+    private simTimeBank412700 = 0;
 
     constructor(scene: THREE.Scene, seed: number = Date.now()) {
         this.scene = scene;
@@ -66,25 +72,41 @@ export class BonsaiController {
     public update(deltaTime: number): void {
         this.updateClock(deltaTime);
 
-        this.worldGrowth.syncEnergyFromStats(this.stats.energy);
+        // sub_408D60: интерполяция UI-статов на частоте рендера (не привязана к sub_4130D0)
+        this.growthController.animateGrowth(this.stats, deltaTime, this.timeSpeed);
 
-        const metabolismLogs = this.growthFrame.run({
-            deltaTime,
-            timeSpeed: this.timeSpeed,
-            stats: this.stats,
-            root: this.root,
-            worldGrowth: this.worldGrowth,
-            onSimulationYearCrossed: () => {
-                this.saveState();
-                this.addLog("Прошел игровой год. Рост продолжается.", "info");
-            },
-            lightIntensity: this.lightIntensity,
-            wind: this.wind,
-            treeRoots: this.treeRoots,
-            tickEnvironment: () => this.updateEnvironment(),
-            rng: this.rng,
-            scene: this.scene,
-        });
+        const SIM_DT = GrowthConstants.SIM_FRAME_DT_SUB_412700 as number;
+        const capped = Math.min(
+            deltaTime * this.timeSpeed,
+            GrowthConstants.MAX_DELTA_SUB_412700 as number,
+        );
+        this.simTimeBank412700 += capped;
+
+        const metabolismLogs: string[] = [];
+        while (this.simTimeBank412700 >= SIM_DT) {
+            this.simTimeBank412700 -= SIM_DT;
+            metabolismLogs.push(
+                ...this.growthFrame.run({
+                    deltaTime,
+                    timeSpeed: this.timeSpeed,
+                    stats: this.stats,
+                    root: this.root,
+                    worldGrowth: this.worldGrowth,
+                    onSimulationYearCrossed: () => {
+                        this.saveState();
+                        this.addLog("Прошел игровой год. Рост продолжается.", "info");
+                    },
+                    lightIntensity: this.lightIntensity,
+                    wind: this.wind,
+                    treeRoots: this.treeRoots,
+                    tickEnvironment: () => this.updateEnvironment(),
+                    rng: this.rng,
+                    scene: this.scene,
+                    simFrameDt: SIM_DT,
+                    renderDeltaTime: deltaTime,
+                }),
+            );
+        }
         metabolismLogs.forEach(msg => this.addLog(msg, 'warning'));
 
         // DEBUG: log tree state every 120 frames
@@ -124,7 +146,7 @@ export class BonsaiController {
             );
         }
 
-        this.worldGrowth.syncEnergyFromStats(this.stats.energy);
+        this.stats.energy = this.worldGrowth.normalizedEnergy;
     }
 
     private updateClock(deltaTime: number): void {
@@ -144,7 +166,8 @@ export class BonsaiController {
 
     public prune(target: THREE.Object3D): boolean {
         if (this.root.prune(target)) {
-            this.stats.energy = Math.min(1.0, this.stats.energy + 0.1);
+            this.worldGrowth.energyPool += (GrowthConstants.INITIAL_ENERGY_POOL_196 as number) * 0.1;
+            this.stats.energy = this.worldGrowth.normalizedEnergy;
             this.root.energy = this.stats.energy;
             this.addLog("Ветка обрезана. Энергия перераспределена.", 'info');
             this.saveState();
@@ -163,7 +186,8 @@ export class BonsaiController {
     }
 
     public interact(): void {
-        this.stats.energy = Math.min(1.0, this.stats.energy + 0.2);
+        this.worldGrowth.energyPool += (GrowthConstants.INITIAL_ENERGY_POOL_196 as number) * 0.2;
+        this.stats.energy = this.worldGrowth.normalizedEnergy;
         this.root.energy = this.stats.energy;
         this.stats.health = Math.min(1.0, this.stats.health + 0.05);
         this.addLog("Дерево полито.", 'info');
@@ -191,6 +215,9 @@ export class BonsaiController {
             stats: this.stats,
             gameTime: this.gameTime,
             simulationDay: this.worldGrowth.simulationDay,
+            growthAccumulator4D7EF8: this.worldGrowth.growthAccumulator4D7EF8,
+            energyPool196: this.worldGrowth.energyPool,
+            simTimeBank412700: this.simTimeBank412700,
             tree: this.root.serialize(),
             roots: this.treeRoots.map(r => r.serialize())
         };
@@ -226,6 +253,15 @@ export class BonsaiController {
                 this.gameTime = data.gameTime;
                 if (typeof data.simulationDay === "number") {
                     this.worldGrowth.simulationDay = data.simulationDay;
+                }
+                if (typeof data.growthAccumulator4D7EF8 === "number") {
+                    this.worldGrowth.growthAccumulator4D7EF8 = data.growthAccumulator4D7EF8;
+                }
+                if (typeof data.energyPool196 === "number") {
+                    this.worldGrowth.energyPool = data.energyPool196;
+                }
+                if (typeof data.simTimeBank412700 === "number") {
+                    this.simTimeBank412700 = data.simTimeBank412700;
                 }
                 
                 if (this.root && this.root.group.parent) {

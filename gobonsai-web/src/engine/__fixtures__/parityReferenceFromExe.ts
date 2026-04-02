@@ -1,41 +1,98 @@
 /**
- * Эталонные снимки с оригинального GoBonsai.exe (IDA, скрипт из GUIDES/spec_f5_ida_capture_workflow.md).
- * Условия: глобал dword_4D7EE8 по адресу 0x4D7EE8 (без сдвига ASLR в этой сессии).
- * W и R — как в выводе IDA; поля — float у корня дерева (root+420/432/436).
+ * Эталонные снимки с оригинального GoBonsai.exe (IDA trace: GoBonsai.exe_gobonsai_trace.jsonl).
+ * Условия: dword_4D7EE8 → мир 0x262b498, корень 0x262b7d8; без ASLR.
+ * flt_4D526C = 50, SIM_DT ≈ 0.0333 → flt_4D7EF8 = 0.6666 при sub_40DC90.
+ * Трасса: 2501 записей, дни 0–46.
  *
- * Только хранение эталона для будущей регрессии. Автотесты против этих чисел — после того,
- * как TS-движок будет доведён до соответствия спекам (см. spec_ts_parity_verification.md §3.1).
+ * Регрессия: см. `parityVerification.test.ts`.
  */
 
-/** Указатель на объект «мир» (для справки; в TS не обязан совпадать). */
-export const parityRefW = 0x0258e428;
-
-/** Указатель на корневую секцию (для справки). */
-export const parityRefRootR = 0x0258e768;
-
 export interface ParitySnapshot {
-    /** Время: *(float*)(W + 216) */
-    worldTime: number;
-    root420: number;
-    root432: number;
-    root436: number;
+    simulationDay: number;
+    energyPool196: number;
+    childCount172: number;
+    energyBudget432: number;
+    energySpent436: number;
+    energyProduction420: number;
+    rollupDword480: number;
+    rollupDword484: number;
+    flt_4D7EF8: number;
 }
 
-/** Останов на sub_40DC90, первый снятый снимок */
-export const paritySnapshotA: ParitySnapshot = {
-    worldTime: 108.0,
-    root420: 1.715135931968689,
-    root432: 1.7341139316558838,
-    root436: 1.7341139316558838,
+/** seq 1: sub_412700, самое начало — корень без детей */
+export const parityDay0: ParitySnapshot = {
+    simulationDay: 0,
+    energyPool196: 74.60920715,
+    childCount172: 0,
+    energyBudget432: 0,
+    energySpent436: 0,
+    energyProduction420: 0,
+    rollupDword480: 0,
+    rollupDword484: 0,
+    flt_4D7EF8: 0,
 };
 
-/** Тот же процесс, через 7 тиков симуляции (115 − 108) */
-export const paritySnapshotB: ParitySnapshot = {
-    worldTime: 115.0,
-    root420: 1.7246016263961792,
-    root432: 1.7062835693359375,
-    root436: 1.7062835693359375,
+/**
+ * seq 1644→1645: sub_40DC90 день 30 → первый ребёнок при day=31.
+ * Это снимок ПОСЛЕ sub_40DC90 (вход в sub_40E0A0).
+ */
+export const parityDay31: ParitySnapshot = {
+    simulationDay: 31,
+    energyPool196: 70.05237579,
+    childCount172: 1,
+    energyBudget432: 0.06737298,
+    energySpent436: 0.06737298,
+    energyProduction420: 0,
+    rollupDword480: 1,
+    rollupDword484: 0,
+    flt_4D7EF8: 0,
 };
 
-/** Разница по времени между снимками (должна совпадать с числом вызовов sub_40DC90 между остановами). */
-export const parityDeltaTicksBetweenAB = paritySnapshotB.worldTime - paritySnapshotA.worldTime; // 7
+/**
+ * seq 2427+: день 45 — «скриншот HUD» (45 Days, 2 Leaves, 0.01" Height).
+ * rollupDword484 впервые = 1 (второй лист/бутон в дереве).
+ */
+export const parityDay45: ParitySnapshot = {
+    simulationDay: 45,
+    energyPool196: 57.75484848,
+    childCount172: 1,
+    energyBudget432: 1.42138267,
+    energySpent436: 1.42138267,
+    energyProduction420: 0,
+    rollupDword480: 1,
+    rollupDword484: 1,
+    flt_4D7EF8: 0,
+};
+
+/**
+ * seq 2486: день 46 (первый кадр после «скриншотного» состояния).
+ * energyProduction420 впервые != 0 — вклад листа.
+ */
+export const parityDay46: ParitySnapshot = {
+    simulationDay: 46,
+    energyPool196: 56.18097687,
+    childCount172: 1,
+    energyBudget432: 1.47947311,
+    energySpent436: 1.47947311,
+    energyProduction420: 0.01818814,
+    rollupDword480: 1,
+    rollupDword484: 1,
+    flt_4D7EF8: 0,
+};
+
+/** Энергетический пул по дням — для проверки decay-кривой 0.998 */
+export const parityEnergyPoolByDay: Array<[day: number, pool: number]> = [
+    [0, 74.60920715],
+    [1, 74.45999146],
+    [2, 74.31107330],
+    [3, 74.16245270],
+    [4, 74.01412964],
+    [5, 73.86610413],
+    [10, 73.13040161],
+    [15, 72.40202332],
+    [18, 71.96847534],
+    [30, 70.26013184],
+    [31, 70.05237579],
+    [45, 57.75484848],
+    [46, 56.18097687],
+];

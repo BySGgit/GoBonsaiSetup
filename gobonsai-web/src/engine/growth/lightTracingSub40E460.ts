@@ -19,8 +19,10 @@ import { Float32 } from "../math/MathTypes";
  */
 
 const MAX_HITS = 30;
-/** Оригинал — один лист за тик sub_40E0A0; веб батчит для сходимости. */
-const LEAF_TRACES_PER_FRAME = 12;
+/** sub_40E0A0: в exe один лист за тик; при наличии листьев держим 1 для паритета. */
+const TRACES_PER_FRAME_LEAVES = 1;
+/** Пока нет листьев (только twig-источники) — чуть больше лучей, иначе +196 почти не обновляется. */
+const TRACES_PER_FRAME_TWIG_FALLBACK = 8;
 /** sub_40E460.c:66–71 — длина полуотрезка луча для sub_450E30/sub_44EE20 */
 const RAY_HALF_LEN = 200.0;
 
@@ -53,6 +55,8 @@ const _hitSortT: number[] = [];
 /** sub_40E0A0: очередь источников лучей (в C — только листья). */
 let _leafQueue: TreeSection[] = [];
 let _leafQueueIndex = 0;
+/** true если в очереди только настоящие листья (не twig-fallback). */
+let _lightQueueIsLeafOnly = false;
 
 /** Детерминированный RNG, если пайплайн вызван без rng (редко). */
 let _fallbackTraceRng: MSVCRand | undefined;
@@ -103,9 +107,25 @@ function getLightTraceRayOrigin(section: TreeSection, out: THREE.Vector3): void 
     }
 }
 
+function collectTerminalTwigs(section: TreeSection, out: TreeSection[]): void {
+    if (section.worldDetached188) return;
+    if (section.sectionRuntimeType4 === SectionRuntimeType.TreeSectionTwig) {
+        const hasTwigChild = section.children.some(
+            (c) => c.sectionRuntimeType4 === SectionRuntimeType.TreeSectionTwig,
+        );
+        if (!hasTwigChild) {
+            out.push(section);
+        }
+    }
+    for (const c of section.children) {
+        collectTerminalTwigs(c, out);
+    }
+}
+
 export function rebuildLeafQueue(root: TreeSection): void {
     _leafQueue = [];
     _leafQueueIndex = 0;
+    _lightQueueIsLeafOnly = false;
     const stack: TreeSection[] = [root];
     while (stack.length) {
         const s = stack.pop()!;
@@ -115,19 +135,12 @@ export function rebuildLeafQueue(root: TreeSection): void {
         }
         for (const c of s.children) stack.push(c);
     }
-    // TODO(original): в exe лучи только с листьев; пока нет листьев — сэмплируем с twig tips,
-    // иначе sub_4143E0 phototropism не получает обновлений +196..+212.
-    if (_leafQueue.length === 0) {
-        const stack2: TreeSection[] = [root];
-        while (stack2.length) {
-            const s = stack2.pop()!;
-            if (s.worldDetached188) continue;
-            if (s.sectionRuntimeType4 === SectionRuntimeType.TreeSectionTwig) {
-                _leafQueue.push(s);
-            }
-            for (const c of s.children) stack2.push(c);
-        }
+    if (_leafQueue.length > 0) {
+        _lightQueueIsLeafOnly = true;
+        return;
     }
+    // APPROX(original): в exe без листьев очереди нет; берём только концевые twig (кончики кроны), не все сегменты.
+    collectTerminalTwigs(root, _leafQueue);
 }
 
 /**
@@ -144,7 +157,10 @@ export function serviceLightTraceQueue(
     const r = traceRng(rng);
     const directP = GrowthConstants.FLT_4D8CF0_DIRECT_LIGHT_PERCENT as number;
 
-    const n = Math.min(LEAF_TRACES_PER_FRAME, _leafQueue.length);
+    const budget = _lightQueueIsLeafOnly
+        ? TRACES_PER_FRAME_LEAVES
+        : TRACES_PER_FRAME_TWIG_FALLBACK;
+    const n = Math.min(budget, _leafQueue.length);
     for (let i = 0; i < n; i++) {
         _leafQueueIndex = _leafQueueIndex % _leafQueue.length;
         const leaf = _leafQueue[_leafQueueIndex];

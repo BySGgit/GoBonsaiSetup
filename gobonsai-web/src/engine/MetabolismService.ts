@@ -20,7 +20,7 @@ export interface MetabolismState {
 
 /**
  * sub_416510.c — свет: D3DXMatrixInverse(this+104) + sub_401540 (D3DXVec3TransformNormal) + dot с flt_4D5390/8C/94.
- * Здесь: inverse(world) + normal matrix, локальный «вверх» · свет (эквивалентно мировому up·L при ортогональной части).
+ * Здесь: section.transformMatrix (+352, синк до метаболизма) + normal matrix.
  * v34 = *(+52)*v22 + *(+53)*0.5; энергия; пропуск роста.
  */
 export interface MetabolismUpdateResult {
@@ -138,7 +138,7 @@ export class MetabolismService {
                 );
             }
 
-            _inv.copy(section.group.matrixWorld).invert();
+            _inv.copy(section.transformMatrix);
             _normalMat.getNormalMatrix(_inv);
             _lightLocal.copy(_lightWorld).applyNormalMatrix(_normalMat);
 
