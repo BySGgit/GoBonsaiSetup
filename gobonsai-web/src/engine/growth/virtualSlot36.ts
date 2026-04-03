@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { TreeSection } from "../TreeSection";
+import { TreeLeaf } from "../TreeLeaf";
 import { MSVCRand } from "../MSVCRand";
 import { SectionRuntimeType } from "../SectionRuntimeType";
 import { Float32 } from "../math/MathTypes";
@@ -179,10 +180,9 @@ function budAfterSub414E10From415EF0(
   rng: MSVCRand | undefined,
   worldFlagByte220: boolean,
 ): void {
-  const budget = bud.energyBudget432 as number;
-
-  if (budget === 0.0) {
-    budQuietDetachSub415ED0(bud);
+  const baseGrowth = bud.baseGrowth as number;
+  if (baseGrowth <= 0.0) {
+    bud.markedForDetach236 = true;
     return;
   }
 
@@ -197,7 +197,7 @@ function budAfterSub414E10From415EF0(
     const maxE = GrowthConstants.FLT_4D8630 as number;
     const v7 = Math.max(
       0,
-      Math.min(1, (budget - minE) / (maxE - minE)),
+      Math.min(1, (baseGrowth - minE) / (maxE - minE)),
     );
 
     // sub_416300: check bud's PARENT — in chain model the parent twig gates spawning
@@ -213,7 +213,8 @@ function budAfterSub414E10From415EF0(
     // §4: girth still growing — sub_415EF0.c else-branch
     const maxE = GrowthConstants.FLT_4D8630 as number;
     const growRate = GrowthConstants.FLT_4D8620 as number;
-    const capped = maxE <= budget ? maxE : budget;
+    const capped = maxE <= baseGrowth ? maxE : baseGrowth;
+    bud.currentGrowth = capped as Float32;
     let newRadius = twigRadius + capped * growRate;
     if (maxGrowth <= newRadius) {
       newRadius = maxGrowth;
@@ -403,6 +404,14 @@ function createLeafSection(
 
   parentTwig.children.push(leaf);
   leaf.updateAttachmentPosition(parentTwig);
+  leaf.mesh.visible = false;
+
+  const leafVisual = new TreeLeaf(leaf.group, rng);
+  leafVisual.energy = 0.9;
+  leafVisual.size = 0.08 + rng.randFloat() * 0.04;
+  leafVisual.targetSize = Math.min(0.3, Math.max(0.12, maxLeafSize * 0.07));
+  leaf.leaves.push(leafVisual);
+
   return leaf;
 }
 

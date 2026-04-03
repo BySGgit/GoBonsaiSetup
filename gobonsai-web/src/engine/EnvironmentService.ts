@@ -5,8 +5,8 @@ export class EnvironmentService {
      * Создает холмик земли (Soil Mound) с процедурным рельефом.
      */
     public static createSoilMound(): THREE.Mesh {
-        const moundGeometry = new THREE.SphereGeometry(1.2, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2);
-        moundGeometry.scale(1, 0.25, 1);
+        const moundGeometry = new THREE.SphereGeometry(2.1, 36, 24, 0, Math.PI * 2, 0, Math.PI / 2);
+        moundGeometry.scale(1, 0.22, 1);
         
         const posAttr = moundGeometry.attributes.position;
         for (let i = 0; i < posAttr.count; i++) {
@@ -28,7 +28,7 @@ export class EnvironmentService {
         });
         
         const mound = new THREE.Mesh(moundGeometry, soilMaterial);
-        mound.position.y = -0.05;
+        mound.position.y = -0.08;
         mound.receiveShadow = true;
         return mound;
     }
@@ -44,12 +44,12 @@ export class EnvironmentService {
         });
 
         for (let i = 0; i < count; i++) {
-            const stoneSize = 0.05 + Math.random() * 0.1;
+            const stoneSize = 0.08 + Math.random() * 0.14;
             const stoneGeo = new THREE.DodecahedronGeometry(stoneSize, 0);
             const stone = new THREE.Mesh(stoneGeo, stoneMat);
             
             const angle = Math.random() * Math.PI * 2;
-            const dist = 0.3 + Math.random() * 0.7;
+            const dist = 0.8 + Math.random() * 1.1;
             stone.position.set(
                 Math.cos(angle) * dist,
                 -0.02,

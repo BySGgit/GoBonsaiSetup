@@ -29,6 +29,9 @@ export function setDebugWireframe(on: boolean): void {
   DEBUG_WIREFRAME = on;
 }
 
+const VISUAL_SEGMENTS_PER_SECTION = 4;
+const VISUAL_THICKNESS_SCALE = 0.42;
+
 export class TreeSection
   implements ITreeSectionData, IVisualState, ITransformState, IWorkingBuffers
 {
@@ -247,22 +250,33 @@ export class TreeSection
 
     // sub_4093B0.c generates a single frustum (cylinder) per section with 32 radial segments
     // The outer loop in C (v46 < 2) processes exactly 2 rings: bottom and top.
-    const segmentMesh = GeometryService.createBranchSegment(
-      this.branchTipRadius,
-      this.branchBaseRadius,
-      sectionHeight,
-      level,
-      this.rng,
-      0.0,
-      1.0,
-    );
-
-    segmentMesh.userData = {
-      isSegment: true,
-      segmentIndex: 0,
-      parentSection: this,
-    };
-    this.mesh.add(segmentMesh);
+    const segmentCount = Math.max(1, VISUAL_SEGMENTS_PER_SECTION);
+    const segmentHeight = sectionHeight / segmentCount;
+    for (let i = 0; i < segmentCount; i++) {
+      const tBottom = i / segmentCount;
+      const tTop = (i + 1) / segmentCount;
+      const radiusBottom =
+        this.branchBaseRadius * (1.0 - tBottom) +
+        this.branchTipRadius * tBottom;
+      const radiusTop =
+        this.branchBaseRadius * (1.0 - tTop) + this.branchTipRadius * tTop;
+      const segmentMesh = GeometryService.createBranchSegment(
+        radiusTop,
+        radiusBottom,
+        segmentHeight,
+        level,
+        this.rng,
+        tBottom,
+        tTop,
+      );
+      segmentMesh.position.y = i * segmentHeight;
+      segmentMesh.userData = {
+        isSegment: true,
+        segmentIndex: i,
+        parentSection: this,
+      };
+      this.mesh.add(segmentMesh);
+    }
 
     if (parent) parent.group.add(this.group);
     Sub416510Rotation.initBlob80Identity(this);
@@ -278,16 +292,11 @@ export class TreeSection
     yawJitter: number,
     rollJitter: number,
   ): TreeSection {
-    const bud = new TreeSection(
-      parent,
-      parent.level + 1,
-      rng,
-      0.01,
-    );
+    const bud = new TreeSection(parent, parent.level + 1, rng, 0.01);
     bud.sectionRuntimeType4 = SectionRuntimeType.TreeSectionBud;
     bud.twigRadius444 = 0.01 as Float32;
-    bud.twigLength448 =
-      (TREE_CONSTANTS.GEOMETRY.HEIGHT_FACTOR * 0.12) as Float32;
+    bud.twigLength448 = (TREE_CONSTANTS.GEOMETRY.HEIGHT_FACTOR *
+      0.12) as Float32;
     bud.energyWeight428 = 1.0 as Float32;
     bud.sub414CE0SeedBudget428 = 1.0 as Float32;
     TransformService.rotationYawPitchRoll(
@@ -374,7 +383,9 @@ export class TreeSection
 
     // sub_40D6D0 (лист): нормаль пластины для sub_40E460 lightDecay — локальная +Y в мир.
     if (this.sectionRuntimeType4 === SectionRuntimeType.TreeSectionLeaf) {
-      this.directionVector.set(0, 1, 0).applyQuaternion(this.rotationQuaternion);
+      this.directionVector
+        .set(0, 1, 0)
+        .applyQuaternion(this.rotationQuaternion);
       this.directionVector.normalize();
     }
 
@@ -403,10 +414,14 @@ export class TreeSection
       currentHeightScale = Math.max(0.05, twigLen / baseHeight);
     } else {
       // Legacy path: length from growthRate progress
-      const growthProgress = this.maxGrowth > 0
-        ? Math.min(1.0, this.growthRate / this.maxGrowth) : 1.0;
+      const growthProgress =
+        this.maxGrowth > 0
+          ? Math.min(1.0, this.growthRate / this.maxGrowth)
+          : 1.0;
       const hasContinuation = this.children.some((c) => c.isContinuation);
-      currentHeightScale = hasContinuation ? 1.0 : Math.max(0.01, growthProgress);
+      currentHeightScale = hasContinuation
+        ? 1.0
+        : Math.max(0.01, growthProgress);
       // Root/initial sections: always show full height
       if (twigLen >= baseHeight - 0.01) currentHeightScale = 1.0;
     }
@@ -414,10 +429,9 @@ export class TreeSection
     // Radius: trunkParams.thickness is the global visual scale (from stats, ~10).
     // templateRadius gives per-level taper. Divide by branchBaseRadius to normalize.
     const templateRadius =
-      GEOMETRY.BASE_RADIUS_FACTOR *
-      Math.pow(GEOMETRY.RADIUS_DECAY, this.level);
+      GEOMETRY.BASE_RADIUS_FACTOR * Math.pow(GEOMETRY.RADIUS_DECAY, this.level);
     const radScale =
-      (trunkParams.thickness * templateRadius) /
+      (trunkParams.thickness * VISUAL_THICKNESS_SCALE * templateRadius) /
       Math.max(1e-6, this.branchBaseRadius as number);
 
     if (trunkParams.thickness > 0.01) {
@@ -456,10 +470,14 @@ export class TreeSection
         mat.opacity = 0.9;
         mat.transparent = true;
         const t = this.sectionRuntimeType4;
-        if (t === SectionRuntimeType.TreeSectionLeaf) mat.color.setHex(0x00ff00);
-        else if (t === SectionRuntimeType.TreeSectionBud) mat.color.setHex(0xff00ff);
-        else if (t === SectionRuntimeType.TreeSectionTwig) mat.color.setHex(0xffaa00);
-        else if (t === SectionRuntimeType.TreeSectionSeed) mat.color.setHex(0xff0000);
+        if (t === SectionRuntimeType.TreeSectionLeaf)
+          mat.color.setHex(0x00ff00);
+        else if (t === SectionRuntimeType.TreeSectionBud)
+          mat.color.setHex(0xff00ff);
+        else if (t === SectionRuntimeType.TreeSectionTwig)
+          mat.color.setHex(0xffaa00);
+        else if (t === SectionRuntimeType.TreeSectionSeed)
+          mat.color.setHex(0xff0000);
         else mat.color.setHex(0x00aaff);
       } else {
         mat.wireframe = false;
@@ -714,39 +732,56 @@ export class TreeSection
     return section;
   }
 
-  public prune(target: THREE.Object3D): boolean {
-    // Check if we clicked a child's group
-    const index = this.children.findIndex((child) => child.group === target);
-    if (index !== -1) {
-      this.group.remove(this.children[index].group);
-      this.children.splice(index, 1);
-      return true;
-    }
+  public prune(
+    target: THREE.Object3D,
+    options?: { removeSection?: boolean; removeTerminalSection?: boolean },
+  ): boolean {
+    const removeSection = !!options?.removeSection;
+    const removeTerminalSection = options?.removeTerminalSection !== false;
+    const clickedSegmentIndex = this.resolveSegmentIndex(target);
+    const isThisTarget = this.group === target || clickedSegmentIndex !== null;
 
-    // Check if we clicked this section's mesh directly
-    const isThisMesh = this.mesh.children.some(
-      (child) =>
-        child === target ||
-        (child instanceof THREE.Group &&
-          child.children.includes(target as any)),
-    );
-    if (isThisMesh) {
-      // In the original game, cutting a section removes all its children and foliage
-      this.children.forEach((child) => this.group.remove(child.group));
-      this.children = [];
+    if (isThisTarget) {
+      if (removeSection && this.parent) {
+        this.detachFromParent();
+        return true;
+      }
 
-      this.leaves.forEach((l) => this.group.remove(l.mesh));
-      this.leaves = [];
+      const segmentCount = this.getSegmentCount();
+      const cutIndex = Math.max(
+        0,
+        Math.min(segmentCount - 1, clickedSegmentIndex ?? segmentCount - 1),
+      );
+      const cutRatio = (cutIndex + 1) / segmentCount;
 
-      this.flowers.forEach((f) => this.group.remove(f.group));
-      this.flowers = [];
+      const removedChildren = this.removeChildrenAtOrAbove(
+        cutRatio,
+        cutIndex < segmentCount - 1,
+      );
+      if (cutIndex < segmentCount - 1) {
+        this.twigLength448 = Math.max(
+          0.05,
+          (this.twigLength448 as number) * cutRatio,
+        ) as Float32;
+        this.growthFlag512 = false;
+      } else if (
+        removedChildren === 0 &&
+        removeTerminalSection &&
+        this.parent
+      ) {
+        this.detachFromParent();
+        return true;
+      }
+
+      this.clearDecorativeFoliage();
 
       this.isPruned = true;
-      this.addCutVisual(0);
+      this.addCutVisual(cutIndex);
       return true;
     }
 
-    for (const child of this.children) if (child.prune(target)) return true;
+    for (const child of this.children)
+      if (child.prune(target, options)) return true;
     return false;
   }
 
@@ -772,14 +807,72 @@ export class TreeSection
 
   private addCutVisual(segmentIndex: number): void {
     if (this.cutCap) this.mesh.remove(this.cutCap);
-    const lastSegment = this.mesh.children[segmentIndex] as THREE.Mesh;
+    const count = this.getSegmentCount();
+    const clampedIndex = Math.max(0, Math.min(count - 1, segmentIndex));
+    const lastSegment = this.mesh.children[clampedIndex] as THREE.Mesh;
     if (!lastSegment || !lastSegment.geometry) return;
 
     const radius = (lastSegment.geometry as THREE.CylinderGeometry).parameters
       .radiusTop;
     this.cutCap = GeometryService.createCutCap(radius);
-    this.cutCap.position.y = TREE_CONSTANTS.GEOMETRY.HEIGHT_FACTOR; // Cap goes at the top of the section
+    this.cutCap.position.y =
+      ((clampedIndex + 1) / count) * TREE_CONSTANTS.GEOMETRY.HEIGHT_FACTOR;
     this.mesh.add(this.cutCap);
+  }
+
+  private getSegmentCount(): number {
+    return Math.max(1, this.mesh.children.length);
+  }
+
+  private resolveSegmentIndex(target: THREE.Object3D): number | null {
+    if (target.userData?.isSegment && target.userData?.parentSection === this) {
+      const idx = Number(target.userData.segmentIndex);
+      return Number.isFinite(idx) ? idx : this.getSegmentCount() - 1;
+    }
+    for (let i = 0; i < this.mesh.children.length; i++) {
+      if (this.mesh.children[i] === target) return i;
+    }
+    return null;
+  }
+
+  private removeChildrenAtOrAbove(
+    cutRatio: number,
+    forceRemoveContinuation: boolean,
+  ): number {
+    const kept: TreeSection[] = [];
+    let removed = 0;
+    for (const child of this.children) {
+      const shouldRemove =
+        (child.branchPosition as number) >= cutRatio - 1e-4 ||
+        (forceRemoveContinuation && child.isContinuation);
+      if (shouldRemove) {
+        this.group.remove(child.group);
+        removed++;
+      } else {
+        kept.push(child);
+      }
+    }
+    this.children = kept;
+    return removed;
+  }
+
+  private clearDecorativeFoliage(): void {
+    this.leaves.forEach((l) => this.group.remove(l.mesh));
+    this.leaves = [];
+    this.flowers.forEach((f) => this.group.remove(f.group));
+    this.flowers = [];
+  }
+
+  private detachFromParent(): void {
+    if (!this.parent) return;
+    const idx = this.parent.children.indexOf(this);
+    if (idx !== -1) {
+      this.parent.children.splice(idx, 1);
+    }
+    if (this.group.parent) {
+      this.group.parent.remove(this.group);
+    }
+    this.parent = null;
   }
 
   private createWireVisuals(): void {

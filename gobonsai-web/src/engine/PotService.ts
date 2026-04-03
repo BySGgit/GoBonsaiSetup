@@ -16,15 +16,15 @@ export class PotService {
         });
 
         // Плоский поддон (Tray) вместо глубокого горшка
-        const potGeometry = new THREE.CylinderGeometry(1.5, 1.3, 0.2, 32);
+        const potGeometry = new THREE.CylinderGeometry(2.7, 2.35, 0.28, 40);
         const pot = new THREE.Mesh(potGeometry, potMaterial);
-        pot.position.y = -0.1;
+        pot.position.y = -0.14;
         pot.castShadow = true;
         pot.receiveShadow = true;
         group.add(pot);
 
         // Тонкий ободок
-        const rimGeometry = new THREE.TorusGeometry(1.5, 0.04, 16, 32);
+        const rimGeometry = new THREE.TorusGeometry(2.7, 0.05, 16, 40);
         rimGeometry.rotateX(Math.PI / 2);
         const rim = new THREE.Mesh(rimGeometry, potMaterial);
         rim.position.y = 0;

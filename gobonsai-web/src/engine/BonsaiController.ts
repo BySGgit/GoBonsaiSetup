@@ -8,12 +8,13 @@ import { WorldGrowthState } from './world/WorldGrowthState';
 import { GrowthFramePipeline } from './growth/GrowthFramePipeline';
 import { SectionRuntimeType } from './SectionRuntimeType';
 import { GrowthConstants } from './config/GrowthConstants';
+import { TREE_CONSTANTS } from './TreeConstants';
 
 export class BonsaiController {
     private scene: THREE.Scene;
     public rng: MSVCRand;
     private growthController: GrowthController;
-    /** Глобальные величины мира (день симуляции, пул энергии) — см. world/WorldGrowthState */
+    /** Р“Р»РѕР±Р°Р»СЊРЅС‹Рµ РІРµР»РёС‡РёРЅС‹ РјРёСЂР° (РґРµРЅСЊ СЃРёРјСѓР»СЏС†РёРё, РїСѓР» СЌРЅРµСЂРіРёРё) вЂ” СЃРј. world/WorldGrowthState */
     public readonly worldGrowth: WorldGrowthState;
     private readonly growthFrame: GrowthFramePipeline;
     
@@ -24,15 +25,15 @@ export class BonsaiController {
     
     public lightIntensity: number = 1.0;
     /**
-     * Базовый ветер (для лучей sub_40E460 и неstrict sway). В strict-exe режиме (`VITE_STRICT_EXE_SIM_PATH=true`)
-     * `tickEnvironment` не крутит вектор каждый кадр — остаётся это значение.
+     * Р‘Р°Р·РѕРІС‹Р№ РІРµС‚РµСЂ (РґР»СЏ Р»СѓС‡РµР№ sub_40E460 Рё РЅРµstrict sway). Р’ strict-exe СЂРµР¶РёРјРµ (`VITE_STRICT_EXE_SIM_PATH=true`)
+     * `tickEnvironment` РЅРµ РєСЂСѓС‚РёС‚ РІРµРєС‚РѕСЂ РєР°Р¶РґС‹Р№ РєР°РґСЂ вЂ” РѕСЃС‚Р°С‘С‚СЃСЏ СЌС‚Рѕ Р·РЅР°С‡РµРЅРёРµ.
      */
     public wind: THREE.Vector3 = new THREE.Vector3(0.004, 0, 0.002); 
     public timeSpeed: number = 1.0;
     
     private onLog?: (message: string, type: 'info' | 'warning' | 'error' | 'success') => void;
     private _dbgFrame: number = 0;
-    /** sub_412700.c: `flt_4D8D04` — накопитель до шага `flt_4DBEE4` (~1/30 с) и вызова `sub_4130D0` */
+    /** sub_412700.c: `flt_4D8D04` вЂ” РЅР°РєРѕРїРёС‚РµР»СЊ РґРѕ С€Р°РіР° `flt_4DBEE4` (~1/30 СЃ) Рё РІС‹Р·РѕРІР° `sub_4130D0` */
     private simTimeBank412700 = 0;
 
     constructor(scene: THREE.Scene, seed: number = Date.now()) {
@@ -48,8 +49,8 @@ export class BonsaiController {
         this.root.sectionRuntimeType4 = SectionRuntimeType.TreeSectionSeed;
         this.root.sub414CE0SeedBudget428 = 1.0;
         
-        // Семя/корень: без начального наклона — наклон задаётся ростом веток и физикой.
-        // (раньше: trunkRotation * 0.05 давало заметный угол «с первого кадра».)
+        // РЎРµРјСЏ/РєРѕСЂРµРЅСЊ: Р±РµР· РЅР°С‡Р°Р»СЊРЅРѕРіРѕ РЅР°РєР»РѕРЅР° вЂ” РЅР°РєР»РѕРЅ Р·Р°РґР°С‘С‚СЃСЏ СЂРѕСЃС‚РѕРј РІРµС‚РѕРє Рё С„РёР·РёРєРѕР№.
+        // (СЂР°РЅСЊС€Рµ: trunkRotation * 0.05 РґР°РІР°Р»Рѕ Р·Р°РјРµС‚РЅС‹Р№ СѓРіРѕР» В«СЃ РїРµСЂРІРѕРіРѕ РєР°РґСЂР°В».)
         this.root.targetRotation.identity();
         this.root.rotationQuaternion.identity();
         this.root.rotation.identity();
@@ -62,7 +63,7 @@ export class BonsaiController {
     }
 
     private initRoots(): void {
-        const rootCount = 5 + Math.floor(this.rng.randFloat() * 3); // Оригинальное количество (5-8)
+        const rootCount = 2 + Math.floor(this.rng.randFloat() * 2);
         for (let i = 0; i < rootCount; i++) {
             const treeRoot = new TreeRoot(this.scene, 0, this.rng);
             this.treeRoots.push(treeRoot);
@@ -72,7 +73,7 @@ export class BonsaiController {
     public update(deltaTime: number): void {
         this.updateClock(deltaTime);
 
-        // sub_408D60: интерполяция UI-статов на частоте рендера (не привязана к sub_4130D0)
+        // sub_408D60: РёРЅС‚РµСЂРїРѕР»СЏС†РёСЏ UI-СЃС‚Р°С‚РѕРІ РЅР° С‡Р°СЃС‚РѕС‚Рµ СЂРµРЅРґРµСЂР° (РЅРµ РїСЂРёРІСЏР·Р°РЅР° Рє sub_4130D0)
         this.growthController.animateGrowth(this.stats, deltaTime, this.timeSpeed);
 
         const SIM_DT = GrowthConstants.SIM_FRAME_DT_SUB_412700 as number;
@@ -94,7 +95,7 @@ export class BonsaiController {
                     worldGrowth: this.worldGrowth,
                     onSimulationYearCrossed: () => {
                         this.saveState();
-                        this.addLog("Прошел игровой год. Рост продолжается.", "info");
+                        this.addLog("Simulation year passed. Growth continues.", "info");
                     },
                     lightIntensity: this.lightIntensity,
                     wind: this.wind,
@@ -159,17 +160,20 @@ export class BonsaiController {
 
     private updateEnvironment(): void {
         const timeScale = (Date.now() * 0.001) % (Math.PI * 2);
-        // Слабая модуляция — иначе sub_414A70 накапливает крен «в сторону» за тысячи кадров
+        // РЎР»Р°Р±Р°СЏ РјРѕРґСѓР»СЏС†РёСЏ вЂ” РёРЅР°С‡Рµ sub_414A70 РЅР°РєР°РїР»РёРІР°РµС‚ РєСЂРµРЅ В«РІ СЃС‚РѕСЂРѕРЅСѓВ» Р·Р° С‚С‹СЃСЏС‡Рё РєР°РґСЂРѕРІ
         this.wind.x = 0.004 + Math.sin(timeScale) * 0.002;
         this.wind.z = 0.002 + Math.cos(timeScale * 0.5) * 0.002;
     }
 
-    public prune(target: THREE.Object3D): boolean {
-        if (this.root.prune(target)) {
+    public prune(
+        target: THREE.Object3D,
+        options?: { removeSection?: boolean; removeTerminalSection?: boolean },
+    ): boolean {
+        if (this.root.prune(target, options)) {
             this.worldGrowth.energyPool += (GrowthConstants.INITIAL_ENERGY_POOL_196 as number) * 0.1;
             this.stats.energy = this.worldGrowth.normalizedEnergy;
             this.root.energy = this.stats.energy;
-            this.addLog("Ветка обрезана. Энергия перераспределена.", 'info');
+            this.addLog("Branch pruned. Energy redistributed.", 'info');
             this.saveState();
             return true;
         }
@@ -178,7 +182,7 @@ export class BonsaiController {
 
     public applyWire(target: THREE.Object3D): boolean {
         if (this.root.applyWire(target)) {
-            this.addLog("Наложена проволока для коррекции роста.", 'info');
+            this.addLog("Wire applied for growth correction.", 'info');
             this.saveState();
             return true;
         }
@@ -190,7 +194,7 @@ export class BonsaiController {
         this.stats.energy = this.worldGrowth.normalizedEnergy;
         this.root.energy = this.stats.energy;
         this.stats.health = Math.min(1.0, this.stats.health + 0.05);
-        this.addLog("Дерево полито.", 'info');
+        this.addLog("Tree watered.", 'info');
         this.saveState();
     }
 
@@ -230,7 +234,7 @@ export class BonsaiController {
             try {
                 const data = JSON.parse(saved);
 
-                // Validate stats integrity — reject corrupted saves
+                // Validate stats integrity вЂ” reject corrupted saves
                 const s = data.stats;
                 if (!s || typeof s.energy !== 'number') {
                     console.warn("Corrupted save state detected, starting fresh");

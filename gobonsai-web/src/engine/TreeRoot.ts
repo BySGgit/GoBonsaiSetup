@@ -42,7 +42,7 @@ export class TreeRoot {
             geometry.translate(0, heightPerSegment / 2, 0);
             
             const material = new THREE.MeshStandardMaterial({ 
-                color: 0x15100c, 
+                color: 0x2b221b, 
                 roughness: 0.9,
                 metalness: 0.0
             });
@@ -54,30 +54,31 @@ export class TreeRoot {
             segmentMesh.rotation.z = (this.rng.randFloat() - 0.5) * gnarl;
             segmentMesh.rotation.x = (this.rng.randFloat() - 0.5) * gnarl;
             
-            segmentMesh.position.x = (this.rng.randFloat() - 0.5) * 0.15;
-            segmentMesh.position.z = (this.rng.randFloat() - 0.5) * 0.15;
+            segmentMesh.position.x = (this.rng.randFloat() - 0.5) * 0.05;
+            segmentMesh.position.z = (this.rng.randFloat() - 0.5) * 0.05;
 
-            segmentMesh.castShadow = true;
-            segmentMesh.receiveShadow = true;
+            segmentMesh.castShadow = false;
+            segmentMesh.receiveShadow = false;
             group.add(segmentMesh);
         }
 
         this.mesh = group;
         this.group.add(this.mesh);
+        this.group.position.y = -0.08 - level * 0.02;
         parent.add(this.group);
 
         if (level < ROOTS.MAX_LEVEL && this.rng.randFloat() > 0.25) { 
             const childCount = Math.floor(this.rng.randFloat() * 2) + 1;
             for (let i = 0; i < childCount; i++) {
                 const child = new TreeRoot(this.group, level + 1, this.rng);
-                child.group.position.y = this.rng.randFloat() * heightPerSegment * segments * 0.8;
+                child.group.position.y -= this.rng.randFloat() * heightPerSegment * segments * 0.6;
                 this.children.push(child);
             }
         }
     }
 
     public update(ageFactor: number, deltaTime: number): void {
-        const targetScale = Math.min(1.0, ageFactor * 8.0 - (this.level * 0.15));
+        const targetScale = Math.min(0.45, Math.max(0, ageFactor * 3.2 - (this.level * 0.2)));
         const lerpFactor = 1.0 - Math.pow(0.1, deltaTime);
         
         this.currentScale += (targetScale - this.currentScale) * lerpFactor;
@@ -106,6 +107,12 @@ export class TreeRoot {
 
     public static deserialize(parent: THREE.Object3D, data: any, rng: MSVCRand): TreeRoot {
         const root = new TreeRoot(parent, data.level, rng);
+        for (const child of root.children) {
+            if (child.group.parent) {
+                child.group.parent.remove(child.group);
+            }
+        }
+        root.children = [];
         root.currentScale = data.currentScale ?? 0;
         if (data.targetRotation) {
             root.targetRotation.set(data.targetRotation.x, data.targetRotation.y, data.targetRotation.z);

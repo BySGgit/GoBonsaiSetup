@@ -299,6 +299,7 @@ onMounted(() => {
 
   if (canvasContainer.value) {
     canvasContainer.value.addEventListener("click", handleCanvasClick);
+    canvasContainer.value.addEventListener("mousedown", onCanvasMouseDown);
     canvasContainer.value.addEventListener("mousemove", onMouseMove);
   }
   window.addEventListener("resize", onWindowResize);
@@ -328,6 +329,51 @@ const createEnvironment = (scene: THREE.Scene) => {
   scene.add(EnvironmentService.createFloor());
 };
 
+const tryPruneAtEvent = (event: MouseEvent, removeSection: boolean): boolean => {
+  if (!bonsai || !renderer || !camera) return false;
+  const rect = renderer.domElement.getBoundingClientRect();
+  const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+  const intersects = raycaster.intersectObjects(scene.children, true);
+  const pruneOptions = {
+    removeSection,
+    removeTerminalSection: true,
+  };
+
+  for (const intersect of intersects) {
+    let current: THREE.Object3D | null = intersect.object;
+
+    if (current.userData.isSegment && current.userData.parentSection) {
+      if (bonsai.prune(current, pruneOptions)) {
+        spawnPruningParticles(intersect.point);
+        audio.playPrune();
+        return true;
+      }
+    }
+
+    while (current && current !== scene) {
+      if (current.userData.isTreeSection) {
+        if (bonsai.prune(current, pruneOptions)) {
+          spawnPruningParticles(intersect.point);
+          audio.playPrune();
+          return true;
+        }
+      }
+      current = current.parent;
+    }
+  }
+  return false;
+};
+
+const onCanvasMouseDown = (event: MouseEvent) => {
+  if (props.settings.interactionMode !== "prune" || event.button !== 1) return;
+  event.preventDefault();
+  event.stopPropagation();
+  audio.init();
+  tryPruneAtEvent(event, true);
+};
+
 const handleCanvasClick = (event: MouseEvent) => {
   if (!bonsai || !renderer || !camera) return;
   audio.init();
@@ -337,36 +383,8 @@ const handleCanvasClick = (event: MouseEvent) => {
     spawnParticles();
     audio.playWater();
   } else if (props.settings.interactionMode === "prune") {
-    const rect = renderer.domElement.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-    const intersects = raycaster.intersectObjects(scene.children, true);
-
-    for (const intersect of intersects) {
-      let current: THREE.Object3D | null = intersect.object;
-
-      // Check for direct segment hit
-      if (current.userData.isSegment && current.userData.parentSection) {
-        if (bonsai.prune(current)) {
-          spawnPruningParticles(intersect.point);
-          audio.playPrune();
-          return;
-        }
-      }
-
-      // Check hierarchy
-      while (current && current !== scene) {
-        if (current.userData.isTreeSection) {
-          if (bonsai.prune(current)) {
-            spawnPruningParticles(intersect.point);
-            audio.playPrune();
-            return;
-          }
-        }
-        current = current.parent;
-      }
-    }
+    const removeSection = event.ctrlKey;
+    if (tryPruneAtEvent(event, removeSection)) return;
   } else if (props.settings.interactionMode === "wire") {
     const rect = renderer.domElement.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -482,6 +500,7 @@ onUnmounted(() => {
   cancelAnimationFrame(animationId);
   if (canvasContainer.value) {
     canvasContainer.value.removeEventListener("click", handleCanvasClick);
+    canvasContainer.value.removeEventListener("mousedown", onCanvasMouseDown);
     canvasContainer.value.removeEventListener("mousemove", onMouseMove);
   }
   window.removeEventListener("resize", onWindowResize);
