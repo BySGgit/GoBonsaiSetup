@@ -39,12 +39,7 @@ export function rebuildLocalTransformSub4146F0(section: TreeSection): void {
     if (!section.parent) return;
 
     section.group.quaternion.copy(section.rotationQuaternion);
-
-    const parentLength = section.parent.getAttachmentSpan();
-    const attachY = parentLength * (section.branchPosition as number);
-    const lat = section.lateralTransY4158 as number;
-    const attachZ = Math.abs(lat) > 1e-8 ? lat * parentLength : 0;
-    section.group.position.set(0, Math.max(0, attachY), attachZ);
+    section.updateAttachmentPosition(section.parent);
 }
 
 /**

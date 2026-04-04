@@ -33,6 +33,7 @@ const VISUAL_SEGMENTS_PER_SECTION = 6;
 const VISUAL_TRUNK_RADIUS_SCALE = 0.23;
 const VISUAL_LENGTH_SCALE_418F10 = 0.51;
 const MIN_YOUNG_RADIUS_SCALE = 0.12;
+const NATURAL_MIN_YOUNG_RADIUS_SCALE = 0.55;
 
 export class TreeSection
   implements ITreeSectionData, IVisualState, ITransformState, IWorkingBuffers
@@ -395,9 +396,20 @@ export class TreeSection
     const visualHeight = parent.getAttachmentSpan();
     const branchPos = Math.max(0, this.branchPosition as number);
     const lat = this.lateralTransY4158 as number;
+    const seamOverlap =
+      branchPos >= 0.98 ? Math.min(0.05, visualHeight * 0.03) : 0;
     this.group.position.x = 0;
-    this.group.position.y = Math.max(0, branchPos * visualHeight);
+    this.group.position.y = Math.max(0, branchPos * visualHeight - seamOverlap);
     this.group.position.z = Math.abs(lat) > 1e-8 ? lat * visualHeight : 0;
+  }
+
+  private hasPrunedAncestor(): boolean {
+    let p = this.parent;
+    while (p) {
+      if (p.isPruned) return true;
+      p = p.parent;
+    }
+    return false;
   }
 
   public update(
@@ -478,8 +490,16 @@ export class TreeSection
       this.sectionRuntimeType4 === SectionRuntimeType.TreeSectionTwig ||
       this.sectionRuntimeType4 === SectionRuntimeType.TreeSectionBud
     ) {
-      youthRadiusScale =
-        MIN_YOUNG_RADIUS_SCALE + (1 - MIN_YOUNG_RADIUS_SCALE) * youthRamp;
+      const regrowthMode = this.isPruned || this.hasPrunedAncestor();
+      // In natural growth the continuation axis should stay thick;
+      // thin "young twig" look is mainly for post-prune regrowth/laterals.
+      const minScale =
+        this.isContinuation && !regrowthMode
+          ? 1.0
+          : regrowthMode
+            ? MIN_YOUNG_RADIUS_SCALE
+            : NATURAL_MIN_YOUNG_RADIUS_SCALE;
+      youthRadiusScale = minScale + (1 - minScale) * youthRamp;
     }
     const thicknessInput = Math.max(0.05, trunkParams.thickness as number);
     const levelTaper = Math.pow(GEOMETRY.RADIUS_DECAY, this.level * 0.85);

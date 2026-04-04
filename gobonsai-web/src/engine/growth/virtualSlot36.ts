@@ -277,11 +277,16 @@ function sub415C10ConvertBudToTwig(
   const maxSegSize =
     (minSeg + (maxSeg - minSeg) * normalizedEnergy) * randomScale;
 
+  const parentAttachPos = Math.max(0, Math.min(1, bud.branchPosition as number));
+  const inheritedBaseRadius = budParent
+    ? budParent.getRadiusAt(parentAttachPos)
+    : (GrowthConstants.FLT_4D861C_INITIAL_TWIG_GIRTH as number);
+
   const newTwig = new TreeSection(
     budParent,
     bud.level,
     rng,
-    GrowthConstants.FLT_4D861C_INITIAL_TWIG_GIRTH as number,
+    inheritedBaseRadius,
   );
   newTwig.sectionRuntimeType4 = SectionRuntimeType.TreeSectionTwig;
 
@@ -408,8 +413,8 @@ function createLeafSection(
 
   const leafVisual = new TreeLeaf(leaf.group, rng);
   leafVisual.energy = 0.9;
-  leafVisual.size = 0.14 + rng.randFloat() * 0.06;
-  leafVisual.targetSize = Math.min(0.75, Math.max(0.24, maxLeafSize * 0.12));
+  leafVisual.size = 0.3 + rng.randFloat() * 0.15;
+  leafVisual.targetSize = Math.min(1.8, Math.max(0.55, maxLeafSize * 0.45));
   leaf.leaves.push(leafVisual);
 
   return leaf;

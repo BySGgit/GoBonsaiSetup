@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { MSVCRand } from './MSVCRand';
 import { TREE_CONSTANTS } from './TreeConstants';
 
+const LEAF_VISUAL_SCALE = 4.0;
+
 export class TreeLeaf {
     public mesh: THREE.Mesh;
     public energy: number = 1.0; 
@@ -111,13 +113,13 @@ export class TreeLeaf {
         }
 
         if (this.energy > 0.4 && this.size < this.targetSize) {
-            this.size += 0.1 * globalGrowthFactor * deltaTime;
+            this.size += 0.16 * globalGrowthFactor * deltaTime;
         } 
 
-        const s = Math.max(0, this.size);
+        const s = Math.max(0, this.size) * LEAF_VISUAL_SCALE;
         this.mesh.scale.set(s, s, s);
         
-        const targetOpacity = this.energy * 0.8;
+        const targetOpacity = this.energy * 0.95;
         const lerpFactor = 1.0 - Math.pow(0.1, deltaTime);
         leafMat.opacity += (targetOpacity - leafMat.opacity) * lerpFactor;
         

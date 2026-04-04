@@ -13,10 +13,18 @@ export class GeometryService {
         level: number,
         rng: MSVCRand,
         tBottom: number = 0,
-        tTop: number = 1
+        tTop: number = 1,
+        openEnded: boolean = true
     ): THREE.Mesh {
         const { GEOMETRY } = TREE_CONSTANTS;
-        const geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, GEOMETRY.RADIAL_SEGMENTS, 1, false);
+        const geometry = new THREE.CylinderGeometry(
+            radiusTop,
+            radiusBottom,
+            height,
+            GEOMETRY.RADIAL_SEGMENTS,
+            1,
+            openEnded
+        );
         geometry.translate(0, height / 2, 0);
 
         // sub_4093B0.c: Custom UV mapping (Concentric projection)
