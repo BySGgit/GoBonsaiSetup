@@ -9,7 +9,6 @@ import {
     applyGlobalEnergyPoolAfterGrowth,
 } from "./sub40DC90PoolBalance";
 import {
-    syncEnergyWeight428FromGeometry,
     distributeEnergyBudget432DownTree,
     aggregateEnergy420436PostOrder,
     applySub414E10PostOrderTail,
@@ -48,7 +47,6 @@ export function runSub40DC90GrowthTick(
     setSlot36SimulationDay(simulationDay);
 
     resetAllEnergyAggregates(root);
-    syncEnergyWeight428FromGeometry(root);
     writeRootEnergyBudget432(root, worldGrowth.energyPool, seasonFactor);
 
     distributeEnergyBudget432DownTree(

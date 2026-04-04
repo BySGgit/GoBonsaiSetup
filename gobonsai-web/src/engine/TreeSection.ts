@@ -502,15 +502,13 @@ export class TreeSection
       youthRadiusScale = minScale + (1 - minScale) * youthRamp;
     }
     const thicknessInput = Math.max(0.05, trunkParams.thickness as number);
-    const levelTaper = Math.pow(GEOMETRY.RADIUS_DECAY, this.level * 0.85);
     let radScale =
       thicknessInput *
       VISUAL_TRUNK_RADIUS_SCALE *
       stateRadiusNorm *
-      youthRadiusScale *
-      levelTaper;
+      youthRadiusScale;
     if (this.parent) {
-      const parentLimit = this.isContinuation ? 0.96 : 0.78;
+      const parentLimit = this.isContinuation ? 1.0 : 0.78;
       radScale = Math.min(
         radScale,
         Math.max(0.02, (this.parent.mesh.scale.x as number) * parentLimit),
@@ -587,8 +585,7 @@ export class TreeSection
       ),
     );
 
-    // Early foliage should be visible in the initial years (original look).
-    const foliageVisible = trunkParams.thickness > 0.2;
+    const foliageVisible = true;
     this.leaves.forEach((leaf) => {
       leaf.mesh.visible = foliageVisible;
       if (foliageVisible) {
