@@ -63,7 +63,7 @@ export class BonsaiController {
     }
 
     private initRoots(): void {
-        const rootCount = 2 + Math.floor(this.rng.randFloat() * 2);
+        const rootCount = 1;
         for (let i = 0; i < rootCount; i++) {
             const treeRoot = new TreeRoot(this.scene, 0, this.rng);
             this.treeRoots.push(treeRoot);

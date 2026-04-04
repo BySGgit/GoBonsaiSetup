@@ -40,7 +40,22 @@ let particlePositions: Float32Array;
 let particleVelocities: THREE.Vector3[] = [];
 const PARTICLE_COUNT = 100;
 
-let highlightedBranch: THREE.Group | null = null;
+type SectionLike = {
+  group: THREE.Group;
+  mesh: THREE.Group;
+  children: SectionLike[];
+  branchPosition: number;
+  isContinuation?: boolean;
+};
+
+type HighlightState = {
+  section: SectionLike;
+  segmentIndex: number;
+  mode: "prune" | "wire";
+};
+
+let highlightedState: HighlightState | null = null;
+const highlightedMeshes = new Set<THREE.Mesh>();
 const mouse = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 
@@ -113,8 +128,8 @@ onMounted(() => {
     0.1,
     1000,
   );
-  camera.position.set(0, 3, 8);
-  camera.lookAt(0, 2, 0);
+  camera.position.set(0, 4.2, 11.5);
+  camera.lookAt(0, 1.8, 0);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -127,10 +142,10 @@ onMounted(() => {
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
   controls.minDistance = 3;
-  controls.maxDistance = 20;
+  controls.maxDistance = 28;
   controls.minPolarAngle = 0;
   controls.maxPolarAngle = Math.PI / 1.8;
-  controls.target.set(0, 2, 0);
+  controls.target.set(0, 1.8, 0);
   controls.update();
 
   const renderScene = new RenderPass(scene, camera);
@@ -231,68 +246,157 @@ onMounted(() => {
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(scene.children, true);
 
-    let found: THREE.Group | null = null;
+    let found: HighlightState | null = null;
     for (const intersect of intersects) {
-      let current: THREE.Object3D | null = intersect.object;
-
-      if (current.userData.isSegment && current.userData.parentSection) {
-        const section = current.userData.parentSection;
-        if (
-          props.settings.interactionMode === "prune" &&
-          section === bonsai.root
-        ) {
-          // Корень не режем
-        } else {
-          found = section.group;
-          break;
-        }
+      const hit = resolveSectionHit(intersect.object);
+      if (!hit) continue;
+      if (
+        props.settings.interactionMode === "prune" &&
+        hit.section === (bonsai.root as unknown as SectionLike)
+      ) {
+        continue;
       }
-
-      while (current && current !== scene) {
-        if (current.userData.isTreeSection) {
-          if (
-            props.settings.interactionMode === "prune" &&
-            current === bonsai.root.group
-          ) {
-            // Корень не подсвечиваем для обрезки
-          } else {
-            found = current as THREE.Group;
-          }
-          break;
-        }
-        current = current.parent;
-      }
-      if (found) break;
+      found = {
+        section: hit.section,
+        segmentIndex: hit.segmentIndex,
+        mode: props.settings.interactionMode,
+      };
+      break;
     }
 
-    if (found !== highlightedBranch) {
+    if (!statesEqual(found, highlightedState)) {
       resetHighlight();
       if (found) {
-        highlightedBranch = found;
-        setBranchHighlight(highlightedBranch, true);
+        highlightedState = found;
+        applyHighlight(found);
       }
     }
   };
 
   const resetHighlight = () => {
-    if (highlightedBranch) {
-      setBranchHighlight(highlightedBranch, false);
-      highlightedBranch = null;
+    if (highlightedMeshes.size > 0) {
+      for (const mesh of highlightedMeshes) {
+        if (!(mesh.material instanceof THREE.MeshStandardMaterial)) continue;
+        mesh.material.emissive.setHex(0x000000);
+        mesh.material.emissiveIntensity = 0;
+        if (mesh.userData?.segmentOverlay && mesh.material.transparent) {
+          mesh.material.opacity = 0;
+        }
+      }
+      highlightedMeshes.clear();
     }
+    highlightedState = null;
   };
 
-  const setBranchHighlight = (group: THREE.Group, active: boolean) => {
-    const color =
-      props.settings.interactionMode === "wire" ? 0x44ff44 : 0x444444;
+  const markMesh = (mesh: THREE.Mesh, color: number, intensity: number) => {
+    if (!(mesh.material instanceof THREE.MeshStandardMaterial)) return;
+    mesh.material.emissive.setHex(color);
+    mesh.material.emissiveIntensity = intensity;
+    if (mesh.userData?.segmentOverlay && mesh.material.transparent) {
+      mesh.material.opacity = Math.max(mesh.material.opacity, 0.38);
+    }
+    highlightedMeshes.add(mesh);
+  };
+
+  const markGroup = (group: THREE.Group, color: number, intensity: number) => {
     group.traverse((obj) => {
       if (
         obj instanceof THREE.Mesh &&
         obj.material instanceof THREE.MeshStandardMaterial
       ) {
-        obj.material.emissive.setHex(active ? color : 0x000000);
-        obj.material.emissiveIntensity = active ? 0.5 : 0;
+        markMesh(obj, color, intensity);
       }
     });
+  };
+
+  const statesEqual = (a: HighlightState | null, b: HighlightState | null) => {
+    if (!a && !b) return true;
+    if (!a || !b) return false;
+    return (
+      a.section === b.section &&
+      a.segmentIndex === b.segmentIndex &&
+      a.mode === b.mode
+    );
+  };
+
+  const getSegmentMeshes = (section: SectionLike): THREE.Mesh[] =>
+    section.mesh.children.filter(
+      (child): child is THREE.Mesh =>
+        child instanceof THREE.Mesh && !!child.userData?.isSegment,
+    );
+
+  const getSegmentCount = (section: SectionLike): number =>
+    Math.max(1, getSegmentMeshes(section).length);
+
+  const clampSegmentIndex = (section: SectionLike, idx: number): number =>
+    Math.max(0, Math.min(getSegmentCount(section) - 1, idx));
+
+  const collectAllDescendants = (section: SectionLike, out: SectionLike[]) => {
+    for (const child of section.children ?? []) {
+      out.push(child);
+      collectAllDescendants(child, out);
+    }
+  };
+
+  const collectPrunedDescendants = (
+    section: SectionLike,
+    cutRatio: number,
+    out: SectionLike[],
+  ) => {
+    for (const child of section.children ?? []) {
+      const branchPos = Number(child.branchPosition ?? 1);
+      const removeNow = branchPos >= cutRatio - 1e-4 || !!child.isContinuation;
+      if (removeNow) {
+        out.push(child);
+        collectAllDescendants(child, out);
+      }
+    }
+  };
+
+  const resolveSectionHit = (
+    object: THREE.Object3D,
+  ): { section: SectionLike; segmentIndex: number } | null => {
+    let current: THREE.Object3D | null = object;
+    if (current.userData?.isSegment && current.userData?.parentSection) {
+      const section = current.userData.parentSection as SectionLike;
+      const idx = Number(current.userData.segmentIndex);
+      return {
+        section,
+        segmentIndex: Number.isFinite(idx) ? idx : getSegmentCount(section) - 1,
+      };
+    }
+    while (current && current !== scene) {
+      const controller = current.userData?.controller as
+        | SectionLike
+        | undefined;
+      if (controller?.mesh && controller?.group) {
+        return {
+          section: controller,
+          segmentIndex: getSegmentCount(controller) - 1,
+        };
+      }
+      current = current.parent;
+    }
+    return null;
+  };
+
+  const applyHighlight = (state: HighlightState) => {
+    if (state.mode === "wire") {
+      markGroup(state.section.group, 0x44ff44, 0.5);
+      return;
+    }
+
+    const segMeshes = getSegmentMeshes(state.section);
+    const cutIndex = clampSegmentIndex(state.section, state.segmentIndex);
+    for (const seg of segMeshes) {
+      const idx = Number(seg.userData?.segmentIndex ?? 0);
+      if (idx >= cutIndex) markMesh(seg, 0x444444, 0.5);
+    }
+
+    const cutRatio = (cutIndex + 1) / getSegmentCount(state.section);
+    const descendants: SectionLike[] = [];
+    collectPrunedDescendants(state.section, cutRatio, descendants);
+    for (const node of descendants) markGroup(node.group, 0x444444, 0.5);
   };
 
   animate();
@@ -313,7 +417,7 @@ const onMouseMove = (event: MouseEvent) => {
   mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
   if (props.settings.interactionMode === "prune") {
-    canvasContainer.value.style.cursor = highlightedBranch
+    canvasContainer.value.style.cursor = highlightedState
       ? "crosshair"
       : "default";
   } else {

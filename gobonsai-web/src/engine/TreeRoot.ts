@@ -42,7 +42,7 @@ export class TreeRoot {
             geometry.translate(0, heightPerSegment / 2, 0);
             
             const material = new THREE.MeshStandardMaterial({ 
-                color: 0x2b221b, 
+                color: 0x4a3528, 
                 roughness: 0.9,
                 metalness: 0.0
             });
@@ -78,7 +78,7 @@ export class TreeRoot {
     }
 
     public update(ageFactor: number, deltaTime: number): void {
-        const targetScale = Math.min(0.45, Math.max(0, ageFactor * 3.2 - (this.level * 0.2)));
+        const targetScale = Math.min(0.22, Math.max(0, ageFactor * 1.35 - (this.level * 0.12)));
         const lerpFactor = 1.0 - Math.pow(0.1, deltaTime);
         
         this.currentScale += (targetScale - this.currentScale) * lerpFactor;

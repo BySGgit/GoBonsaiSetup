@@ -43,12 +43,12 @@ export const TREE_CONSTANTS = {
 
     // Roots logic (crawling effect)
     ROOTS: {
-        BASE_RADIUS: 0.08,
+        BASE_RADIUS: 0.05,
         RADIUS_DECAY: 0.8,
-        SEGMENTS: 12,
-        SEGMENT_HEIGHT: 0.05,
+        SEGMENTS: 9,
+        SEGMENT_HEIGHT: 0.035,
         GNARL_LEVEL_0: 0.8,
         GNARL_LEVEL_N: 1.2,
-        MAX_LEVEL: 3,
+        MAX_LEVEL: 2,
     }
 };

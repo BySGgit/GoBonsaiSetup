@@ -40,7 +40,7 @@ export function rebuildLocalTransformSub4146F0(section: TreeSection): void {
 
     section.group.quaternion.copy(section.rotationQuaternion);
 
-    const parentLength = section.parent.twigLength448 as number;
+    const parentLength = section.parent.getAttachmentSpan();
     const attachY = parentLength * (section.branchPosition as number);
     const lat = section.lateralTransY4158 as number;
     const attachZ = Math.abs(lat) > 1e-8 ? lat * parentLength : 0;

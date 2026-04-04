@@ -408,8 +408,8 @@ function createLeafSection(
 
   const leafVisual = new TreeLeaf(leaf.group, rng);
   leafVisual.energy = 0.9;
-  leafVisual.size = 0.08 + rng.randFloat() * 0.04;
-  leafVisual.targetSize = Math.min(0.3, Math.max(0.12, maxLeafSize * 0.07));
+  leafVisual.size = 0.14 + rng.randFloat() * 0.06;
+  leafVisual.targetSize = Math.min(0.75, Math.max(0.24, maxLeafSize * 0.12));
   leaf.leaves.push(leafVisual);
 
   return leaf;

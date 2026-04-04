@@ -29,8 +29,10 @@ export function setDebugWireframe(on: boolean): void {
   DEBUG_WIREFRAME = on;
 }
 
-const VISUAL_SEGMENTS_PER_SECTION = 4;
-const VISUAL_THICKNESS_SCALE = 0.42;
+const VISUAL_SEGMENTS_PER_SECTION = 6;
+const VISUAL_TRUNK_RADIUS_SCALE = 0.23;
+const VISUAL_LENGTH_SCALE_418F10 = 0.51;
+const MIN_YOUNG_RADIUS_SCALE = 0.12;
 
 export class TreeSection
   implements ITreeSectionData, IVisualState, ITransformState, IWorkingBuffers
@@ -248,8 +250,23 @@ export class TreeSection
     // HEIGHT_FACTOR
     const sectionHeight = GEOMETRY.HEIGHT_FACTOR;
 
-    // sub_4093B0.c generates a single frustum (cylinder) per section with 32 radial segments
-    // The outer loop in C (v46 < 2) processes exactly 2 rings: bottom and top.
+    // Original sub_4093B0 builds one continuous frustum surface for a section.
+    const branchMesh = GeometryService.createBranchSegment(
+      this.branchTipRadius,
+      this.branchBaseRadius,
+      sectionHeight,
+      level,
+      this.rng,
+      0,
+      1,
+    );
+    branchMesh.userData = {
+      isBranchSurface: true,
+      parentSection: this,
+    };
+    this.mesh.add(branchMesh);
+
+    // Virtual sub-segments are kept only for raycast/highlight/cut UX.
     const segmentCount = Math.max(1, VISUAL_SEGMENTS_PER_SECTION);
     const segmentHeight = sectionHeight / segmentCount;
     for (let i = 0; i < segmentCount; i++) {
@@ -269,12 +286,26 @@ export class TreeSection
         tBottom,
         tTop,
       );
-      segmentMesh.position.y = i * segmentHeight;
       segmentMesh.userData = {
         isSegment: true,
+        segmentOverlay: true,
         segmentIndex: i,
         parentSection: this,
       };
+      segmentMesh.position.y = i * segmentHeight;
+      segmentMesh.castShadow = false;
+      segmentMesh.receiveShadow = false;
+      segmentMesh.material = new THREE.MeshStandardMaterial({
+        color: 0x000000,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -2,
+        roughness: 1.0,
+        metalness: 0,
+      });
       this.mesh.add(segmentMesh);
     }
 
@@ -337,15 +368,35 @@ export class TreeSection
     return baseRadius * (1.0 - t) + tipRadius * t;
   }
 
+  public getAttachmentSpan(): number {
+    const { GEOMETRY } = TREE_CONSTANTS;
+    const baseHeight = GEOMETRY.HEIGHT_FACTOR;
+    const twigLen = this.twigLength448 as number;
+
+    if (twigLen > 0.001) {
+      return Math.max(baseHeight * 0.02, twigLen * VISUAL_LENGTH_SCALE_418F10);
+    }
+
+    const maxGrowth = Math.max(1e-4, this.maxGrowth as number);
+    const growthProgress = Math.max(
+      0,
+      Math.min(1, (this.growthRate as number) / maxGrowth),
+    );
+    const hasContinuation = this.children.some((c) => c.isContinuation);
+    let currentHeightScale = hasContinuation
+      ? 1.0
+      : Math.max(0.01, growthProgress);
+    if (twigLen >= baseHeight - 0.01) currentHeightScale = 1.0;
+    return baseHeight * currentHeightScale;
+  }
+
   /** Позиция дочерней секции вдоль локальной оси Y родителя (sub_415C10 / иерархия сцены). */
   public updateAttachmentPosition(parent: TreeSection): void {
-    const { GEOMETRY } = TREE_CONSTANTS;
-    // Match the visual top of the parent mesh: base height * mesh scaleY.
-    // parent.mesh.scale.y is set in update() BEFORE children call this.
-    const visualHeight = GEOMETRY.HEIGHT_FACTOR * parent.mesh.scale.y;
+    const visualHeight = parent.getAttachmentSpan();
+    const branchPos = Math.max(0, this.branchPosition as number);
     const lat = this.lateralTransY4158 as number;
     this.group.position.x = 0;
-    this.group.position.y = (this.branchPosition as number) * visualHeight;
+    this.group.position.y = Math.max(0, branchPos * visualHeight);
     this.group.position.z = Math.abs(lat) > 1e-8 ? lat * visualHeight : 0;
   }
 
@@ -405,41 +456,55 @@ export class TreeSection
 
     const { GEOMETRY } = TREE_CONSTANTS;
 
-    // Height: prefer C-truth twigLength448 when available, fall back to growthRate-based
+    // Height: sub_418F10 uses this+448 with ~0.51 multiplier for twig visual length.
     const baseHeight = GEOMETRY.HEIGHT_FACTOR;
     const twigLen = this.twigLength448 as number;
-    let currentHeightScale: number;
-    if (twigLen > 0.001 && twigLen !== baseHeight) {
-      // Section length was set by C-parity growth engine
-      currentHeightScale = Math.max(0.05, twigLen / baseHeight);
-    } else {
-      // Legacy path: length from growthRate progress
-      const growthProgress =
-        this.maxGrowth > 0
-          ? Math.min(1.0, this.growthRate / this.maxGrowth)
-          : 1.0;
-      const hasContinuation = this.children.some((c) => c.isContinuation);
-      currentHeightScale = hasContinuation
-        ? 1.0
-        : Math.max(0.01, growthProgress);
-      // Root/initial sections: always show full height
-      if (twigLen >= baseHeight - 0.01) currentHeightScale = 1.0;
+    const maxGrowth = Math.max(1e-4, this.maxGrowth as number);
+    const growth01 = Math.max(0, Math.min(1, twigLen / maxGrowth));
+    const youthRamp = growth01 * growth01 * (3 - 2 * growth01);
+    const currentHeightScale = this.getAttachmentSpan() / baseHeight;
+
+    const stateRadiusNorm = Math.max(
+      0.15,
+      Math.min(
+        1.0,
+        Math.sqrt(
+          (this.twigRadius444 as number) / Math.max(1e-5, this.branchBaseRadius),
+        ),
+      ),
+    );
+    let youthRadiusScale = 1.0;
+    if (
+      this.sectionRuntimeType4 === SectionRuntimeType.TreeSectionTwig ||
+      this.sectionRuntimeType4 === SectionRuntimeType.TreeSectionBud
+    ) {
+      youthRadiusScale =
+        MIN_YOUNG_RADIUS_SCALE + (1 - MIN_YOUNG_RADIUS_SCALE) * youthRamp;
+    }
+    const thicknessInput = Math.max(0.05, trunkParams.thickness as number);
+    const levelTaper = Math.pow(GEOMETRY.RADIUS_DECAY, this.level * 0.85);
+    let radScale =
+      thicknessInput *
+      VISUAL_TRUNK_RADIUS_SCALE *
+      stateRadiusNorm *
+      youthRadiusScale *
+      levelTaper;
+    if (this.parent) {
+      const parentLimit = this.isContinuation ? 0.96 : 0.78;
+      radScale = Math.min(
+        radScale,
+        Math.max(0.02, (this.parent.mesh.scale.x as number) * parentLimit),
+      );
     }
 
-    // Radius: trunkParams.thickness is the global visual scale (from stats, ~10).
-    // templateRadius gives per-level taper. Divide by branchBaseRadius to normalize.
-    const templateRadius =
-      GEOMETRY.BASE_RADIUS_FACTOR * Math.pow(GEOMETRY.RADIUS_DECAY, this.level);
-    const radScale =
-      (trunkParams.thickness * VISUAL_THICKNESS_SCALE * templateRadius) /
-      Math.max(1e-6, this.branchBaseRadius as number);
-
-    if (trunkParams.thickness > 0.01) {
+    if (thicknessInput > 0.01) {
       this.mesh.scale.set(radScale, currentHeightScale, radScale);
       this.group.visible = true;
 
-      if (this.wireMesh)
-        this.wireMesh.scale.set(radScale, currentHeightScale, radScale);
+      if (this.wireMesh) {
+        const wireScale = Math.max(0.05, radScale * 0.85);
+        this.wireMesh.scale.set(wireScale, currentHeightScale, wireScale);
+      }
 
       this.children.forEach((child) => child.updateAttachmentPosition(this));
     } else {
@@ -502,8 +567,8 @@ export class TreeSection
       ),
     );
 
-    // Листва появляется при достаточной толщине (ориентировочно)
-    const foliageVisible = trunkParams.thickness > 1.0;
+    // Early foliage should be visible in the initial years (original look).
+    const foliageVisible = trunkParams.thickness > 0.2;
     this.leaves.forEach((leaf) => {
       leaf.mesh.visible = foliageVisible;
       if (foliageVisible) {
@@ -807,9 +872,10 @@ export class TreeSection
 
   private addCutVisual(segmentIndex: number): void {
     if (this.cutCap) this.mesh.remove(this.cutCap);
-    const count = this.getSegmentCount();
+    const segmentMeshes = this.getSegmentMeshes();
+    const count = Math.max(1, segmentMeshes.length);
     const clampedIndex = Math.max(0, Math.min(count - 1, segmentIndex));
-    const lastSegment = this.mesh.children[clampedIndex] as THREE.Mesh;
+    const lastSegment = segmentMeshes[clampedIndex];
     if (!lastSegment || !lastSegment.geometry) return;
 
     const radius = (lastSegment.geometry as THREE.CylinderGeometry).parameters
@@ -820,8 +886,14 @@ export class TreeSection
     this.mesh.add(this.cutCap);
   }
 
+  private getSegmentMeshes(): THREE.Mesh[] {
+    return this.mesh.children.filter(
+      (child): child is THREE.Mesh => !!child.userData?.isSegment,
+    );
+  }
+
   private getSegmentCount(): number {
-    return Math.max(1, this.mesh.children.length);
+    return Math.max(1, this.getSegmentMeshes().length);
   }
 
   private resolveSegmentIndex(target: THREE.Object3D): number | null {
@@ -829,8 +901,9 @@ export class TreeSection
       const idx = Number(target.userData.segmentIndex);
       return Number.isFinite(idx) ? idx : this.getSegmentCount() - 1;
     }
-    for (let i = 0; i < this.mesh.children.length; i++) {
-      if (this.mesh.children[i] === target) return i;
+    const segmentMeshes = this.getSegmentMeshes();
+    for (let i = 0; i < segmentMeshes.length; i++) {
+      if (segmentMeshes[i] === target) return i;
     }
     return null;
   }
