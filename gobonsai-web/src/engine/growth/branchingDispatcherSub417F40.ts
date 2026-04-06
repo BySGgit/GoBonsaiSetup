@@ -8,11 +8,19 @@ import {
     sampleMaxGrowth452Sub4159C0,
 } from "../config/GrowthConstants";
 import { Float32 } from "../math/MathTypes";
-import { TransformService } from "../math/TransformService";
-import { Sub416510Rotation } from "../math/Sub416510Rotation";
 import { sub4084F0NormalizeInPlaceReturnLen, sub408590 } from "../math/Vec3Sub40xPrimitives";
 import { sub401B00ExtractBasisZ } from "../world/SectionSpatialQueriesSub40x";
 import { getSlot36SimulationDay } from "./frameState";
+import { sub413F50AttachChild, sub413F50InitSection } from "./sub413F50Ctor";
+import {
+    createNumericPropertyBinding,
+    createSub4032WideString,
+    createSub408600Entry,
+    sub401DD0DestroyIniEntry,
+    sub4032D0Assign,
+    sub408600Register,
+    subAtexitRegister,
+} from "../config/IniRegistrySub408600";
 
 const _tmpInv417FF0 = new THREE.Matrix4();
 const _tmpM3FromInv417FF0 = new THREE.Matrix3();
@@ -24,6 +32,28 @@ const _tmpA417FF0 = new THREE.Vector3();
 const _tmpB417FF0 = new THREE.Vector3();
 const _tmpNegB417FF0 = new THREE.Vector3();
 const _tmpCross417FF0 = new THREE.Vector3();
+const _randomBudRotationMeta4DBAC4 = createSub408600Entry();
+let _sub417FF0InitFlags4DBAE8 = 0;
+
+function sub4724B0CleanupStub(): void {
+    sub401DD0DestroyIniEntry(_randomBudRotationMeta4DBAC4);
+}
+
+function ensureSub417FF0IniBindings(): void {
+    if ((_sub417FF0InitFlags4DBAE8 & 1) !== 0) return;
+    _sub417FF0InitFlags4DBAE8 |= 1;
+    const key = createSub4032WideString();
+    sub4032D0Assign(key, "randomBudRotation", 0x11);
+    sub408600Register(
+        key,
+        _randomBudRotationMeta4DBAC4,
+        createNumericPropertyBinding(
+            GrowthConstants,
+            "FLT_4D642C_RANDOM_BUD_ROTATION",
+        ),
+    );
+    subAtexitRegister(sub4724B0CleanupStub);
+}
 
 function sub416300Filter(section: TreeSection | null): TreeSection | null {
     if (!section) return null;
@@ -216,6 +246,8 @@ function apicalBranchSub417FF0(
         return;
     }
 
+    ensureSub417FF0IniBindings();
+
     const v30 = signedBudBaseAngleSub417FF0(section);
     const randBud =
         (rng.randFloat() * 2.0 - 1.0) *
@@ -342,18 +374,18 @@ function createBudChild(
 ): TreeSection | null {
     opts ??= {};
     const bud = new TreeSection(parent, parent.level + 1, rng, 0.01);
+    sub413F50InitSection(
+        bud,
+        parent,
+        parent.localTemplate240,
+        [yaw, pitch, opts.roll ?? 0],
+    );
     bud.sectionRuntimeType4 = SectionRuntimeType.TreeSectionBud;
     bud.twigRadius444 = 0.01 as Float32;
     bud.twigLength448 = 0 as Float32;
     bud.energyWeight428 = 1.0 as Float32;
     bud.sub414CE0SeedBudget428 = 1.0 as Float32;
     bud.growthFlag512 = true;
-
-    const roll = opts.roll ?? 0;
-    TransformService.rotationYawPitchRoll(bud.targetRotation, yaw, pitch, roll);
-    bud.rotationQuaternion.copy(bud.targetRotation);
-    bud.rotation.copy(bud.targetRotation);
-    Sub416510Rotation.syncBlob80FromQuaternion(bud);
 
     if (opts.branchPosition !== undefined) {
         bud.branchPosition = opts.branchPosition as Float32;
@@ -369,7 +401,7 @@ function createBudChild(
             ? (opts.maxGrowth452 as Float32)
             : sampleMaxGrowth452Sub4159C0(rng);
 
-    parent.children.push(bud);
+    sub413F50AttachChild(parent, bud);
     bud.updateAttachmentPosition(parent);
     return bud;
 }

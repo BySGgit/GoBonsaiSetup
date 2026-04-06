@@ -1,4 +1,4 @@
-volatile LONG *___lc_handle_func()
+volatile LONG *___lc_handle_func() 
 {
   int v0; // ecx
   volatile LONG *v1; // eax

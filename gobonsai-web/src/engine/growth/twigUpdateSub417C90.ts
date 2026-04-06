@@ -5,6 +5,15 @@ import { Float32 } from "../math/MathTypes";
 import { TransformService } from "../math/TransformService";
 import { twigLengthGrowthSub418BD0 } from "./twigLengthGrowthSub418BD0";
 import { branchingDispatcherSub417F40 } from "./branchingDispatcherSub417F40";
+import {
+    createNumericPropertyBinding,
+    createSub4032WideString,
+    createSub408600Entry,
+    sub401DD0DestroyIniEntry,
+    sub4032D0Assign,
+    sub408600Register,
+    subAtexitRegister,
+} from "../config/IniRegistrySub408600";
 
 /**
  * sub_417C90.c: per-frame update for TreeSectionTwig (vtable slot +36, type=10).
@@ -18,6 +27,28 @@ const DEATH_OLD_TICK_THRESHOLD = 1000;
 const DEATH_THICK_TICK_THRESHOLD = 2000;
 const DEATH_THICK_GIRTH_THRESHOLD = 0.1;
 const DEATH_RARE_PROBABILITY = 0.01;
+const _healthEnergyAdjustmentMeta4DBAEC = createSub408600Entry();
+let _sub417C90InitFlags4DBB10 = 0;
+
+function sub4724A0CleanupStub(): void {
+    sub401DD0DestroyIniEntry(_healthEnergyAdjustmentMeta4DBAEC);
+}
+
+function ensureSub417C90IniBindings(): void {
+    if ((_sub417C90InitFlags4DBB10 & 1) !== 0) return;
+    _sub417C90InitFlags4DBB10 |= 1;
+    const key = createSub4032WideString();
+    sub4032D0Assign(key, "healthEnergyAdjustment", 0x16);
+    sub408600Register(
+        key,
+        _healthEnergyAdjustmentMeta4DBAEC,
+        createNumericPropertyBinding(
+            GrowthConstants,
+            "FLT_4D6428_HEALTH_ENERGY_ADJUSTMENT",
+        ),
+    );
+    subAtexitRegister(sub4724A0CleanupStub);
+}
 
 export function twigUpdateSub417C90(
     section: TreeSection,
@@ -53,6 +84,8 @@ export function twigUpdateSub417C90(
     } else {
         if (rng) branchingDispatcherSub417F40(section, rng);
     }
+
+    ensureSub417C90IniBindings();
 
     // Health smoothing with INI-driven flt_4D6428.
     const minBudEnergy = GrowthConstants.FLT_4D862C as number;

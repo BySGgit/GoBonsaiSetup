@@ -97,7 +97,7 @@ export function sub43FD00Stub(): void {
 
 /** sub_472560: atexit teardown hook (stub in web runtime). */
 export function sub472560Stub(): void {
-    // Runtime teardown hook placeholder.
+    sub43FBB0TeardownRegistry();
 }
 
 export function subAtexitRegister(handler: () => void): void {
@@ -178,6 +178,20 @@ export function sub44A640SortList(): void {
     }
 }
 
+/**
+ * sub_43FBB0:
+ *   full registry teardown path used by atexit handler in native runtime.
+ *   Web runtime mirrors observable effect by dropping all registry nodes/state.
+ */
+export function sub43FBB0TeardownRegistry(): void {
+    const fresh = createRegistryState();
+    dword4D8E20.initMask4D8EC0 = fresh.initMask4D8EC0;
+    dword4D8E20.listHead4D8E20 = fresh.listHead4D8E20;
+    dword4D8E20.size4D8E24 = fresh.size4D8E24;
+    dword4D8E20.initCalls43FD00 = fresh.initCalls43FD00;
+    dword4D8E20.atexitHandlers = fresh.atexitHandlers;
+}
+
 function sub403580Grow(dest: Sub4032WideString, requestedLen: number): void {
     let newCap = requestedLen | 7;
     if (newCap <= SUB_4032D0_MAX_LENGTH) {
@@ -207,23 +221,57 @@ export function sub4037B0AssignSubstr(
     count: number,
     pos: number,
 ): Sub4032WideString {
-    if (src.length16 < pos) {
+    const p = pos >>> 0;
+    if (src.length16 < p) {
         throw new RangeError("invalid string position");
     }
-    let copyLen = src.length16 - pos;
+    let copyLen = src.length16 - p;
     const c = count >>> 0;
     if (c < copyLen) {
         copyLen = c;
+    }
+    if (src === dest) {
+        sub403440Erase(dest, UINT32_MAX, copyLen + p);
+        sub403440Erase(dest, p, 0);
+        return dest;
     }
     if (copyLen > SUB_4032D0_MAX_LENGTH) {
         throw new RangeError("string too long");
     }
 
-    const slice = src.value.slice(pos, pos + copyLen);
+    const slice = src.value.slice(p, p + copyLen);
     if (dest.capacity20 < copyLen) {
         sub403580Grow(dest, copyLen);
     }
     return setWideStringValue(dest, slice);
+}
+
+/**
+ * sub_403440:
+ *   erase `count` wide chars from `dest` at `pos`, clamped to string end.
+ *   Throws on invalid position.
+ */
+export function sub403440Erase(
+    dest: Sub4032WideString,
+    count: number,
+    pos: number,
+): Sub4032WideString {
+    const p = pos >>> 0;
+    if (dest.length16 < p) {
+        throw new RangeError("invalid string position");
+    }
+    const tailLen = dest.length16 - p;
+    let eraseLen = count >>> 0;
+    if (eraseLen > tailLen) {
+        eraseLen = tailLen;
+    }
+    if (eraseLen === 0) {
+        return dest;
+    }
+    const next = dest.value.slice(0, p) + dest.value.slice(p + eraseLen);
+    dest.value = next;
+    dest.length16 = next.length;
+    return dest;
 }
 
 function resolveSource(

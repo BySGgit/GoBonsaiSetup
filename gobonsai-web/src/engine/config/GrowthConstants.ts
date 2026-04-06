@@ -21,6 +21,9 @@ function buildTypeTable(entries: Array<[typeId: number, value: number]>): Uint8A
 export const GrowthConstants = {
   BYTE_4D62DC_UPDATE_GROWTH: true,
   BYTE_4D8CED_RANDOM_AUTO_CUTS: false,
+  BYTE_4D6356_PHYSICS_ENABLED: true,
+  BYTE_4D8DA5_DEBUG_LIGHT_VECTOR: false,
+  FLT_4D6358_PHYSICS_WEIGHT_THRESHOLD: 0.001 as Float32,
 
   FLT_4B786C_MONTH: [
     0.0, 0.0, 0.5, 1.0, 1.0, 0.5, 0.1, 0.1, 0.050000001, 0.0, 0.0, 0.0,
@@ -114,6 +117,7 @@ export const GrowthConstants = {
 
   /** sub_40E230: INI key L"directLightPercent" → flt_4D8CF0 (sub_4032D0 + sub_408600; см. ida_extracted_truth_log § sub_40E230) */
   FLT_4D8CF0_DIRECT_LIGHT_PERCENT: 0.5 as Float32,
+  FLT_4D62E8: 0.89999998 as Float32,
   /** sub_40E460: INI lightDecayAmount → flt_4D62EC (full.c .data) */
   FLT_4D62EC_LIGHT_DECAY_AMOUNT: 0.40000001 as Float32,
 

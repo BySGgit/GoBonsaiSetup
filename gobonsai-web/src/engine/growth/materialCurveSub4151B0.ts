@@ -1,6 +1,6 @@
 import { TreeSection } from "../TreeSection";
-import { GrowthConstants } from "../config/GrowthConstants";
 import { Float32 } from "../math/MathTypes";
+import { sub413DF0InterpolateRgba } from "./sub413DF0Palette";
 
 /**
  * sub_4151B0 — material/color resolver with ease-out curve.
@@ -16,19 +16,6 @@ export interface RGBA {
     b: number;
     a: number;
 }
-
-const BASE_GROWTH = GrowthConstants.FLT_4D63B0 as number;
-
-const MATERIAL_PALETTE: RGBA[] = [
-    { r: 0.0,        g: 0.0,        b: 0.0, a: 1.0 },  // 0: black (dead)
-    { r: 1.0,        g: 0.0,        b: 0.0, a: 1.0 },  // 1: red
-    { r: BASE_GROWTH, g: BASE_GROWTH, b: 0.0, a: 1.0 },  // 2: olive/brown
-    { r: 1.0,        g: 1.0,        b: 1.0, a: 1.0 },  // 3: white
-    { r: 0.0,        g: 0.2,        b: 1.0, a: 0.0 },  // 4: blue-green
-    { r: 1.0,        g: 1.0,        b: 0.0, a: 0.0 },  // 5: yellow
-    { r: 0.0,        g: 0.7,        b: 0.0, a: 0.0 },  // 6: green
-    { r: 1.0,        g: 1.0,        b: 1.0, a: 1.0 },  // 7: white
-];
 
 /** Current color mode — mirrors dword_4D8644 */
 let _colorMode = 0;
@@ -48,31 +35,7 @@ function materialEaseOut(value: number): number {
     return Math.max(0, Math.min(1, t));
 }
 
-/**
- * sub_40FDE0: linear interpolation across an N-point palette.
- * t ∈ [0,1] maps to segments between palette keys.
- */
-function interpolatePalette(palette: RGBA[], t: number): RGBA {
-    const n = palette.length;
-    if (n === 0) return { r: 0, g: 0, b: 0, a: 1 };
-    if (n === 1) return { ...palette[0] };
-
-    const clamped = Math.max(0, Math.min(1, t));
-    const segment = clamped * (n - 1);
-    const idx = Math.floor(segment);
-    const frac = segment - idx;
-
-    if (idx >= n - 1) return { ...palette[n - 1] };
-
-    const a = palette[idx];
-    const b = palette[idx + 1];
-    return {
-        r: a.r + (b.r - a.r) * frac,
-        g: a.g + (b.g - a.g) * frac,
-        b: a.b + (b.b - a.b) * frac,
-        a: a.a + (b.a - a.a) * frac,
-    };
-}
+const _tmpRgba413DF0 = new Float32Array(4);
 
 /**
  * sub_4151B0: resolve material color for a section.
@@ -90,7 +53,13 @@ export function resolveMaterialColor(section: TreeSection): RGBA | null {
         default: return null;
     }
 
-    return interpolatePalette(MATERIAL_PALETTE, t);
+    sub413DF0InterpolateRgba(_tmpRgba413DF0, t);
+    return {
+        r: _tmpRgba413DF0[0],
+        g: _tmpRgba413DF0[1],
+        b: _tmpRgba413DF0[2],
+        a: _tmpRgba413DF0[3],
+    };
 }
 
 /**

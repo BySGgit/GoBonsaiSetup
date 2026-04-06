@@ -4,6 +4,16 @@ import { GrowthConstants, byte4D8226ForSectionType } from "../config/GrowthConst
 import { Float32 } from "../math/MathTypes";
 import { TransformService } from "../math/TransformService";
 import {
+    createBooleanPropertyBinding,
+    createNumericPropertyBinding,
+    createSub4032WideString,
+    createSub408600Entry,
+    sub401DD0DestroyIniEntry,
+    sub4032D0Assign,
+    sub4038B0Register,
+    subAtexitRegister,
+} from "../config/IniRegistrySub408600";
+import {
     sub40CF00NormalizeInPlace,
     sub4084F0NormalizeInPlaceReturnLen,
     sub4085B0TransformCoord,
@@ -22,8 +32,6 @@ import { SectionRuntimeType } from "../SectionRuntimeType";
  * 4. Smooth light direction vectors (+216..+232)
  */
 
-const PHYSICS_ENABLED = true;                    // byte_4D6356
-const PHYSICS_WEIGHT_THRESHOLD = 0.001;          // flt_4D6358
 const GRAVITY_DIRECTION = new THREE.Vector3(0, -1, 0);
 const _tmpVec = new THREE.Vector3();
 const _tmpVec2 = new THREE.Vector3();
@@ -35,6 +43,60 @@ const _parentWorldQuat = new THREE.Quaternion();
 const _worldQuat = new THREE.Quaternion();
 const _yUp = new THREE.Vector3(0, 1, 0);
 const _alignLight = new THREE.Quaternion();
+const _physicsEnabledMeta4DBC40 = createSub408600Entry();
+const _debugLightVecMeta4DBC1C = createSub408600Entry();
+const _resistanceRadiusBiasMeta4DBBF4 = createSub408600Entry();
+let _sub4143E0InitFlags4DBC64 = 0;
+
+function sub472420CleanupStub(): void {
+    sub401DD0DestroyIniEntry(_physicsEnabledMeta4DBC40);
+}
+
+function sub472410CleanupStub(): void {
+    sub401DD0DestroyIniEntry(_debugLightVecMeta4DBC1C);
+}
+
+function sub472430CleanupStub(): void {
+    sub401DD0DestroyIniEntry(_resistanceRadiusBiasMeta4DBBF4);
+}
+
+function ensureSub4143E0IniBindings(): void {
+    if ((_sub4143E0InitFlags4DBC64 & 1) === 0) {
+        _sub4143E0InitFlags4DBC64 |= 1;
+        const key = createSub4032WideString();
+        sub4032D0Assign(key, "physicsEnabled", 0x0e);
+        sub4038B0Register(
+            key,
+            _physicsEnabledMeta4DBC40,
+            createBooleanPropertyBinding(GrowthConstants, "BYTE_4D6356_PHYSICS_ENABLED"),
+        );
+        subAtexitRegister(sub472420CleanupStub);
+    }
+
+    if ((_sub4143E0InitFlags4DBC64 & 2) === 0) {
+        _sub4143E0InitFlags4DBC64 |= 2;
+        const key = createSub4032WideString();
+        sub4032D0Assign(key, "debugLightDirection", 0x13);
+        sub4038B0Register(
+            key,
+            _debugLightVecMeta4DBC1C,
+            createBooleanPropertyBinding(GrowthConstants, "BYTE_4D8DA5_DEBUG_LIGHT_VECTOR"),
+        );
+        subAtexitRegister(sub472410CleanupStub);
+    }
+
+    if ((_sub4143E0InitFlags4DBC64 & 4) === 0) {
+        _sub4143E0InitFlags4DBC64 |= 4;
+        const key = createSub4032WideString();
+        sub4032D0Assign(key, "resistanceRadiusBias", 0x14);
+        sub4038B0Register(
+            key,
+            _resistanceRadiusBiasMeta4DBBF4,
+            createNumericPropertyBinding(GrowthConstants, "FLT_4D635C"),
+        );
+        subAtexitRegister(sub472430CleanupStub);
+    }
+}
 
 /**
  * Entry point: call once per frame on the root section.
@@ -50,6 +112,7 @@ export function perFramePhysicsSub4143E0(
     wind: THREE.Vector3,
     options?: PerFramePhysicsOptions,
 ): void {
+    ensureSub4143E0IniBindings();
     walkPhysics(root, wind, options);
 }
 
@@ -69,9 +132,9 @@ function walkPhysics(
     computeCentroidSub414870(section);
 
     // Step 3: optional wind/resistance physics
-    if (PHYSICS_ENABLED
+    if ((GrowthConstants.BYTE_4D6356_PHYSICS_ENABLED as boolean)
         && section.children.length > 0
-        && section.totalWeight460 > PHYSICS_WEIGHT_THRESHOLD) {
+        && (GrowthConstants.FLT_4D6358_PHYSICS_WEIGHT_THRESHOLD as number) < section.totalWeight460) {
         if (section.parent) {
             applyWindTorqueSub414A70(section, wind);
         }

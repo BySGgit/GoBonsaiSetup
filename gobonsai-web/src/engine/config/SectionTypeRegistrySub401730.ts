@@ -70,8 +70,27 @@ export function sub401730RegisterType(typeIndex: number): number {
 }
 
 function sub403A90RegisterType5(typeIndex: number): number {
+    if ((dword4D7CF8 & 1) === 0) {
+        dword4D7CF8 |= 1;
+        const v1 = sub403B40EnsureType5Base();
+        sub403A90RegisterType5(v1);
+    }
     setFlag5(typeIndex, 1);
+    if ((dword4D7CF8 & 1) === 0) {
+        dword4D7CF8 |= 1;
+        const v2 = sub403B40EnsureType5Base();
+        return sub403A90RegisterType5(v2);
+    }
     return sub401730RegisterType(typeIndex);
+}
+
+/** decompiled sub_403B40: one-time init gate for base type id 5. */
+export function sub403B40EnsureType5Base(): number {
+    if ((dword4D7CF8 & 1) === 0) {
+        dword4D7CF8 |= 1;
+        sub4079C0EnsureInitialized();
+    }
+    return 5;
 }
 
 /**

@@ -11,9 +11,11 @@ import {
     sub4038B0Register,
     sub4033D0InitAssign,
     sub403410Reset,
+    sub403440Erase,
     sub4032D0Assign,
     sub4032View,
     sub401DD0DestroyIniEntry,
+    sub43FBB0TeardownRegistry,
     sub408600Register,
 } from "./IniRegistrySub408600";
 
@@ -53,6 +55,20 @@ describe("IniRegistrySub408600 parity helpers", () => {
         expect(dest.value).toBe("");
         expect(dest.length16).toBe(0);
         expect(dest.capacity20).toBe(7);
+    });
+
+    it("sub_403440 erases substring with clamp semantics", () => {
+        const dest = createSub4032WideString("directLightPercent");
+        sub403440Erase(dest, 0xffffffff, 6);
+        expect(dest.value).toBe("direct");
+        sub403440Erase(dest, 3, 0);
+        expect(dest.value).toBe("ect");
+        expect(dest.length16).toBe(3);
+    });
+
+    it("sub_403440 throws on invalid position", () => {
+        const dest = createSub4032WideString("abc");
+        expect(() => sub403440Erase(dest, 1, 10)).toThrow("invalid string position");
     });
 
     it("sub_408600 lazily initializes registry once and keeps sorted keys", () => {
@@ -119,5 +135,22 @@ describe("IniRegistrySub408600 parity helpers", () => {
         expect(secondMeta.keyStorage20.value).toBe("");
         expect(secondMeta.keyStorage20.length16).toBe(0);
         expect(secondMeta.keyStorage20.capacity20).toBe(7);
+    });
+
+    it("sub_43FBB0 drops registry state and atexit queue", () => {
+        const key = createSub4032WideString();
+        sub4032D0Assign(key, "energyUseRate", 13);
+        const meta = createSub408600Entry();
+        const target = { value: 0.5 };
+        sub408600Register(key, meta, createNumericPropertyBinding(target, "value"));
+        expect(getIniRegistrySnapshot().size).toBe(1);
+
+        sub43FBB0TeardownRegistry();
+
+        const snap = getIniRegistrySnapshot();
+        expect(snap.size).toBe(0);
+        expect(snap.keys).toEqual([]);
+        expect(snap.initMask4D8EC0).toBe(0);
+        expect(setIniNumericValueByKey("energyUseRate", 0.2)).toBe(false);
     });
 });

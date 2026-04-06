@@ -3,6 +3,7 @@ import { GrowthConstants } from "./GrowthConstants";
 import {
     getSectionTypeRegistryStateForTests,
     resetSectionTypeRegistryStateForTests,
+    sub403B40EnsureType5Base,
     sub401730RegisterType,
     sub40FC70FilterByType7,
     sub40FCF0FilterByType8,
@@ -32,6 +33,14 @@ describe("SectionTypeRegistrySub401730", () => {
 
     it("sub_4079C0 ensures type 5 flags used by runtime checks", () => {
         sub4079C0EnsureInitialized();
+        expect(GrowthConstants.BYTE_4D8220_STRIDE11[11 * 5]).toBe(1);
+        expect(GrowthConstants.BYTE_4D8225_STRIDE11[11 * 5]).toBe(1);
+        expect(getSectionTypeRegistryStateForTests().dword4D7CF8 & 1).toBe(1);
+    });
+
+    it("sub_403B40 returns base type id 5 and initializes gate once", () => {
+        expect(sub403B40EnsureType5Base()).toBe(5);
+        expect(sub403B40EnsureType5Base()).toBe(5);
         expect(GrowthConstants.BYTE_4D8220_STRIDE11[11 * 5]).toBe(1);
         expect(GrowthConstants.BYTE_4D8225_STRIDE11[11 * 5]).toBe(1);
         expect(getSectionTypeRegistryStateForTests().dword4D7CF8 & 1).toBe(1);

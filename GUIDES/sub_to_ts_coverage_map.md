@@ -85,15 +85,16 @@
 
 | sub_*                                      | Файл(ы) TS                        | Статус    | Примечание                                                                                  |
 | ------------------------------------------ | --------------------------------- | --------- | ------------------------------------------------------------------------------------------- |
-| `sub_40E230`                               | `growth/lightTracingSub40E460.ts` | 🟡 (~75%) | INI **`directLightPercent`** → `flt_4D8CF0` (журнал § **sub_40E230**); масштаб смещения — не построчно C. |
-| `sub_40E460`                               | `growth/lightTracingSub40E460.ts` | 🟡 (~70%) | March луча; `**TODO(original)`**: в exe источники только листья, в TS fallback с twig tips. |
-| `sub_40E0A0`                               | `growth/lightTracingSub40E460.ts` | 🟡 (~65%) | Глобалы **`4D866C/8670/8C10`** (журнал); в TS батчинг vs один лист/тик в C; вызов **`sub_40E230(leaf, world)`**. |
-| `sub_40D610`                               | `growth/lightTracingSub40E460.ts` | 🟡 (~90%) | Случайный единичный вектор.                                                                 |
-| `sub_40D6D0`                               | `TreeSection.ts` (нормаль листа)  | 🟡        | Для decay в трассировке.                                                                    |
-| `sub_450E30` / `sub_450CD0`                | `growth/lightTracingSub40E460.ts` | 🟡 (~80%) | Broad-phase + рекурсия (исправление бага декомпила отмечено в комментарии).                 |
-| `sub_450860` / `sub_450970` / `sub_450A80` | `growth/lightTracingSub40E460.ts` | 🟡 (~80%) | Расстояния до отрезка/сферы.                                                                |
-| `sub_44EE20`                               | `growth/lightTracingSub40E460.ts` | 🟡 (~85%) | Отрезок × отрезок (twig screen).                                                            |
-| `sub_450E10`                               | `growth/lightTracingSub40E460.ts` | 🟡        | Сортировка hit-листа.                                                                       |
+| `sub_40E230`                               | `growth/lightTracingSub40E460.ts`       | PARTIAL (~75%) | INI `directLightPercent` + ray origin/dir prep; minor distribution approximations remain.                                 |
+| `sub_40E460`                               | `growth/lightTracingSub40E460.ts`       | PARTIAL (~75%) | Ray march + decay pipeline; fallback source policy (twig tips when no leaves) remains approximate.                        |
+| `sub_40E0A0`                               | `growth/lightTracingSub40E460.ts`       | PARTIAL (~65%) | Queue servicing and trace dispatch; batching policy differs from strict one-leaf-per-tick path.                            |
+| `sub_40D610`                               | `growth/lightTracingSub40E460.ts`       | PARTIAL (~90%) | Random unit-vector generation is ported.                                                                                   |
+| `sub_40D6D0`                               | `world/SectionSpatialQueriesSub40x.ts`  | DONE           | Basis-Y extraction via `sub_4015B0` helper is ported and used in leaf decay path.                                         |
+| `sub_450E30` / `sub_450CD0`                | `growth/lightTracingSub40E460.ts`       | PARTIAL (~85%) | Broad-phase + recursive hit gather; hit records now sorted through `sub_451320` port (no ad-hoc JS index sort).          |
+| `sub_450860` / `sub_450970` / `sub_450A80` | `growth/lightTracingSub40E460.ts`       | PARTIAL (~80%) | Segment/sphere distance and closest-point helpers are ported.                                                              |
+| `sub_44EE20`                               | `growth/lightTracingSub40E460.ts`       | PARTIAL (~85%) | Segment-vs-segment screening for twig attenuation is ported.                                                               |
+| `sub_450E10`                               | `growth/Sub451320Sort.ts`               | DONE           | Comparator parity: `return b.sortT > a.sortT` (C semantics).                                                              |
+| `sub_451320` / `sub_451990`                | `growth/Sub451320Sort.ts`               | PARTIAL (~90%) | Runtime path parity for hit sorting (`n <= 30`): insertion-sort branch (`sub_451990`) is used 1:1.                       |
 
 
 ---
@@ -223,24 +224,62 @@
 | `sub_4037b0` | `config/IniRegistrySub408600.ts` | ✅ (~90%) | Wide-string substring assign helper. |
 | `sub_4033d0` | `config/IniRegistrySub408600.ts` | ✅ (~90%) | Init+assign wrapper preserved explicitly. |
 | `sub_403410` | `config/IniRegistrySub408600.ts` | ✅ (~90%) | Reset/clear wrapper preserved explicitly. |
+| `sub_403440` | `config/IniRegistrySub408600.ts` | DONE (~92%) | Wide-string erase helper with clamp semantics and invalid-position guard; alias path in `sub_4037B0` switched to C-style two-step erase. |
 | `sub_4038b0` | `config/IniRegistrySub408600.ts` | 🟡 (~86%) | INI binding registration port. |
 | `sub_408600` | `config/IniRegistrySub408600.ts` | 🟡 (~85%) | Registry wiring entrypoint present. |
 | `sub_40fd70` | `config/IniRegistrySub408600.ts` | ✅ (~90%) | Intrusive list node allocator wrapper. |
+| `sub_43fbb0` | `config/IniRegistrySub408600.ts` | DONE (~84%) | Full registry teardown wrapper for atexit path (drops list/init state, mirrors native cleanup intent). |
 | `sub_43fd00` | `config/IniRegistrySub408600.ts` | 🟡 (~60%) | Exported init hook stub for web runtime bootstrap path. |
 | `sub_44a640` | `config/IniRegistrySub408600.ts` | 🟡 (~80%) | Registry intrusive-list sorting helper. |
 | `sub_472560` | `config/IniRegistrySub408600.ts` | 🟡 (~55%) | Exported atexit teardown stub (non-native runtime). |
 | `sub_401730` | `config/SectionTypeRegistrySub401730.ts` | ✅ (~90%) | Type registration table with explicit function boundary. |
 | `sub_4017d0` | `config/SectionTypeRegistrySub401730.ts` | 🟡 (~80%) | One-time recursive static-init pattern preserved. |
+| `sub_401830` | `world/WorldObjectSub401830.ts` | 🟡 (~78%) | WorldObject base constructor port with identity matrices, object-id sequencing, intrusive global list append and id-index insert. |
+| `sub_403b40` | `config/SectionTypeRegistrySub401730.ts` | DONE (~92%) | Type-base wrapper returns `5` and mirrors one-time `dword_4D7CF8` gate before `sub_4079C0` call. |
 | `sub_413cf0` | `config/SectionTypeRegistrySub401730.ts`, `growth/virtualSlot36.ts` | ✅ (~90%) | Parent type-5 filter integrated in slot+36 flow. |
 | `sub_40d6c0` | `world/SectionSpatialQueriesSub40x.ts` | ✅ (~90%) | Translation extractor (`this+104`). |
 | `sub_40a310` | `world/SectionSpatialQueriesSub40x.ts` | ✅ (~90%) | Basis-Z extractor (`this+104[8..10]`). |
 | `sub_4153d0` | `world/SectionSpatialQueriesSub40x.ts` | 🟡 (~85%) | Recursive max world-Y scan wrapper. |
 | `sub_44e5d0` | `world/Sub44E5D0Pool.ts` | 🟡 (~84%) | Detached-item pool enqueue path. |
 | `sub_451210` | `world/Sub451210Resolver.ts` | 🟡 (~85%) | Bucketed resolver/lookup path. |
+| `sub_450e10` | `growth/Sub451320Sort.ts`, `growth/lightTracingSub40E460.ts` | DONE (~92%) | Hit comparator (`sortT`) extracted and wired into tracing hit-order pass. |
+| `sub_451320` | `growth/Sub451320Sort.ts`, `growth/lightTracingSub40E460.ts` | DONE (~90%) | Introsort dispatcher integrated into hit-order pipeline. |
+| `sub_451460` | `growth/Sub451320Sort.ts` | DONE (~88%) | Three-way partition helper for introsort branch. |
+| `sub_451720` | `growth/Sub451320Sort.ts` | DONE (~88%) | Pivot preparation helper (median-of-three / median-of-nine). |
+| `sub_4517d0` | `growth/Sub451320Sort.ts` | DONE (~86%) | Heap-build helper for depth-exhaust fallback path. |
+| `sub_4518f0` | `growth/Sub451320Sort.ts` | DONE (~86%) | Heap-sort extraction pass for depth-exhaust fallback path. |
+| `sub_451990` | `growth/Sub451320Sort.ts` | DONE (~90%) | Insertion-sort helper used for small ranges (`<= 32`). |
+| `sub_451a80` | `growth/Sub451320Sort.ts` | DONE (~86%) | Median-of-three local ordering helper. |
+| `sub_451b10` | `growth/Sub451320Sort.ts` | DONE (~84%) | Sift-down heap helper retained in parity module. |
+| `sub_451c10` | `growth/Sub451320Sort.ts` | DONE (~84%) | Sift-up heap helper retained in parity module. |
+| `sub_441e00` | `config/Sub44ListOps.ts` | DONE (~85%) | Sorted list insertion wrapper by key (`sub441E00InsertByKey`) with fixed-capacity guard. |
+| `sub_444090` | `config/Sub44ListOps.ts` | DONE (~90%) | List sentinel init wrapper (`sub444090InitList`). |
+| `sub_4440f0` | `config/Sub44ListOps.ts` | DONE (~90%) | List clear/destroy wrapper (`sub4440F0DestroyList`). |
+| `sub_44a600` | `config/Sub44ListOps.ts` | DONE (~90%) | Version-string init wrapper (`sub44A600InitVersionString`, `"v0.276"`). |
+| `sub_44b900` | `config/Sub44ListOps.ts` | DONE (~86%) | Splice-range pointer surgery wrapper (`sub44B900SpliceRange`). |
+| `sub_44c260` | `config/Sub44ListOps.ts` | DONE (~86%) | Sorted list merge wrapper by key (`sub44C260MergeByKey`). |
+| `sub_44c360` | `config/Sub44ListOps.ts` | DONE (~85%) | Node creation wrapper with explicit prev/next links (`sub44C360CreateNode`). |
+| `sub_44bc80` | `config/Sub44StringOps.ts` | DONE (~84%) | UTF-16 append wrapper (`sub44BC80Append`) for bounded source-length copy. |
+| `sub_444ae0` | `config/Sub44StringOps.ts` | DONE (~84%) | Wide-string move-assign wrapper (`sub444AE0MoveAssign`). |
+| `sub_44a460` | `config/Sub44StringOps.ts` | DONE (~86%) | Wide-string append-range helper with bounds/clamp semantics (`sub44A460AppendRange`). |
+| `sub_44c210` | `config/Sub44StringOps.ts` | DONE (~84%) | Lowercase range-copy helper (`sub44C210CopyLowerRange`). |
+| `sub_444c00` | `config/Sub44StringOps.ts` | DONE (~84%) | Substring-find helper with explicit count limit (`sub444C00FindSubstr`). |
+| `sub_446b40` | `config/Sub44CleanupOps.ts` | DONE (~86%) | Wide-string array reset-range helper (`sub446B40ResetWideRange`). |
+| `sub_444140` | `config/Sub44CleanupOps.ts` | DONE (~84%) | Intrusive-list destroy/reset helper with optional payload cleanup callback (`sub444140DestroyList`). |
+| `sub_444ce0` | `config/Sub44CleanupOps.ts` | DONE (~82%) | Bucket-table teardown helper with refcount drain (`sub444CE0DestroyBucketState`). |
 | `sub_450c80` | `growth/sub450C80.ts`, `growth/virtualSlot36.ts`, `growth/detachPipelineSub40EEE0.ts` | ✅ (~90%) | Parent-child unlink helper extracted and reused in detach/conversion paths. |
 | `sub_403580` | `config/IniRegistrySub408600.ts` | 🟡 (~82%) | Dynamic string-capacity growth helper (`sub403580Grow`). |
 | `sub_4015f0` | `math/Sub4015F0.ts` | ✅ (~92%) | Matrix translation extractor wrapper. |
 | `sub_4015d0` | `math/Sub4015F0.ts` | ✅ (~92%) | Matrix basis-Z extractor wrapper. |
+| `sub_402cd0` | `world/WorldObjectSub401830.ts` | 🟡 (~72%) | Simplified id-index insertion wrapper (`sub402CD0InsertById`) replacing native bucket/tree internals with JS `Map`. |
+| `sub_402e10` | `world/WorldObjectSub401830.ts` | 🟡 (~74%) | Simplified load-factor rehash wrapper (`sub402E10MaybeRehash`) with native hash-mix and bucket rebuild. |
+| `sub_402ee0` | `world/WorldObjectSub401830.ts` | 🟡 (~76%) | Simplified transfer/splice wrapper (`sub402EE0TransferOne`) with list-size guard semantics. |
+| `sub_402f60` | `world/WorldObjectSub401830.ts` | DONE (~86%) | Vector insert-fill helper (`sub402F60InsertFilled`) mirroring repeated-value insertion semantics. |
+| `sub_4031b0` | `world/WorldObjectSub401830.ts` | DONE (~88%) | Pointer-vector allocation helper (`sub4031B0AllocatePointerVector`) with max-length guard. |
+| `sub_403210` | `world/WorldObjectSub401830.ts` | DONE (~90%) | Fill helper (`sub403210FillValue`) for repeated pointer/value write. |
+| `sub_4032a0` | `world/WorldObjectSub401830.ts` | DONE (~90%) | Forward copy-range helper (`sub4032A0CopyForward`). |
+| `sub_403230` | `world/WorldObjectSub401830.ts` | DONE (~90%) | Intrusive node allocation wrapper (`sub403230CreateWorldNode`) for global world-object list. |
+| `sub_44ede0` | `world/WorldObjectSub401830.ts` | 🟡 (~76%) | Simplified erase-and-advance wrapper (`sub44EDE0EraseAt`) for node-release semantics. |
 | `sub_40fa00` | `config/SectionTypeRegistrySub401730.ts` | 🟡 (~88%) | Lazy init for type-8 flag path (`byte_4D8228`) + type registration side effect. |
 | `sub_40fad0` | `config/SectionTypeRegistrySub401730.ts` | 🟡 (~90%) | Lazy init for type-7 flag path (`byte_4D8227`) + type registration side effect. |
 | `sub_40fc70` | `config/SectionTypeRegistrySub401730.ts` | ✅ (~92%) | Null-safe filter by `byte_4D8227[11*type]` with lazy initializer call. |
@@ -259,3 +298,13 @@
 | `sub_472110` | `growth/sub40DC90GrowthTick.ts` | 🟡 (~90%) | Cleanup wrapper mapped to `sub_401DD0(_updateGrowthMeta4DBD80)`. |
 | `sub_472170` | `growth/lightTracingSub40E460.ts` | 🟡 (~90%) | Cleanup wrapper mapped to `sub_401DD0(_directLightPercentMeta4DBCEC)`. |
 | `sub_472180` | `growth/lightTracingSub40E460.ts` | 🟡 (~90%) | Cleanup wrapper mapped to `sub_401DD0(_lightDecayAmountMeta4DBCC4)` + lazy INI init in `sub_40E460`. |
+| `sub_472410` | `growth/perFramePhysicsSub4143E0.ts` | DONE (~90%) | Cleanup wrapper mapped to `sub_401DD0(_debugLightVecMeta4DBC1C)` with lazy INI init in `sub_4143E0`. |
+| `sub_472420` | `growth/perFramePhysicsSub4143E0.ts` | DONE (~90%) | Cleanup wrapper mapped to `sub_401DD0(_physicsEnabledMeta4DBC40)` with lazy INI init in `sub_4143E0`. |
+| `sub_472430` | `growth/perFramePhysicsSub4143E0.ts` | DONE (~90%) | Cleanup wrapper mapped to `sub_401DD0(_resistanceRadiusBiasMeta4DBBF4)` with lazy INI init in `sub_4143E0`. |
+| `sub_472460` | `growth/leafMetabolismSub416510.ts` | DONE (~90%) | Cleanup wrapper mapped to `sub_401DD0(_baseGrowthMultiplierMeta4DBB14)` with lazy INI init in `sub_416510`. |
+| `sub_472470` | `growth/leafMetabolismSub416510.ts` | DONE (~90%) | Cleanup wrapper mapped to `sub_401DD0(_randomGrowthFactorMeta4DBB38)` with lazy INI init in `sub_416510`. |
+| `sub_472480` | `growth/leafMetabolismSub416510.ts` | DONE (~90%) | Cleanup wrapper mapped to `sub_401DD0(_lightThresholdMaxMeta4DBB5C)` with lazy INI init in `sub_416510`. |
+| `sub_472490` | `growth/leafMetabolismSub416510.ts` | DONE (~90%) | Cleanup wrapper mapped to `sub_401DD0(_lightThresholdMinMeta4DBB80)` with lazy INI init in `sub_416510`. |
+| `sub_4724a0` | `growth/twigUpdateSub417C90.ts` | DONE (~90%) | Cleanup wrapper mapped to `sub_401DD0(_healthEnergyAdjustmentMeta4DBAEC)` with lazy INI init in `sub_417C90`. |
+| `sub_4724b0` | `growth/branchingDispatcherSub417F40.ts` | DONE (~90%) | Cleanup wrapper mapped to `sub_401DD0(_randomBudRotationMeta4DBAC4)` with lazy INI init in `sub_417FF0`. |
+

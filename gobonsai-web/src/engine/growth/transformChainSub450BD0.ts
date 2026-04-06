@@ -1,8 +1,14 @@
 import { TreeSection } from "../TreeSection";
+import { Quaternion, Vector3 } from "three";
 
 /**
  * sub_450BD0 (slot +16) + sub_4146F0 (slot +32): transform chain.
  */
+
+const _tmpLocalPos4146F0 = new Vector3();
+const _tmpLocalQuat4146F0 = new Quaternion();
+const _tmpLocalScale4146F0 = new Vector3(1, 1, 1);
+const _tmpCombinedQuat4146F0 = new Quaternion();
 
 /**
  * Keep scene transforms in sync before metabolism/light passes.
@@ -33,10 +39,18 @@ export function rebuildLocalTransformSub4146F0(section: TreeSection): void {
     if (!section.parent) return;
 
     section.updateAttachmentPosition(section.parent);
-    // Temporarily keep stable direct orientation mapping.
-    // Full +240 matrix composition will be restored after field parity is finalized.
-    section.group.quaternion.copy(section.rotationQuaternion);
-    section.group.scale.set(1, 1, 1);
+    section.localTemplate240.decompose(
+        _tmpLocalPos4146F0,
+        _tmpLocalQuat4146F0,
+        _tmpLocalScale4146F0,
+    );
+    section.group.position.copy(_tmpLocalPos4146F0);
+    _tmpCombinedQuat4146F0.multiplyQuaternions(
+        _tmpLocalQuat4146F0,
+        section.rotationQuaternion,
+    );
+    section.group.quaternion.copy(_tmpCombinedQuat4146F0);
+    section.group.scale.copy(_tmpLocalScale4146F0);
 }
 
 /**

@@ -13,6 +13,8 @@ import { TransformService } from "../math/TransformService";
 import { Sub416510Rotation } from "../math/Sub416510Rotation";
 import { twigUpdateSub417C90 } from "./twigUpdateSub417C90";
 import { sub450C80RemoveFromParent } from "./sub450C80";
+import { sub417BB0CreateTwig } from "./sub417BB0TwigCtor";
+import { sub413F50AttachChild } from "./sub413F50Ctor";
 
 /**
  * Виртуальный слот +36 по типу секции (spec_update_growth_sub_40DC90 §2.5).
@@ -286,12 +288,6 @@ function sub415C10ConvertBudToTwig(
   // ── Step 2: Create new twig as child of bud's former parent ──
   const yawJitter = rng.randFloat() * 0.1 - 0.05;
 
-  const minSeg = GrowthConstants.FLT_4D85E8 as number;
-  const maxSeg = GrowthConstants.FLT_4D85EC as number;
-  const randomScale = rng.randFloat() * 0.2 + 0.9;
-  const maxSegSize =
-    (minSeg + (maxSeg - minSeg) * normalizedEnergy) * randomScale;
-
   const parentAttachPos = Math.max(0, Math.min(1, bud.branchPosition as number));
   const inheritedBaseRadius = budParent
     ? Math.max(
@@ -300,45 +296,29 @@ function sub415C10ConvertBudToTwig(
       )
     : (GrowthConstants.FLT_4D861C_INITIAL_TWIG_GIRTH as number);
 
-  const newTwig = new TreeSection(
+  const newTwig = sub417BB0CreateTwig(
+    _tmpMatrix415C10,
     budParent,
     bud.level,
-    rng,
+    normalizedEnergy,
+    [yawJitter, 0, 0],
     inheritedBaseRadius,
+    rng,
   );
-  newTwig.sectionRuntimeType4 = SectionRuntimeType.TreeSectionTwig;
   newTwig.branchPosition = oldBudBranchPos;
   newTwig.lateralTransY4158 = oldBudLat;
   newTwig.lateralRoll4158Z = oldBudRoll;
-  newTwig.localTemplate240.copy(_tmpMatrix415C10);
-  newTwig.growthFlag512 = false;
-
-  // sub_417BB0: initial yaw jitter rotation
-  TransformService.rotationYawPitchRoll(
-    newTwig.targetRotation,
-    yawJitter,
-    0,
-    0,
-  );
-  newTwig.rotationQuaternion.copy(newTwig.targetRotation);
-  newTwig.rotation.copy(newTwig.targetRotation);
-  Sub416510Rotation.syncBlob80FromQuaternion(newTwig);
 
   newTwig.twigRadius444 = GrowthConstants.FLT_4D861C_INITIAL_TWIG_GIRTH;
   newTwig.twigLength448 = 0 as Float32;
-  newTwig.maxGrowth = maxSegSize as Float32;
-  newTwig.energyWeight428 = 1.0 as Float32;
 
   // Add twig to budParent's scene graph and child list
   if (budParent) {
-    budParent.children.push(newTwig);
-    budParent.group.add(newTwig.group);
+    sub413F50AttachChild(budParent, newTwig);
   }
 
   // ── Step 3: Add bud as child of new twig ──
-  newTwig.children.push(bud);
-  bud.parent = newTwig;
-  newTwig.group.add(bud.group);
+  sub413F50AttachChild(newTwig, bud);
   bud.branchPosition = 1.0 as Float32;
   bud.lateralTransY4158 = 0 as Float32;
   bud.lateralRoll4158Z = 0 as Float32;

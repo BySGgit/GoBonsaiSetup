@@ -14,6 +14,11 @@ import {
 import { SectionRuntimeType } from "../SectionRuntimeType";
 import { Float32 } from "../math/MathTypes";
 import { sub4015B0ExtractBasisY } from "../math/Sub4015F0";
+import {
+    sub450E10CompareHitSortT,
+    sub451320Sort,
+    Sub450E10HitRecord,
+} from "./Sub451320Sort";
 
 /**
  * sub_40E230 + sub_40E460 вЂ” light tracing pipeline.
@@ -58,9 +63,8 @@ const _worldPos24 = new THREE.Vector3();
 const _spatialWorld = new THREE.Vector3();
 const _mergeCenterScratch = new THREE.Vector3();
 const _mergeDirScratch = new THREE.Vector3();
-const _hitSections: TreeSection[] = [];
+const _hitRecords: Sub450E10HitRecord<TreeSection>[] = [];
 /** sub_450E10 sort key: sqrt(lenSq)*t (hit[+4] РІ exe) вЂ” РїРѕ СѓР±С‹РІР°РЅРёСЋ. */
-const _hitSortT: number[] = [];
 
 /** sub_40E0A0: РѕС‡РµСЂРµРґСЊ РёСЃС‚РѕС‡РЅРёРєРѕРІ Р»СѓС‡РµР№ (РІ C вЂ” С‚РѕР»СЊРєРѕ Р»РёСЃС‚СЊСЏ). */
 let _leafQueue: TreeSection[] = [];
@@ -270,17 +274,15 @@ function rayMarchSub40E460(
     _deltaRay.subVectors(_rayP1, _rayP0);
     const lenSq = _deltaRay.lengthSq();
 
-    _hitSections.length = 0;
-    _hitSortT.length = 0;
+    _hitRecords.length = 0;
     collectHitsSub450CD0(root, _rayP0, _rayP1, _deltaRay, lenSq);
 
-    const indices = _hitSections.map((_, i) => i);
-    indices.sort((a, b) => _hitSortT[b] - _hitSortT[a]);
+    sub451320Sort(_hitRecords, _hitRecords.length, sub450E10CompareHitSortT);
 
     let intensity = initialIntensity;
 
-    for (const i of indices) {
-        const section = _hitSections[i];
+    for (const hit of _hitRecords) {
+        const section = hit.section;
 
         // 3a: update lightResponseVec
         const rate = (section.smoothedLightA as number + 0.01) * 10.0;
@@ -466,7 +468,7 @@ function collectHitsSub450CD0(
     delta: THREE.Vector3,
     lenSq: number,
 ): void {
-    if (_hitSections.length >= MAX_HITS) return;
+    if (_hitRecords.length >= MAX_HITS) return;
     if (section.worldDetached188) return;
     if (lenSq < 1e-14) return;
 
@@ -494,10 +496,13 @@ function collectHitsSub450CD0(
         p1,
         lenSq,
     );
-    if (innerSq > closeDistSq && _hitSections.length < MAX_HITS) {
+    if (innerSq > closeDistSq && _hitRecords.length < MAX_HITS) {
         const sqrtLen = Math.sqrt(lenSq);
-        _hitSections.push(section);
-        _hitSortT.push(sqrtLen * tAlong01);
+        _hitRecords.push({
+            section,
+            sortT: sqrtLen * tAlong01,
+            aux: 0,
+        });
     }
 
     for (const child of section.children) {

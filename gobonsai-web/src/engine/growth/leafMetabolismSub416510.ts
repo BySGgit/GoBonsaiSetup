@@ -5,6 +5,15 @@ import { MSVCRand } from "../MSVCRand";
 import { SectionRuntimeType } from "../SectionRuntimeType";
 import { SectionColorService } from "../SectionColorService";
 import { Float32 } from "../math/MathTypes";
+import {
+    createNumericPropertyBinding,
+    createSub4032WideString,
+    createSub408600Entry,
+    sub401DD0DestroyIniEntry,
+    sub4032D0Assign,
+    sub408600Register,
+    subAtexitRegister,
+} from "../config/IniRegistrySub408600";
 
 /**
  * sub_416510 — leaf metabolism: light → energy → production → growth.
@@ -18,6 +27,74 @@ const _normalMat = new THREE.Matrix3();
 const _lightWorld = new THREE.Vector3();
 const _lightLocal = new THREE.Vector3();
 const _localUp = new THREE.Vector3(0, 1, 0);
+const _baseGrowthMultiplierMeta4DBB14 = createSub408600Entry();
+const _lightThresholdMinMeta4DBB80 = createSub408600Entry();
+const _lightThresholdMaxMeta4DBB5C = createSub408600Entry();
+const _randomGrowthFactorMeta4DBB38 = createSub408600Entry();
+let _sub416510InitFlags4DBBA4 = 0;
+
+function sub472460CleanupStub(): void {
+    sub401DD0DestroyIniEntry(_baseGrowthMultiplierMeta4DBB14);
+}
+
+function sub472490CleanupStub(): void {
+    sub401DD0DestroyIniEntry(_lightThresholdMinMeta4DBB80);
+}
+
+function sub472480CleanupStub(): void {
+    sub401DD0DestroyIniEntry(_lightThresholdMaxMeta4DBB5C);
+}
+
+function sub472470CleanupStub(): void {
+    sub401DD0DestroyIniEntry(_randomGrowthFactorMeta4DBB38);
+}
+
+function ensureSub416510IniBindings(): void {
+    if ((_sub416510InitFlags4DBBA4 & 1) === 0) {
+        _sub416510InitFlags4DBBA4 |= 1;
+        const key = createSub4032WideString();
+        sub4032D0Assign(key, "lightThresholdMin", 0x11);
+        sub408600Register(
+            key,
+            _lightThresholdMinMeta4DBB80,
+            createNumericPropertyBinding(GrowthConstants, "FLT_4D63B4"),
+        );
+        subAtexitRegister(sub472490CleanupStub);
+    }
+    if ((_sub416510InitFlags4DBBA4 & 2) === 0) {
+        _sub416510InitFlags4DBBA4 |= 2;
+        const key = createSub4032WideString();
+        sub4032D0Assign(key, "lightThresholdMax", 0x11);
+        sub408600Register(
+            key,
+            _lightThresholdMaxMeta4DBB5C,
+            createNumericPropertyBinding(GrowthConstants, "FLT_4D63B8"),
+        );
+        subAtexitRegister(sub472480CleanupStub);
+    }
+    if ((_sub416510InitFlags4DBBA4 & 4) === 0) {
+        _sub416510InitFlags4DBBA4 |= 4;
+        const key = createSub4032WideString();
+        sub4032D0Assign(key, "randomGrowthFactor", 0x12);
+        sub408600Register(
+            key,
+            _randomGrowthFactorMeta4DBB38,
+            createNumericPropertyBinding(GrowthConstants, "FLT_4D63BC"),
+        );
+        subAtexitRegister(sub472470CleanupStub);
+    }
+    if ((_sub416510InitFlags4DBBA4 & 8) === 0) {
+        _sub416510InitFlags4DBBA4 |= 8;
+        const key = createSub4032WideString();
+        sub4032D0Assign(key, "baseGrowthMultiplier", 0x15);
+        sub408600Register(
+            key,
+            _baseGrowthMultiplierMeta4DBB14,
+            createNumericPropertyBinding(GrowthConstants, "FLT_4D63B0"),
+        );
+        subAtexitRegister(sub472460CleanupStub);
+    }
+}
 
 /**
  * Process leaf-specific metabolism for all leaf sections in the tree.
@@ -30,6 +107,7 @@ export function processLeafMetabolism(
     treeAge: number,
     deltaTime: number,
 ): void {
+    ensureSub416510IniBindings();
     const stack: TreeSection[] = [root];
     while (stack.length) {
         const section = stack.pop()!;

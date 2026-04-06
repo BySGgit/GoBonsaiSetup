@@ -34,4 +34,34 @@ describe("sub_451320/sub_450E10 hit sort parity", () => {
         sub451320Sort(none, 0, sub450E10CompareHitSortT);
         expect(none).toEqual([]);
     });
+
+    it("sorts ranges > 32 through introsort branch", () => {
+        const hits: Rec[] = [];
+        for (let i = 0; i < 96; i++) {
+            const t = ((i * 17) % 31) + Math.floor(i / 9);
+            hits.push(rec(`s${i}`, t));
+        }
+
+        sub451320Sort(hits, hits.length, sub450E10CompareHitSortT);
+
+        for (let i = 1; i < hits.length; i++) {
+            expect(hits[i - 1].sortT <= hits[i].sortT).toBe(true);
+        }
+
+        expect(new Set(hits.map((h) => h.section)).size).toBe(96);
+    });
+
+    it("sorts ranges > 32 when depth budget is exhausted (heap fallback)", () => {
+        const hits: Rec[] = [];
+        for (let i = 0; i < 64; i++) {
+            const t = ((i * 23) % 19) + Math.floor(i / 8);
+            hits.push(rec(`h${i}`, t));
+        }
+
+        sub451320Sort(hits, 0, sub450E10CompareHitSortT);
+
+        for (let i = 1; i < hits.length; i++) {
+            expect(hits[i - 1].sortT <= hits[i].sortT).toBe(true);
+        }
+    });
 });

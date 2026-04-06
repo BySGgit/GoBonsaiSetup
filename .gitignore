@@ -6,3 +6,5 @@ GoBonsai.exe.nam
 GoBonsai.exe.til
 GoBonsai.exe_gobonsai_trace.jsonl
 installed game/ida-20260331-193522-16104.dmp
+*.c
+!/decompiled/full.c
