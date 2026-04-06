@@ -1,0 +1,68 @@
+﻿# Decomp Dependency Frontier (mapped -> unmapped)
+
+Generated: 2026-04-06T14:22:05
+
+- Manifest: `GUIDES/decomp_master_manifest.csv`
+- Rows in frontier: 55
+
+## Top 100 By Impact
+
+| callee | mapped callers | call sites | callers (sample) |
+| --- | ---: | ---: | --- |
+| sub_401470 | 11 | 18 | sub_408a30, sub_408d60, sub_40e460, sub_40eee0, sub_40f140, sub_4143e0, sub_4146f0, sub_414870 |
+| sub_401430 | 8 | 19 | sub_408d60, sub_4093b0, sub_40e460, sub_44ee20, sub_450860, sub_450970, sub_450a80, sub_450e30 |
+| sub_4032d0 | 8 | 14 | sub_40dc90, sub_40e230, sub_40e460, sub_4143e0, sub_414bb0, sub_416510, sub_417c90, sub_417ff0 |
+| sub_408600 | 7 | 11 | sub_40dc90, sub_40e230, sub_40e460, sub_414bb0, sub_416510, sub_417c90, sub_417ff0 |
+| sub_401500 | 6 | 10 | sub_40e230, sub_40e460, sub_40eee0, sub_40f140, sub_4143e0, sub_44ee20 |
+| sub_4013f0 | 6 | 9 | sub_40e460, sub_4143e0, sub_4146f0, sub_44ee20, sub_450860, sub_450970 |
+| sub_408470 | 5 | 8 | sub_408a30, sub_414a70, sub_416510, sub_417ff0, sub_418bd0 |
+| sub_40fd70 | 5 | 5 | sub_40e0a0, sub_40eee0, sub_413f50, sub_415c10, sub_4163b0 |
+| sub_401180 | 4 | 7 | sub_414a70, sub_416510, sub_417ff0, sub_418bd0 |
+| sub_408590 | 3 | 4 | sub_408a30, sub_40e230, sub_417ff0 |
+| sub_4085b0 | 3 | 4 | sub_4093b0, sub_40f140, sub_414870 |
+| sub_450c80 | 3 | 4 | sub_40eee0, sub_415c10, sub_417c90 |
+| sub_4038b0 | 2 | 4 | sub_40dc90, sub_4143e0 |
+| sub_401730 | 2 | 3 | sub_403a90, sub_4079c0 |
+| sub_44e5d0 | 2 | 3 | sub_40e460, sub_4143e0 |
+| sub_451210 | 2 | 3 | sub_40e0a0, sub_40f140 |
+| sub_4015f0 | 2 | 2 | sub_40f140, sub_4146f0 |
+| sub_4084f0 | 2 | 2 | sub_408d60, sub_414a70 |
+| sub_40cf00 | 2 | 2 | sub_40e460, sub_4143e0 |
+| sub_413cf0 | 2 | 2 | sub_40eee0, sub_415ef0 |
+| sub_4017d0 | 1 | 2 | sub_4079c0 |
+| sub_403b40 | 1 | 2 | sub_403a90 |
+| sub_40d6c0 | 1 | 2 | sub_40e460 |
+| sub_4015b0 | 1 | 1 | sub_40d6d0 |
+| sub_401690 | 1 | 1 | sub_408a30 |
+| sub_401830 | 1 | 1 | sub_413f50 |
+| sub_401b00 | 1 | 1 | sub_417ff0 |
+| sub_401b10 | 1 | 1 | sub_408a30 |
+| sub_4033d0 | 1 | 1 | sub_416510 |
+| sub_403410 | 1 | 1 | sub_416510 |
+| sub_403ba0 | 1 | 1 | sub_408a30 |
+| sub_408450 | 1 | 1 | sub_450a80 |
+| sub_40a310 | 1 | 1 | sub_40e460 |
+| sub_40fa00 | 1 | 1 | sub_417220 |
+| sub_40fc70 | 1 | 1 | sub_40eee0 |
+| sub_40fcf0 | 1 | 1 | sub_40eee0 |
+| sub_413df0 | 1 | 1 | sub_4151b0 |
+| sub_4153d0 | 1 | 1 | sub_408a30 |
+| sub_417bb0 | 1 | 1 | sub_415c10 |
+| sub_451320 | 1 | 1 | sub_450e30 |
+| sub_4720e0 | 1 | 1 | sub_40dc90 |
+| sub_4720f0 | 1 | 1 | sub_40dc90 |
+| sub_472100 | 1 | 1 | sub_40dc90 |
+| sub_472110 | 1 | 1 | sub_40dc90 |
+| sub_472170 | 1 | 1 | sub_40e230 |
+| sub_472180 | 1 | 1 | sub_40e460 |
+| sub_472410 | 1 | 1 | sub_4143e0 |
+| sub_472420 | 1 | 1 | sub_4143e0 |
+| sub_472430 | 1 | 1 | sub_414bb0 |
+| sub_472460 | 1 | 1 | sub_416510 |
+| sub_472470 | 1 | 1 | sub_416510 |
+| sub_472480 | 1 | 1 | sub_416510 |
+| sub_472490 | 1 | 1 | sub_416510 |
+| sub_4724a0 | 1 | 1 | sub_417c90 |
+| sub_4724b0 | 1 | 1 | sub_417ff0 |
+
+Full machine-readable table: `GUIDES/decomp_dependency_frontier.csv`.

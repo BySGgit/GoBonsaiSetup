@@ -16,6 +16,78 @@ import {
 import { syncGroupQuaternionsFromRotationForMetabolism } from "./transformChainSub450BD0";
 import { setSlot36SimulationDay } from "./frameState";
 import { sub414CE0Yearly } from "./sub414CE0";
+import { GrowthConstants } from "../config/GrowthConstants";
+import {
+    createBooleanPropertyBinding,
+    createNumericPropertyBinding,
+    createSub4032WideString,
+    createSub408600Entry,
+    sub4032D0Assign,
+    sub4038B0Register,
+    sub408600Register,
+    subAtexitRegister,
+} from "../config/IniRegistrySub408600";
+
+let _sub40DC90InitMask4DBDA4 = 0;
+const _updateGrowthMeta4DBD80 = createSub408600Entry();
+const _randomAutoCutsMeta4DBD5C = createSub408600Entry();
+const _energyUseRateMeta4DBD38 = createSub408600Entry();
+const _energyLeakMeta4DBD14 = createSub408600Entry();
+
+function sub472110CleanupStub(): void {}
+function sub472100CleanupStub(): void {}
+function sub4720F0CleanupStub(): void {}
+function sub4720E0CleanupStub(): void {}
+
+function ensureSub40DC90IniInits(): void {
+    if ((_sub40DC90InitMask4DBDA4 & 1) === 0) {
+        _sub40DC90InitMask4DBDA4 |= 1;
+        const key = createSub4032WideString();
+        sub4032D0Assign(key, "updateGrowth", 0x0c);
+        sub4038B0Register(
+            key,
+            _updateGrowthMeta4DBD80,
+            createBooleanPropertyBinding(GrowthConstants, "BYTE_4D62DC_UPDATE_GROWTH"),
+        );
+        subAtexitRegister(sub472110CleanupStub);
+    }
+
+    if ((_sub40DC90InitMask4DBDA4 & 2) === 0) {
+        _sub40DC90InitMask4DBDA4 |= 2;
+        const key = createSub4032WideString();
+        sub4032D0Assign(key, "randomAutoCuts", 0x0e);
+        sub4038B0Register(
+            key,
+            _randomAutoCutsMeta4DBD5C,
+            createBooleanPropertyBinding(GrowthConstants, "BYTE_4D8CED_RANDOM_AUTO_CUTS"),
+        );
+        subAtexitRegister(sub472100CleanupStub);
+    }
+
+    if ((_sub40DC90InitMask4DBDA4 & 4) === 0) {
+        _sub40DC90InitMask4DBDA4 |= 4;
+        const key = createSub4032WideString();
+        sub4032D0Assign(key, "energyUseRate", 0x0d);
+        sub408600Register(
+            key,
+            _energyUseRateMeta4DBD38,
+            createNumericPropertyBinding(GrowthConstants, "ENERGY_USE_RATE"),
+        );
+        subAtexitRegister(sub4720F0CleanupStub);
+    }
+
+    if ((_sub40DC90InitMask4DBDA4 & 8) === 0) {
+        _sub40DC90InitMask4DBDA4 |= 8;
+        const key = createSub4032WideString();
+        sub4032D0Assign(key, "energyLeak", 0x0a);
+        sub408600Register(
+            key,
+            _energyLeakMeta4DBD14,
+            createNumericPropertyBinding(GrowthConstants, "ENERGY_LEAK"),
+        );
+        subAtexitRegister(sub4720E0CleanupStub);
+    }
+}
 
 /**
  * Один полный `sub_40DC90()` по энергии/росту (без метаболизма листьев, лучей и `sub_4143E0`).
@@ -29,7 +101,10 @@ export function runSub40DC90GrowthTick(
     worldGrowth: WorldGrowthState,
     onSimulationYearCrossed?: () => void,
     rng?: MSVCRand,
+    strictExeParity?: boolean,
 ): void {
+    ensureSub40DC90IniInits();
+
     if (rng) {
         maybeRandomAutoCutsSub40DC902(root, rng);
     }
@@ -61,5 +136,7 @@ export function runSub40DC90GrowthTick(
 
     aggregateEnergy420436PostOrder(root);
     applySub414E10PostOrderTail(root);
-    applyGlobalEnergyPoolAfterGrowth(worldGrowth, root);
+    applyGlobalEnergyPoolAfterGrowth(worldGrowth, root, {
+        strictExeParity: strictExeParity === true,
+    });
 }

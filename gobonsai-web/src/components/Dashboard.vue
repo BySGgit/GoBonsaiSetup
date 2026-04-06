@@ -31,6 +31,7 @@ const props = defineProps<{
     age: number;
     targetAge: number;
     gameTime: number;
+    simulationDay: number;
     energy: number;
     health: number;
     light: number;
@@ -48,7 +49,7 @@ const props = defineProps<{
   };
 }>();
 const seasonInfo = computed(() => {
-  const day = Math.floor(props.stats.gameTime % 365);
+  const day = ((Math.floor(props.stats.simulationDay) % 365) + 365) % 365;
   if (day >= 60 && day < 150)
     return { name: "Весна", icon: Flower2, color: "text-pink-400" };
   if (day >= 150 && day < 240)
@@ -162,8 +163,8 @@ const seasonInfo = computed(() => {
             <span>Год / День</span>
           </div>
           <span class="text-sm font-mono text-amber-400">
-            {{ Math.floor(props.stats.gameTime / 365) + 1 }} /
-            {{ Math.floor(props.stats.gameTime % 365) }}
+            {{ Math.floor(props.stats.simulationDay / 365) + 1 }} /
+            {{ ((Math.floor(props.stats.simulationDay) % 365) + 365) % 365 }}
           </span>
         </div>
       </div>

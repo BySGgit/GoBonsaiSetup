@@ -120,6 +120,10 @@ export const GrowthConstants = {
   FLT_4D63B4: 0.2 as Float32,
   FLT_4D63B8: 1.0 as Float32,
   FLT_4D63BC: 0.02 as Float32,
+  /** sub_417C90: health smoothing delta (flt_4D6428, INI-driven) */
+  FLT_4D6428_HEALTH_ENERGY_ADJUSTMENT: 0.0015 as Float32,
+  /** sub_417FF0: randomBudRotation amplitude (flt_4D642C) */
+  FLT_4D642C_RANDOM_BUD_ROTATION: 0.1 as Float32,
   /** sub_416510: верхний зажим второго угла при v26 > π/2 (full.c flt_4D6388) */
   FLT_4D6388: 1.5707964 as Float32,
   FLT_4D63C0: 0.059999999 as Float32,
@@ -210,3 +214,4 @@ export function sampleMaxGrowth452Sub4159C0(rng: { randFloat(): number }): Float
   const hi = GrowthConstants.FLT_4D85F8 as number;
   return (hi * 0.8 + hi * 0.2 * rng.randFloat()) as Float32;
 }
+

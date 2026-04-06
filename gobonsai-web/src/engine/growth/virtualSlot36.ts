@@ -39,6 +39,15 @@ function skipDetached(section: TreeSection): boolean {
   return section.worldDetached188;
 }
 
+function effectiveGrowthWeightForBudget(section: TreeSection): number {
+  // Leaves intentionally keep zero budget share in this path.
+  if (section.sectionRuntimeType4 === SectionRuntimeType.TreeSectionLeaf) {
+    return 0;
+  }
+  // Recovery guard for trees created during weight=0 regressions.
+  return Math.max(1e-4, section.energyWeight428 as number);
+}
+
 /**
  * sub_416300: filter by byte_4D822A (Twig type check).
  * Returns section if it's a registered Twig type, null otherwise.
@@ -73,7 +82,7 @@ export function runVirtualSlot36Tree(
 
     let v10 = 0;
     for (const c of children) {
-      if (!skipDetached(c)) v10 += c.energyWeight428 as number;
+      if (!skipDetached(c)) v10 += effectiveGrowthWeightForBudget(c);
     }
 
     // Snapshot: child handlers may mutate the array (budQuietDetachSub415ED0,
@@ -85,24 +94,32 @@ export function runVirtualSlot36Tree(
         c.energyBudget432 = 0 as Float32;
         continue;
       }
-      const share = v10 <= 0 ? 1.0 / n : (c.energyWeight428 as number) / v10;
+      const w = effectiveGrowthWeightForBudget(c);
+      const share = v10 <= 0 ? 1.0 / n : w / v10;
       c.energyBudget432 = (share *
         (section.energyBudget432 as number)) as Float32;
       visit(c);
     }
 
     // C: sub_414E10 post-order rollup runs BEFORE the parent's type-specific code.
-    // Aggregate children's +420/+436 so the parent can read them (e.g. twig girth growth).
+    // Aggregate children's +420/+436/+480/+484 so the parent can read them
+    // in its type-specific slot (+36), matching sub_414E10 call order.
     let sum420 = 0;
     let sum436 = 0;
+    let sum480 = 0;
+    let sum484 = 0;
     for (const c of section.children) {
       if (!skipDetached(c)) {
         sum420 += c.energyProduction420 as number;
         sum436 += c.energySpent436 as number;
+        sum480 += c.rollupDword480;
+        sum484 += c.rollupDword484;
       }
     }
     section.energyProduction420 = sum420 as Float32;
     section.energySpent436 = sum436 as Float32;
+    section.rollupDword480 = sum480 >>> 0;
+    section.rollupDword484 = sum484 >>> 0;
 
     postDispatchByType(section, rng, worldFlagByte220);
   };
@@ -182,6 +199,8 @@ function budAfterSub414E10From415EF0(
 ): void {
   const baseGrowth = bud.baseGrowth as number;
   if (baseGrowth <= 0.0) {
+    // NOTE: mapping of EXE field at this check is not finalized yet.
+    // Keep soft detach path to avoid catastrophic branch loss in TS.
     bud.markedForDetach236 = true;
     return;
   }
@@ -247,6 +266,10 @@ function sub415C10ConvertBudToTwig(
   if (!rng) return 0;
 
   const budParent = bud.parent;
+  const oldBudBranchPos = bud.branchPosition;
+  const oldBudLat = bud.lateralTransY4158;
+  const oldBudRoll = bud.lateralRoll4158Z;
+  _tmpMatrix415C10.copy(bud.localTemplate240);
 
   // sub_413CF0: check if parent is a registered twig-like type
   let v4: TreeSection | null = null;
@@ -292,6 +315,11 @@ function sub415C10ConvertBudToTwig(
     inheritedBaseRadius,
   );
   newTwig.sectionRuntimeType4 = SectionRuntimeType.TreeSectionTwig;
+  newTwig.branchPosition = oldBudBranchPos;
+  newTwig.lateralTransY4158 = oldBudLat;
+  newTwig.lateralRoll4158Z = oldBudRoll;
+  newTwig.localTemplate240.copy(_tmpMatrix415C10);
+  newTwig.growthFlag512 = false;
 
   // sub_417BB0: initial yaw jitter rotation
   TransformService.rotationYawPitchRoll(
@@ -300,29 +328,33 @@ function sub415C10ConvertBudToTwig(
     0,
     0,
   );
+  newTwig.rotationQuaternion.copy(newTwig.targetRotation);
+  newTwig.rotation.copy(newTwig.targetRotation);
+  Sub416510Rotation.syncBlob80FromQuaternion(newTwig);
 
   newTwig.twigRadius444 = GrowthConstants.FLT_4D861C_INITIAL_TWIG_GIRTH;
   newTwig.twigLength448 = 0 as Float32;
   newTwig.maxGrowth = maxSegSize as Float32;
   newTwig.energyWeight428 = 1.0 as Float32;
-  newTwig.growthFlag512 = true;
 
   // Add twig to budParent's scene graph and child list
   if (budParent) {
     budParent.children.push(newTwig);
     budParent.group.add(newTwig.group);
-    newTwig.updateAttachmentPosition(budParent);
   }
 
   // ── Step 3: Add bud as child of new twig ──
   newTwig.children.push(bud);
   bud.parent = newTwig;
   newTwig.group.add(bud.group);
-  bud.updateAttachmentPosition(newTwig);
+  bud.branchPosition = 1.0 as Float32;
+  bud.lateralTransY4158 = 0 as Float32;
+  bud.lateralRoll4158Z = 0 as Float32;
+  bud.localTemplate240.identity();
 
   // ── Step 4: Combined quaternion — D3DXQuaternionMultiply(result, twig, bud) ──
   const combinedQuat = _tmpQuat.multiplyQuaternions(
-    newTwig.targetRotation,
+    newTwig.rotationQuaternion,
     bud.rotationQuaternion,
   );
   newTwig.rotationQuaternion.copy(combinedQuat);
@@ -331,8 +363,10 @@ function sub415C10ConvertBudToTwig(
   Sub416510Rotation.syncBlob80FromQuaternion(newTwig);
 
   // ── Step 5: Copy energy fields from bud to twig ──
+  newTwig.energyWeight428 = bud.energyWeight428;
   newTwig.energyProduction420 = bud.energyProduction420;
   newTwig.energyAccumulator424 = bud.energyAccumulator424;
+  newTwig.growthFlag512 = true;
 
   // ── Step 6: Reset bud's quaternion to identity ──
   bud.rotationQuaternion.identity();
@@ -350,6 +384,7 @@ function sub415C10ConvertBudToTwig(
 }
 
 const _tmpQuat = new THREE.Quaternion();
+const _tmpMatrix415C10 = new THREE.Matrix4();
 
 // ─── sub_415AB0: spawn 2 symmetric leaves at bud→twig conversion ───
 
@@ -417,11 +452,13 @@ function createLeafSection(
   const leafVisual = new TreeLeaf(leaf.group, rng);
   leafVisual.energy = 0.9;
   const parentRadius = Math.max(0.015, parentTwig.twigRadius444 as number);
-  const radiusFactor = Math.max(0.65, Math.min(1.3, parentRadius / 0.08));
-  leafVisual.size = (0.14 + rng.randFloat() * 0.06) * radiusFactor;
+  const radiusFactor = Math.max(0.75, Math.min(1.15, parentRadius / 0.06));
+  const sizeFromLeafType = Math.max(0.55, Math.min(1.5, maxLeafSize / 2.4));
+  leafVisual.size =
+    (0.22 + rng.randFloat() * 0.12) * radiusFactor * sizeFromLeafType;
   leafVisual.targetSize = Math.min(
-    1.05,
-    Math.max(0.24, maxLeafSize * 0.18 * radiusFactor),
+    1.9,
+    Math.max(0.55, maxLeafSize * 0.34 * radiusFactor),
   );
   leaf.leaves.push(leafVisual);
 

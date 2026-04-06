@@ -4,13 +4,6 @@ import { TreeRoot } from "../TreeRoot";
 import { GrowthController, GrowthStats } from "../GrowthController";
 import { GrowthConstants } from "../config/GrowthConstants";
 import { MSVCRand } from "../MSVCRand";
-import {
-    clearGrowthScratchATree,
-} from "./sub40DC90PoolBalance";
-import {
-    aggregateEnergy420436PostOrder,
-    applySub414E10PostOrderTail,
-} from "./sub414E10";
 import { WorldGrowthState } from "../world/WorldGrowthState";
 import {
     serviceLightTraceQueue,
@@ -134,8 +127,6 @@ export class GrowthFramePipeline {
             v8 = 0;
         }
         worldGrowth.growthAccumulator4D7EF8 += v8;
-        clearGrowthScratchATree(root);
-
         const maxGrowIters = GrowthConstants.MAX_SUB_40DC90_ITERATIONS_PER_4130D0;
         let growIters = 0;
         while (
@@ -151,6 +142,7 @@ export class GrowthFramePipeline {
                 worldGrowth,
                 onSimulationYearCrossed,
                 rng,
+                strictExe,
             );
             propagateTransformsSub450BD0(root);
         }
@@ -177,15 +169,10 @@ export class GrowthFramePipeline {
         // --- Scratch energy values for aggregation (stripped-down sub_416510 tail) ---
         this.growth.updateEnergyScratches(root, simFrameDt);
 
-        // --- sub_414E10: rollup +420/+436/+480/+484 после метаболизма (для лучей/физики) ---
-        // Pool update (leak) только внутри sub_40DC90 — НЕ повторяем снаружи.
-        aggregateEnergy420436PostOrder(root);
-        applySub414E10PostOrderTail(root);
-
         // sub_40E230 + sub_40E460: очередь листьев → лучи, обновление +196..+212 (lightResponseVec / smoothedLight*)
         root.group.updateMatrixWorld(true);
         updateLightSpatialBoundsSub450BD0(root);
-        rebuildLeafQueue(root);
+        rebuildLeafQueue(root, strictExe);
         serviceLightTraceQueue(root, wind, rng);
 
         // sub_414A70: this+352 к миру после лучей (updateMatrixWorld выше)
@@ -202,7 +189,8 @@ export class GrowthFramePipeline {
         });
 
         const ageFactor = stats.age / 10.0;
-        const dayOfYear = simulationDay % 365;
+        const dayOfYear =
+            ((Math.floor(simulationDay) % 365) + 365) % 365;
 
         // --- Визуальное обновление иерархии ---
         root.update(

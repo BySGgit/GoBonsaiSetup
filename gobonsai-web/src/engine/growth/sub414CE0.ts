@@ -32,6 +32,8 @@ function applyBeforeLabel11(section: TreeSection): void {
         if (parent) {
             const v2 =
                 readApproxC428(parent) * (section.ce512EnergyAllowanceScale as number);
+            // C writes into unified +428 field; keep both fields synchronized.
+            section.energyWeight428 = v2 as Float32;
             section.sub414CE0SeedBudget428 = v2 as Float32;
         }
         return;
@@ -44,6 +46,8 @@ function applyBeforeLabel11(section: TreeSection): void {
         const v6 = Math.pow(acc, powExp);
         const old428 = readApproxC428(section);
         const v2 = (1.0 - reb) * old428 + reb * v6;
+        // C writes back to +428 directly; this is the source for next year's 432 distribution.
+        section.energyWeight428 = v2 as Float32;
         section.sub414CE0SeedBudget428 = v2 as Float32;
     }
 }

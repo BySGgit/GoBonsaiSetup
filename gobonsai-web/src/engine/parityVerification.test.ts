@@ -51,8 +51,40 @@ function runGrowthFrames(
       tickEnvironment: () => {},
       rng: h.rng,
       scene: h.scene,
+      strictExeSimPath: true,
     });
   }
+}
+
+function collectParityTrace(
+  h: ReturnType<typeof createMinimalGrowthHarness>,
+  frames: number,
+  deltaTime: number,
+): Array<{
+  day: number;
+  pool: number;
+  budget432: number;
+  spent436: number;
+  prod420: number;
+}> {
+  const out: Array<{
+    day: number;
+    pool: number;
+    budget432: number;
+    spent436: number;
+    prod420: number;
+  }> = [];
+  for (let i = 0; i < frames; i++) {
+    runGrowthFrames(h, 1, deltaTime);
+    out.push({
+      day: h.worldGrowth.simulationDay,
+      pool: h.worldGrowth.energyPool,
+      budget432: h.root.energyBudget432 as number,
+      spent436: h.root.energySpent436 as number,
+      prod420: h.root.energyProduction420 as number,
+    });
+  }
+  return out;
 }
 
 describe("parityReferenceFromExe: начальное состояние", () => {
@@ -102,5 +134,16 @@ describe("energy pool decay ×0.998 (childless root)", () => {
 
   it("INITIAL_ENERGY_POOL_196 ≈ 74.609", () => {
     expect(GrowthConstants.INITIAL_ENERGY_POOL_196).toBeCloseTo(74.609, 2);
+  });
+});
+
+describe("strict parity determinism", () => {
+  it("одинаковый seed даёт идентичный trace ключевых полей", () => {
+    const a = createMinimalGrowthHarness(1337);
+    const b = createMinimalGrowthHarness(1337);
+    // Keep test in node-safe window before first leaf spawn (TreeLeaf uses document/canvas).
+    const ta = collectParityTrace(a, 20, 1 / 60);
+    const tb = collectParityTrace(b, 20, 1 / 60);
+    expect(tb).toEqual(ta);
   });
 });

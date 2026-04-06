@@ -7,6 +7,7 @@ import { GrowthConstants } from './config/GrowthConstants';
 import { Float32 } from './math/MathTypes';
 import { TREE_CONSTANTS } from './TreeConstants';
 import { WorldGrowthState } from './world/WorldGrowthState';
+import { SectionRuntimeType } from './SectionRuntimeType';
 export type GrowthStats = GrowthState & {
     energy: number;
     health: number;
@@ -89,16 +90,21 @@ export class GrowthController {
         const leafProd = GrowthConstants.LEAF_ENERGY_PRODUCTION as number;
 
         const walk = (section: TreeSection): void => {
+            // sub_416510 writes local production for leaf path; keep non-leaf scratch at 0.
+            section.growthScratchA = 0 as Float32;
+
             if (section.skipGrowthTick) {
                 for (const c of section.children) walk(c);
                 return;
             }
 
-            const v34 = Math.min(1, section.lastLightFactor as number);
-            const v16 = (section.growthRate as number) * v34;
-            const v19 = v16 * v34 * (section.energy as number) * leafProd * simTicks;
-            section.growthScratchA = v19 as Float32;
-            section.growthScratchB = ((section.growthScratchB as number) + v19) as Float32;
+            if (section.sectionRuntimeType4 === SectionRuntimeType.TreeSectionLeaf) {
+                const v34 = Math.min(1, section.lastLightFactor as number);
+                const v16 = (section.growthRate as number) * v34;
+                const v19 = v16 * v34 * (section.energy as number) * leafProd * simTicks;
+                section.growthScratchA = v19 as Float32;
+                section.growthScratchB = ((section.growthScratchB as number) + v19) as Float32;
+            }
 
             // Цвет листьев — в processLeafMetabolism (treeAge); дублировать здесь нельзя.
 

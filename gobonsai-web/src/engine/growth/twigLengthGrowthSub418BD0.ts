@@ -4,6 +4,7 @@ import { MSVCRand } from "../MSVCRand";
 import { GrowthConstants } from "../config/GrowthConstants";
 import { Float32 } from "../math/MathTypes";
 import { TransformService } from "../math/TransformService";
+import { sub4084F0NormalizeInPlaceReturnLen } from "../math/Vec3Sub40xPrimitives";
 
 /**
  * sub_418BD0.c — twig length growth (called when growthFlag512 == true).
@@ -18,6 +19,8 @@ const _tmpVec = new THREE.Vector3();
 const _tmpAxis = new THREE.Vector3();
 const _upVec = new THREE.Vector3(0, 1, 0);
 const _tmpQuat = new THREE.Quaternion();
+const _tmpInv418BD0 = new THREE.Matrix4();
+const _tmpM3FromInv418BD0 = new THREE.Matrix3();
 
 export function twigLengthGrowthSub418BD0(
     section: TreeSection,
@@ -60,14 +63,13 @@ function slerpTowardLight(section: TreeSection): void {
     if (slerpFactor <= 0) return;
 
     // sub_418BD0.c: sub_401540(+196, …, +352) — локальный вектор из lightResponse (+196), не глобальный свет.
-    const worldInverse = new THREE.Matrix4().copy(section.group.matrixWorld).invert();
-    _tmpVec.copy(section.lightResponseVec).applyMatrix4(worldInverse).normalize();
-
-    if (_tmpVec.lengthSq() < 1e-10) return;
+    _tmpInv418BD0.copy(section.transformMatrix);
+    _tmpM3FromInv418BD0.setFromMatrix4(_tmpInv418BD0);
+    _tmpVec.copy(section.lightResponseVec).applyMatrix3(_tmpM3FromInv418BD0);
+    if (sub4084F0NormalizeInPlaceReturnLen(_tmpVec) <= 0) return;
 
     _tmpAxis.crossVectors(_upVec, _tmpVec);
-    if (_tmpAxis.lengthSq() < 1e-10) return;
-    _tmpAxis.normalize();
+    if (sub4084F0NormalizeInPlaceReturnLen(_tmpAxis) <= 0) return;
 
     const dot = Math.max(-1, Math.min(1, _upVec.dot(_tmpVec)));
     const angle = Math.acos(dot);

@@ -221,6 +221,7 @@ onMounted(() => {
         age: bonsai.age,
         targetAge: bonsai.targetAge,
         gameTime: bonsai.gameTime,
+        simulationDay: bonsai.simulationDay,
         energy: bonsai.energy,
         health: bonsai.health,
         light: bonsai.lightIntensity,

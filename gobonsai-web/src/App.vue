@@ -8,6 +8,7 @@ const stats = ref({
   age: 0,
   targetAge: 0,
   gameTime: 0,
+  simulationDay: 0,
   energy: 1.0,
   health: 1.0,
   light: 1.0,

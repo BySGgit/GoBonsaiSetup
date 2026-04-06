@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import { TreeSection } from "../TreeSection";
 import { MSVCRand } from "../MSVCRand";
 import { SectionRuntimeType } from "../SectionRuntimeType";
@@ -9,7 +10,18 @@ import {
 import { Float32 } from "../math/MathTypes";
 import { TransformService } from "../math/TransformService";
 import { Sub416510Rotation } from "../math/Sub416510Rotation";
+import { sub4084F0NormalizeInPlaceReturnLen, sub408590 } from "../math/Vec3Sub40xPrimitives";
 import { getSlot36SimulationDay } from "./frameState";
+
+const _tmpInv417FF0 = new THREE.Matrix4();
+const _tmpM3FromInv417FF0 = new THREE.Matrix3();
+const _tmpLocalLight417FF0 = new THREE.Vector3();
+const _tmpAxisZ417FF0 = new THREE.Vector3(0, 0, 1);
+const _tmpForward417FF0 = new THREE.Vector3();
+const _tmpA417FF0 = new THREE.Vector3();
+const _tmpB417FF0 = new THREE.Vector3();
+const _tmpNegB417FF0 = new THREE.Vector3();
+const _tmpCross417FF0 = new THREE.Vector3();
 
 function sub416300Filter(section: TreeSection | null): TreeSection | null {
     if (!section) return null;
@@ -18,12 +30,51 @@ function sub416300Filter(section: TreeSection | null): TreeSection | null {
 
 function yearsSinceBranch(section: TreeSection): number {
     const worldTime = getSlot36SimulationDay();
-    const birthTime = worldTime - (section.energyTickCounter440 as number);
-    return Math.floor(worldTime / 365) - Math.floor(birthTime / 365);
+    const worldYears = worldTime / 365.0;
+    const birthYears =
+        (worldTime - (section.energyTickCounter440 as number)) / 365.0;
+    // C cast-to-int truncates toward zero, not Math.floor for negatives.
+    const toIntTrunc = (v: number): number => (v < 0 ? Math.ceil(v) : Math.floor(v));
+    return toIntTrunc(worldYears) - toIntTrunc(birthYears);
 }
 
 function sub415470Years(section: TreeSection): number {
     return yearsSinceBranch(section);
+}
+
+/**
+ * sub_417FF0 helper chain:
+ * - D3DXMatrixInverse(this+104)
+ * - sub_401540(+196, inverse) == D3DXVec3TransformNormal (no translation, no transpose)
+ * - sub_401180(localLight, zAxis) + normalize
+ * - sub_401B00(this) approximated by local forward from current quaternion
+ * - sub_401180(forward, A) + normalize
+ * - angle/sign via dot/cross like decompiled chain
+ */
+function signedBudBaseAngleSub417FF0(section: TreeSection): number {
+    _tmpInv417FF0.copy(section.transformMatrix);
+    _tmpM3FromInv417FF0.setFromMatrix4(_tmpInv417FF0);
+    _tmpLocalLight417FF0.copy(section.lightResponseVec).applyMatrix3(_tmpM3FromInv417FF0);
+    if (sub4084F0NormalizeInPlaceReturnLen(_tmpLocalLight417FF0) <= 0) return 0;
+
+    _tmpA417FF0.crossVectors(_tmpLocalLight417FF0, _tmpAxisZ417FF0);
+    if (sub4084F0NormalizeInPlaceReturnLen(_tmpA417FF0) <= 0) return 0;
+
+    _tmpForward417FF0.set(0, 0, 1).applyQuaternion(section.rotationQuaternion);
+    if (sub4084F0NormalizeInPlaceReturnLen(_tmpForward417FF0) <= 0) return 0;
+
+    _tmpB417FF0.crossVectors(_tmpForward417FF0, _tmpA417FF0);
+    if (sub4084F0NormalizeInPlaceReturnLen(_tmpB417FF0) <= 0) return 0;
+
+    sub408590(_tmpNegB417FF0, _tmpB417FF0);
+    let dot = _tmpNegB417FF0.dot(_tmpA417FF0);
+    if (dot > 1) dot = 1;
+    else if (dot < -1) dot = -1;
+    const angle = Math.acos(dot);
+
+    _tmpCross417FF0.crossVectors(_tmpA417FF0, _tmpNegB417FF0);
+    const sign = _tmpCross417FF0.z <= 0 ? -1 : 1;
+    return sign * angle;
 }
 
 /**
@@ -41,7 +92,12 @@ export function branchingDispatcherSub417F40(
         return;
     }
 
-    const childCount = section.children.length;
+    // EXE +172 list for this path effectively tracks branch chain children.
+    // In TS leaf sections share `children`, so ignore leaves for branching gates.
+    const growthChildren = section.children.filter(
+        (c) => c.sectionRuntimeType4 !== SectionRuntimeType.TreeSectionLeaf,
+    );
+    const childCount = growthChildren.length;
     if (childCount > 1) return;
 
     if (childCount === 0) {
@@ -49,7 +105,7 @@ export function branchingDispatcherSub417F40(
         return;
     }
 
-    const firstTwig = sub416300Filter(section.children[0]);
+    const firstTwig = sub416300Filter(growthChildren[0] ?? null);
     const okChild = firstTwig !== null && sub415470Years(firstTwig) !== 0;
     if (okChild) {
         apicalBranchSub417FF0(section, rng);
@@ -130,9 +186,16 @@ function apicalBranchSub417FF0(
     const available =
         (section.energyBudget432 as number) - (section.energySpent436 as number);
 
-    const childCount = section.children.length >>> 0;
-    const oldChildWeight428 =
-        childCount === 1 ? (section.children[0].energyWeight428 as number) : 0.0;
+    const growthChildren = section.children.filter(
+        (c) => c.sectionRuntimeType4 !== SectionRuntimeType.TreeSectionLeaf,
+    );
+    const childCount = growthChildren.length >>> 0;
+    let oldChildWeight428 =
+        childCount === 1 ? (growthChildren[0].energyWeight428 as number) : 0.0;
+    // Recovery guard: old saves may contain zeroed weights from previous regressions.
+    if (childCount === 1 && oldChildWeight428 <= 1e-6) {
+        oldChildWeight428 = 1.0;
+    }
 
     let v33 = 1.0;
     const roll = section.rollupDword484 >>> 0;
@@ -150,39 +213,64 @@ function apicalBranchSub417FF0(
         return;
     }
 
-    const baseYaw = rng.randFloat() * Math.PI * 2;
-    const spreadAngle = 0.3 + rng.randFloat() * 0.4;
-    const bud1 = createBudChild(section, baseYaw + spreadAngle, -0.3, rng);
+    const v30 = signedBudBaseAngleSub417FF0(section);
+    const randBud =
+        (rng.randFloat() * 2.0 - 1.0) *
+        (GrowthConstants.FLT_4D642C_RANDOM_BUD_ROTATION as number);
+    let v31 = randBud + v30;
+    if ((section.rollupDword484 & 1) === 0) {
+        v31 += Math.PI * 0.5;
+    }
+
+    const v25 = rng.randFloat() * 0.5 + 1.0;
+    const v19 =
+        rng.randFloat() * 0.1000000014901161 -
+        0.05000000074505806 +
+        v31;
+    void v19;
+    const bud1 = createBudChild(section, 0, v25, rng, {
+        roll: -v31,
+        lateralRoll4158Z: v19,
+    });
     if (bud1) {
         section.spawnDelta480 = (section.spawnDelta480 + 1) >>> 0;
     }
 
     const denom = 1.0 - v33;
-    let baseWeight =
+    const baseWeight =
         Math.abs(denom) > 1e-8
             ? ((apicalStr * v33) * oldChildWeight428) / denom
             : 0.0;
-    if (baseWeight <= 1e-8) baseWeight = 1.0;
 
     if (bud1) {
         const w1 =
             (rng.randFloat() * 0.800000011920929 + 0.2000000029802322) *
             baseWeight;
-        bud1.energyWeight428 = w1 as Float32;
+        bud1.energyWeight428 = Math.max(1e-4, w1) as Float32;
     }
 
-    const bud2 = createBudChild(
-        section,
-        baseYaw - spreadAngle + Math.PI,
-        -0.3,
-        rng,
-    );
+    const v32 = v31 + Math.PI;
+    const v21 = rng.randFloat() * 0.5 + 1.0;
+    const v28 =
+        rng.randFloat() * 0.1000000014901161 -
+        0.05000000074505806 +
+        v32;
+    void v28;
+    const v22 =
+        rng.randFloat() * 0.1000000014901161 -
+        0.05000000074505806 +
+        v32;
+    void v22;
+    const bud2 = createBudChild(section, 0, v21, rng, {
+        roll: -v32,
+        lateralRoll4158Z: v22,
+    });
     if (bud2) {
         section.spawnDelta480 = (section.spawnDelta480 + 1) >>> 0;
         const w2 =
             (rng.randFloat() * 0.800000011920929 + 0.2000000029802322) *
             baseWeight;
-        bud2.energyWeight428 = w2 as Float32;
+        bud2.energyWeight428 = Math.max(1e-4, w2) as Float32;
     }
 }
 

@@ -92,11 +92,18 @@ export function rollupFrameEnergy420(root: TreeSection): void {
 export function applyGlobalEnergyPoolAfterGrowth(
     worldGrowth: WorldGrowthState,
     root: TreeSection,
+    options?: { strictExeParity?: boolean },
 ): void {
     const spent = root.energySpent436;
     const prod = root.energyProduction420;
     let e = worldGrowth.energyPool - spent + prod;
     e *= GrowthConstants.ENERGY_LEAK as number;
+    // Gameplay stabilizer (TS-only): keep global pool within 100% reference band.
+    // Strict parity path must match exe behavior and skip this cap.
+    if (!options?.strictExeParity) {
+        const maxPool = GrowthConstants.INITIAL_ENERGY_POOL_196 as number;
+        if (e > maxPool) e = maxPool;
+    }
     worldGrowth.energyPool = e;
     root.energy = worldGrowth.normalizedEnergy as Float32;
 }

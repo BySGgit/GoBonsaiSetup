@@ -3,6 +3,7 @@ import { TreeSection } from "../TreeSection";
 import { GrowthConstants, byte4D8226ForSectionType } from "../config/GrowthConstants";
 import { Float32 } from "../math/MathTypes";
 import { TransformService } from "../math/TransformService";
+import { sub4084F0NormalizeInPlaceReturnLen } from "../math/Vec3Sub40xPrimitives";
 import { SectionRuntimeType } from "../SectionRuntimeType";
 
 /**
@@ -134,15 +135,7 @@ function computeCentroidSub414870(section: TreeSection): void {
  * sub_4084F0.c — нормализация; при |v|≈0 → (0,0,1); возвращает исходную длину (или 0).
  */
 function sub4084F0NormalizeReturnLen(v: THREE.Vector3): number {
-    const lenSq = v.x * v.x + v.y * v.y + v.z * v.z;
-    const len = Math.sqrt(lenSq);
-    if (len <= 1.000000013351432e-10) {
-        v.set(0, 0, 1);
-        return 0;
-    }
-    const inv = 1 / len;
-    v.multiplyScalar(inv);
-    return len;
+    return sub4084F0NormalizeInPlaceReturnLen(v);
 }
 
 // ─── sub_414A70: wind/gravity torque → targetQuat (+320) ─────────────

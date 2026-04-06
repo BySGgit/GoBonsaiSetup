@@ -2,10 +2,10 @@ import * as THREE from 'three';
 import { MSVCRand } from './MSVCRand';
 import { TREE_CONSTANTS } from './TreeConstants';
 
-const LEAF_VISUAL_SCALE = 2.2;
+const LEAF_VISUAL_SCALE = 2.9;
 const LEAF_ALPHA_CUTOFF = 0.35;
-const LEAF_BASE_WIDTH = 0.22;
-const LEAF_BASE_HEIGHT = 0.28;
+const LEAF_BASE_WIDTH = 0.26;
+const LEAF_BASE_HEIGHT = 0.34;
 
 export class TreeLeaf {
     private static sharedGeometry: THREE.PlaneGeometry | null = null;
@@ -178,9 +178,10 @@ export class TreeLeaf {
 
         if (!strictExeSimVisuals) {
             const time = Date.now() * 0.002;
-            const swayAmp = wind.length() * 0.2 + 0.1;
+            const swayAmp = Math.min(0.11, wind.length() * 0.05 + 0.015);
             this.mesh.rotation.z = Math.sin(time + this.swayOffset) * swayAmp;
-            this.mesh.rotation.x = Math.cos(time * 0.8 + this.swayOffset) * (swayAmp * 0.55);
+            this.mesh.rotation.x =
+                Math.cos(time * 0.8 + this.swayOffset) * (swayAmp * 0.35);
             const shader = leafMat.userData?.shader;
             if (shader?.uniforms) {
                 shader.uniforms.uLeafTime.value = time + this.swayOffset;
@@ -202,7 +203,12 @@ export class TreeLeaf {
         if (globalHealth < 0.3) this.energy -= 0.002 * deltaTime * 60;
         this.energy = Math.max(0, Math.min(1.0, this.energy));
 
-        if ((this.energy <= 0 && this.rng.randFloat() < 0.01) || (globalHealth < 0.2 && this.rng.randFloat() < 0.005)) {
+        const leafDropSeason = dayOfYear >= 260 || dayOfYear < 40;
+        if (
+            leafDropSeason &&
+            ((this.energy <= 0 && this.rng.randFloat() < 0.01) ||
+                (globalHealth < 0.2 && this.rng.randFloat() < 0.005))
+        ) {
             this.startFalling();
         }
 

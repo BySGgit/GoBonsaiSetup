@@ -34,6 +34,10 @@ const VISUAL_TRUNK_RADIUS_SCALE = 0.23;
 const VISUAL_LENGTH_SCALE_418F10 = 0.51;
 const MIN_YOUNG_RADIUS_SCALE = 0.12;
 const NATURAL_MIN_YOUNG_RADIUS_SCALE = 0.55;
+const _tmpTemplatePos240 = new THREE.Vector3();
+const _tmpTemplateQuat240 = new THREE.Quaternion();
+const _axisY240 = new THREE.Vector3(0, 1, 0);
+const _tmpTemplateScale240 = new THREE.Vector3(1, 1, 1);
 
 export class TreeSection
   implements ITreeSectionData, IVisualState, ITransformState, IWorkingBuffers
@@ -58,6 +62,8 @@ export class TreeSection
 
   // ITransformState
   public rotationQuaternion: D3DXQUATERNION = new THREE.Quaternion(); // this + 320
+  /** sub_413F50/4158D0: base local template matrix at +240 */
+  public localTemplate240: D3DXMATRIX = new THREE.Matrix4();
   /** sub_4146F0: qmemcpy(this+352, D3DXMatrixInverse(world)); не прямой matrixWorld. */
   public transformMatrix: D3DXMATRIX = new THREE.Matrix4();
 
@@ -396,11 +402,23 @@ export class TreeSection
     const visualHeight = parent.getAttachmentSpan();
     const branchPos = Math.max(0, this.branchPosition as number);
     const lat = this.lateralTransY4158 as number;
+    const roll = this.lateralRoll4158Z as number;
     const seamOverlap =
       branchPos >= 0.98 ? Math.min(0.05, visualHeight * 0.03) : 0;
-    this.group.position.x = 0;
-    this.group.position.y = Math.max(0, branchPos * visualHeight - seamOverlap);
-    this.group.position.z = Math.abs(lat) > 1e-8 ? lat * visualHeight : 0;
+    // sub_4158D0: lateral offset (a2) is absolute branch radius-space value.
+    const radial = Math.abs(lat) > 1e-8 ? lat : 0;
+    const px = Math.sin(roll) * radial;
+    const py = Math.max(0, branchPos * visualHeight - seamOverlap);
+    const pz = Math.cos(roll) * radial;
+    this.group.position.set(px, py, pz);
+
+    _tmpTemplatePos240.set(px, py, pz);
+    _tmpTemplateQuat240.setFromAxisAngle(_axisY240, roll);
+    this.localTemplate240.compose(
+      _tmpTemplatePos240,
+      _tmpTemplateQuat240,
+      _tmpTemplateScale240,
+    );
   }
 
   private hasPrunedAncestor(): boolean {
@@ -476,15 +494,6 @@ export class TreeSection
     const youthRamp = growth01 * growth01 * (3 - 2 * growth01);
     const currentHeightScale = this.getAttachmentSpan() / baseHeight;
 
-    const stateRadiusNorm = Math.max(
-      0.15,
-      Math.min(
-        1.0,
-        Math.sqrt(
-          (this.twigRadius444 as number) / Math.max(1e-5, this.branchBaseRadius),
-        ),
-      ),
-    );
     let youthRadiusScale = 1.0;
     if (
       this.sectionRuntimeType4 === SectionRuntimeType.TreeSectionTwig ||
@@ -501,6 +510,15 @@ export class TreeSection
             : NATURAL_MIN_YOUNG_RADIUS_SCALE;
       youthRadiusScale = minScale + (1 - minScale) * youthRamp;
     }
+    const stateRadiusNorm = Math.max(
+      0.15,
+      Math.min(
+        1.0,
+        Math.sqrt(
+          (this.twigRadius444 as number) / Math.max(1e-5, this.branchBaseRadius),
+        ),
+      ),
+    );
     const thicknessInput = Math.max(0.05, trunkParams.thickness as number);
     let radScale =
       thicknessInput *
@@ -508,14 +526,15 @@ export class TreeSection
       stateRadiusNorm *
       youthRadiusScale;
     if (this.parent) {
-      const parentLimit = this.isContinuation ? 1.0 : 0.78;
+      const parentLimit = this.isContinuation ? 0.95 : 0.74;
       radScale = Math.min(
         radScale,
-        Math.max(0.02, (this.parent.mesh.scale.x as number) * parentLimit),
+        Math.max(0.015, (this.parent.mesh.scale.x as number) * parentLimit),
       );
     }
 
     if (thicknessInput > 0.01) {
+      radScale = Math.max(0.012, radScale);
       this.mesh.scale.set(radScale, currentHeightScale, radScale);
       this.group.visible = true;
 
@@ -585,7 +604,8 @@ export class TreeSection
       ),
     );
 
-    const foliageVisible = true;
+    const isWinter = dayOfYear >= 320 || dayOfYear < 60;
+    const foliageVisible = !isWinter;
     this.leaves.forEach((leaf) => {
       leaf.mesh.visible = foliageVisible;
       if (foliageVisible) {

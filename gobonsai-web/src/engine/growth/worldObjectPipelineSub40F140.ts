@@ -11,16 +11,18 @@ import { getWorldObjects, clearWorldObjects } from "./detachPipelineSub40EEE0";
  * update position/rotation, remove when fallen below Y=-100.
  */
 
-const LEAF_GRAVITY = 0.025;
+const LEAF_GRAVITY = 0.08;
 const BRANCH_GRAVITY = 0.1;
-const LEAF_WIND_SCALE = 0.09;
+const LEAF_WIND_SCALE = 0.035;
 const BRANCH_WIND_SCALE = 0.03;
-const LEAF_POS_NOISE = 0.12;
-const LEAF_ROT_NOISE = 0.05;
+const LEAF_POS_NOISE = 0.01;
+const LEAF_LINEAR_DAMPING = 0.94;
+const LEAF_ANGULAR_DAMPING = 0.9;
 const BRANCH_ANGULAR_DAMPING = 0.98;
 const VEL_CLAMP = 5.0;
 const ANGVEL_CLAMP = 0.2;
-const REMOVAL_Y = -100.0;
+const LEAF_REMOVAL_Y = -1.5;
+const BRANCH_REMOVAL_Y = -100.0;
 
 const _tmpEuler = new THREE.Euler();
 
@@ -52,11 +54,9 @@ export function updateWorldObjectsSub40F140(
             const randScale = rng.randFloat() * 0.5 + 0.5;
             vel.addScaledVector(wind, LEAF_WIND_SCALE * randScale);
             vel.x += (rng.randFloat() - 0.5) * LEAF_POS_NOISE * 2;
-            vel.y += (rng.randFloat() - 0.5) * LEAF_POS_NOISE * 2;
             vel.z += (rng.randFloat() - 0.5) * LEAF_POS_NOISE * 2;
-            angVel.x += (rng.randFloat() - 0.5) * LEAF_ROT_NOISE * 2;
-            angVel.y += (rng.randFloat() - 0.5) * LEAF_ROT_NOISE * 2;
-            angVel.z += (rng.randFloat() - 0.5) * LEAF_ROT_NOISE * 2;
+            vel.multiplyScalar(LEAF_LINEAR_DAMPING);
+            angVel.multiplyScalar(LEAF_ANGULAR_DAMPING);
         } else {
             vel.y -= BRANCH_GRAVITY;
             vel.addScaledVector(wind, BRANCH_WIND_SCALE);
@@ -80,8 +80,8 @@ export function updateWorldObjectsSub40F140(
             new THREE.Quaternion().setFromEuler(_tmpEuler),
         );
 
-        // Remove if fallen below threshold
-        if (section.group.position.y < REMOVAL_Y) {
+        const removalY = isLeaf ? LEAF_REMOVAL_Y : BRANCH_REMOVAL_Y;
+        if (section.group.position.y < removalY) {
             if (section.group.parent) section.group.parent.remove(section.group);
             objects.splice(i, 1);
         }

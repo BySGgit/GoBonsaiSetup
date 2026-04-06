@@ -4,6 +4,7 @@ import { Float32 } from "../math/MathTypes";
 import { TREE_CONSTANTS } from "../TreeConstants";
 import { MSVCRand } from "../MSVCRand";
 import { runVirtualSlot36Tree } from "./virtualSlot36";
+import { SectionRuntimeType } from "../SectionRuntimeType";
 
 /**
  * sub_414E10.c — базовый слот +36 для TreeSection: сброс +420/+436/+480/+484, доли child+432
@@ -95,7 +96,12 @@ export function aggregateEnergy420436PostOrder(root: TreeSection): void {
         if (skipDetached(section)) return;
         const activeChildren = section.children.filter((c) => !skipDetached(c));
         if (section.children.length === 0) {
-            section.energyProduction420 = (section.growthScratchA as number) * scale as Float32;
+            // In C, local +420 production at this stage comes from leaf path (sub_416510).
+            // Terminal non-leaf nodes should not synthesize production here.
+            section.energyProduction420 =
+                section.sectionRuntimeType4 === SectionRuntimeType.TreeSectionLeaf
+                    ? ((section.growthScratchA as number) * scale as Float32)
+                    : 0;
             section.rollupDword480 = 0;
             section.rollupDword484 = 0;
             return;

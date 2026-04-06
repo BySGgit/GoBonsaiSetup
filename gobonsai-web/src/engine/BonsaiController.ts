@@ -33,6 +33,35 @@ export class BonsaiController {
     
     private onLog?: (message: string, type: 'info' | 'warning' | 'error' | 'success') => void;
     private _dbgFrame: number = 0;
+    private readonly debugTreeLogs: boolean =
+        typeof window !== "undefined" &&
+        window.localStorage.getItem("gobonsai_debug_tree") === "1";
+    private readonly debugTreeDumpMaxNodes: number =
+        typeof window !== "undefined"
+            ? Math.max(
+                40,
+                Math.min(
+                    400,
+                    Number.parseInt(
+                        window.localStorage.getItem("gobonsai_debug_tree_max_nodes") ?? "120",
+                        10,
+                    ) || 120,
+                ),
+            )
+            : 120;
+    private readonly debugTreeDumpMaxDepth: number =
+        typeof window !== "undefined"
+            ? Math.max(
+                2,
+                Math.min(
+                    12,
+                    Number.parseInt(
+                        window.localStorage.getItem("gobonsai_debug_tree_max_depth") ?? "8",
+                        10,
+                    ) || 8,
+                ),
+            )
+            : 8;
     /** sub_412700.c: `flt_4D8D04` вЂ” РЅР°РєРѕРїРёС‚РµР»СЊ РґРѕ С€Р°РіР° `flt_4DBEE4` (~1/30 СЃ) Рё РІС‹Р·РѕРІР° `sub_4130D0` */
     private simTimeBank412700 = 0;
 
@@ -77,11 +106,12 @@ export class BonsaiController {
         this.growthController.animateGrowth(this.stats, deltaTime, this.timeSpeed);
 
         const SIM_DT = GrowthConstants.SIM_FRAME_DT_SUB_412700 as number;
-        const capped = Math.min(
-            deltaTime * this.timeSpeed,
+        const cappedRealDelta = Math.min(
+            deltaTime,
             GrowthConstants.MAX_DELTA_SUB_412700 as number,
         );
-        this.simTimeBank412700 += capped;
+        // Keep speed multiplier effective at high xN; cap only real frame delta.
+        this.simTimeBank412700 += cappedRealDelta * this.timeSpeed;
 
         const metabolismLogs: string[] = [];
         while (this.simTimeBank412700 >= SIM_DT) {
@@ -110,41 +140,80 @@ export class BonsaiController {
         }
         metabolismLogs.forEach(msg => this.addLog(msg, 'warning'));
 
-        // DEBUG: log tree state every 120 frames
-        if (!this._dbgFrame) this._dbgFrame = 0;
-        if (++this._dbgFrame % 120 === 0) {
-            const count = (s: TreeSection): number => {
-                let n = 1;
-                for (const c of s.children) n += count(c);
-                return n;
-            };
-            const dumpTree = (s: TreeSection, depth: number): string => {
-                const pad = '  '.repeat(depth);
-                const t = s.sectionRuntimeType4;
-                const b432 = (s.energyBudget432 as number).toFixed(4);
-                const p420 = (s.energyProduction420 as number).toFixed(4);
-                const tR = (s.twigRadius444 as number).toFixed(5);
-                const tL = (s.twigLength448 as number).toFixed(5);
-                const mg = (s.maxGrowth as number).toFixed(4);
-                const gf = s.growthFlag512 ? 'T' : 'F';
-                const bg = (s.baseGrowth as number).toFixed(4);
-                const det = s.markedForDetach236 ? 'D!' : '';
-                const w428 = (s.energyWeight428 as number).toFixed(4);
-                const gR = (s.growthRate as number).toFixed(4);
-                const lf = (s.lastLightFactor as number).toFixed(3);
-                let line = `${pad}[t${t}] bud432=${b432} prod420=${p420} tR=${tR} tL=${tL} max=${mg} gf=${gf} bg=${bg} w=${w428} gR=${gR} lf=${lf} ${det}`;
-                for (const c of s.children) line += '\n' + dumpTree(c, depth + 1);
-                return line;
-            };
-            const sf = this.worldGrowth.seasonFactor().toFixed(3);
-            console.log(
-                `[Bonsai] sections=${count(this.root)}`
-                + ` day=${this.worldGrowth.simulationDay}`
-                + ` season=${sf}`
-                + ` E=${this.stats.energy.toFixed(3)}`
-                + ` age=${this.stats.age.toFixed(2)}`
-                + `\n` + dumpTree(this.root, 0)
-            );
+        // Optional heavy debug dump (disabled by default).
+        if (this.debugTreeLogs) {
+            if (!this._dbgFrame) this._dbgFrame = 0;
+            if (++this._dbgFrame % 120 === 0) {
+                let sections = 0;
+                const byType = new Map<number, number>();
+                const stack: TreeSection[] = [this.root];
+                while (stack.length) {
+                    const s = stack.pop()!;
+                    sections++;
+                    const t = s.sectionRuntimeType4;
+                    byType.set(t, (byType.get(t) ?? 0) + 1);
+                    for (const c of s.children) stack.push(c);
+                }
+                const typeSummary = [...byType.entries()]
+                    .sort((a, b) => a[0] - b[0])
+                    .map(([t, n]) => `t${t}:${n}`)
+                    .join(",");
+
+                let remaining = this.debugTreeDumpMaxNodes;
+                let truncated = false;
+                const maxDepth = this.debugTreeDumpMaxDepth;
+                const dumpTree = (s: TreeSection, depth: number): string => {
+                    const pad = '  '.repeat(depth);
+                    if (remaining <= 0) {
+                        truncated = true;
+                        return `${pad}... [truncated]`;
+                    }
+                    remaining--;
+                    const t = s.sectionRuntimeType4;
+                    const b432 = (s.energyBudget432 as number).toFixed(4);
+                    const p420 = (s.energyProduction420 as number).toFixed(4);
+                    const tR = (s.twigRadius444 as number).toFixed(5);
+                    const tL = (s.twigLength448 as number).toFixed(5);
+                    const mg = (s.maxGrowth as number).toFixed(4);
+                    const gf = s.growthFlag512 ? 'T' : 'F';
+                    const bg = (s.baseGrowth as number).toFixed(4);
+                    const det = s.markedForDetach236 ? 'D!' : '';
+                    const w428 = (s.energyWeight428 as number).toFixed(4);
+                    const gR = (s.growthRate as number).toFixed(4);
+                    const lf = (s.lastLightFactor as number).toFixed(3);
+                    let line = `${pad}[t${t}] bud432=${b432} prod420=${p420} tR=${tR} tL=${tL} max=${mg} gf=${gf} bg=${bg} w=${w428} gR=${gR} lf=${lf} ${det}`;
+                    if (depth >= maxDepth) {
+                        if (s.children.length > 0) {
+                            truncated = true;
+                            line += ` [depth-cut children=${s.children.length}]`;
+                        }
+                        return line;
+                    }
+                    for (const c of s.children) {
+                        if (remaining <= 0) {
+                            truncated = true;
+                            break;
+                        }
+                        line += '\n' + dumpTree(c, depth + 1);
+                    }
+                    return line;
+                };
+                const sf = this.worldGrowth.seasonFactor().toFixed(3);
+                const treeDump = dumpTree(this.root, 0);
+                const tail = truncated
+                    ? `\n... [dump limited: maxNodes=${this.debugTreeDumpMaxNodes}, maxDepth=${this.debugTreeDumpMaxDepth}]`
+                    : "";
+                console.log(
+                    `[Bonsai] sections=${sections}`
+                    + ` day=${this.worldGrowth.simulationDay}`
+                    + ` season=${sf}`
+                    + ` E=${this.stats.energy.toFixed(3)}`
+                    + ` age=${this.stats.age.toFixed(2)}`
+                    + ` types=${typeSummary}`
+                    + `\n` + treeDump
+                    + tail
+                );
+            }
         }
 
         this.stats.energy = this.worldGrowth.normalizedEnergy;
@@ -295,4 +364,5 @@ export class BonsaiController {
     public get energy() { return this.stats.energy; }
     public get age() { return this.stats.age; }
     public get targetAge() { return this.stats.targetAge; }
+    public get simulationDay() { return this.worldGrowth.simulationDay; }
 }
