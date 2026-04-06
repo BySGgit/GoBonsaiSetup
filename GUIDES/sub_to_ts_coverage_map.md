@@ -200,3 +200,62 @@
 - 2026-04-02: **`sub_416510`** — дизасм **`v44=(0,Ty,Tz)`**; **`Sub416510Rotation`** фаза 1 для листа; очередь IDA п.1 обновлена.
 - 2026-04-02: **`sub_416510`** — второй блок в TS (**`Ry`**, **`q38`**, **`q42·q38`**); **`FLT_4D6388`**; журнал § второй блок.
 
+
+---
+
+## L. Runtime Queue Closures (2026-04-06)
+
+| sub_* | TS file(s) | Status | Notes |
+| --- | --- | --- | --- |
+| `sub_4013f0` | `math/Vec3Sub40xPrimitives.ts` | ✅ (~95%) | Exact vec3 add primitive. |
+| `sub_401430` | `math/Vec3Sub40xPrimitives.ts` | ✅ (~95%) | Exact vec3 subtract primitive. |
+| `sub_401470` | `math/Vec3Sub40xPrimitives.ts` | ✅ (~95%) | Exact vec3 scalar multiply primitive. |
+| `sub_401500` | `math/Vec3Sub40xPrimitives.ts` | ✅ (~95%) | Calling-convention alias of `sub_401470`. |
+| `sub_4014b0` | `math/Vec3Sub40xPrimitives.ts` | ✅ (~95%) | Vec3 divide-by-scalar primitive. |
+| `sub_401180` | `math/Vec3Sub40xPrimitives.ts` | ✅ (~90%) | Cross-product wrapper over `sub_401120`. |
+| `sub_408470` | `math/Vec3Sub40xPrimitives.ts` | 🟡 (~88%) | Normalize-with-fallback helper (Three.js-backed). |
+| `sub_408450` | `math/Vec3Sub40xPrimitives.ts` | ✅ (~92%) | Vec3 normalize/divide helper wrapper. |
+| `sub_408590` | `math/Vec3Sub40xPrimitives.ts` | ✅ (~95%) | Unary negation helper. |
+| `sub_4085b0` | `math/Vec3Sub40xPrimitives.ts`, `growth/perFramePhysicsSub4143E0.ts` | ✅ (~90%) | `TransformCoord` helper extracted and wired in centroid stage. |
+| `sub_4084f0` | `math/Vec3Sub40xPrimitives.ts` | ✅ (~92%) | In-place normalize + original length return. |
+| `sub_40cf00` | `math/Vec3Sub40xPrimitives.ts`, `growth/perFramePhysicsSub4143E0.ts` | ✅ (~92%) | In-place normalize wrapper integrated in frame physics path. |
+| `sub_4032d0` | `config/IniRegistrySub408600.ts` | ✅ (~90%) | Wide-string assign parity helper. |
+| `sub_4037b0` | `config/IniRegistrySub408600.ts` | ✅ (~90%) | Wide-string substring assign helper. |
+| `sub_4033d0` | `config/IniRegistrySub408600.ts` | ✅ (~90%) | Init+assign wrapper preserved explicitly. |
+| `sub_403410` | `config/IniRegistrySub408600.ts` | ✅ (~90%) | Reset/clear wrapper preserved explicitly. |
+| `sub_4038b0` | `config/IniRegistrySub408600.ts` | 🟡 (~86%) | INI binding registration port. |
+| `sub_408600` | `config/IniRegistrySub408600.ts` | 🟡 (~85%) | Registry wiring entrypoint present. |
+| `sub_40fd70` | `config/IniRegistrySub408600.ts` | ✅ (~90%) | Intrusive list node allocator wrapper. |
+| `sub_43fd00` | `config/IniRegistrySub408600.ts` | 🟡 (~60%) | Exported init hook stub for web runtime bootstrap path. |
+| `sub_44a640` | `config/IniRegistrySub408600.ts` | 🟡 (~80%) | Registry intrusive-list sorting helper. |
+| `sub_472560` | `config/IniRegistrySub408600.ts` | 🟡 (~55%) | Exported atexit teardown stub (non-native runtime). |
+| `sub_401730` | `config/SectionTypeRegistrySub401730.ts` | ✅ (~90%) | Type registration table with explicit function boundary. |
+| `sub_4017d0` | `config/SectionTypeRegistrySub401730.ts` | 🟡 (~80%) | One-time recursive static-init pattern preserved. |
+| `sub_413cf0` | `config/SectionTypeRegistrySub401730.ts`, `growth/virtualSlot36.ts` | ✅ (~90%) | Parent type-5 filter integrated in slot+36 flow. |
+| `sub_40d6c0` | `world/SectionSpatialQueriesSub40x.ts` | ✅ (~90%) | Translation extractor (`this+104`). |
+| `sub_40a310` | `world/SectionSpatialQueriesSub40x.ts` | ✅ (~90%) | Basis-Z extractor (`this+104[8..10]`). |
+| `sub_4153d0` | `world/SectionSpatialQueriesSub40x.ts` | 🟡 (~85%) | Recursive max world-Y scan wrapper. |
+| `sub_44e5d0` | `world/Sub44E5D0Pool.ts` | 🟡 (~84%) | Detached-item pool enqueue path. |
+| `sub_451210` | `world/Sub451210Resolver.ts` | 🟡 (~85%) | Bucketed resolver/lookup path. |
+| `sub_450c80` | `growth/sub450C80.ts`, `growth/virtualSlot36.ts`, `growth/detachPipelineSub40EEE0.ts` | ✅ (~90%) | Parent-child unlink helper extracted and reused in detach/conversion paths. |
+| `sub_403580` | `config/IniRegistrySub408600.ts` | 🟡 (~82%) | Dynamic string-capacity growth helper (`sub403580Grow`). |
+| `sub_4015f0` | `math/Sub4015F0.ts` | ✅ (~92%) | Matrix translation extractor wrapper. |
+| `sub_4015d0` | `math/Sub4015F0.ts` | ✅ (~92%) | Matrix basis-Z extractor wrapper. |
+| `sub_40fa00` | `config/SectionTypeRegistrySub401730.ts` | 🟡 (~88%) | Lazy init for type-8 flag path (`byte_4D8228`) + type registration side effect. |
+| `sub_40fad0` | `config/SectionTypeRegistrySub401730.ts` | 🟡 (~90%) | Lazy init for type-7 flag path (`byte_4D8227`) + type registration side effect. |
+| `sub_40fc70` | `config/SectionTypeRegistrySub401730.ts` | ✅ (~92%) | Null-safe filter by `byte_4D8227[11*type]` with lazy initializer call. |
+| `sub_40fcf0` | `config/SectionTypeRegistrySub401730.ts` | ✅ (~92%) | Null-safe filter by `byte_4D8228[11*type]` with lazy initializer call. |
+| `sub_401610` | `world/SectionSpatialQueriesSub40x.ts` | ✅ (~94%) | AABB merge primitive (min/min/min + max/max/max). |
+| `sub_401690` | `world/SectionSpatialQueriesSub40x.ts` | ✅ (~92%) | AABB-to-sphere conversion helper (`center + radius`). |
+| `sub_401b10` | `world/SectionSpatialQueriesSub40x.ts` | 🟡 (~88%) | Recursive subtree AABB builder over `center24`/`meshScalar36` abstraction. |
+| `sub_401b00` | `world/SectionSpatialQueriesSub40x.ts`, `growth/branchingDispatcherSub417F40.ts` | 🟡 (~86%) | `sub_4015D0(out,this+40)` wrapper now wired in branching angle path via matrix basis-Z extraction. |
+| `sub_403ba0` | `world/SectionSpatialQueriesSub40x.ts` | 🟡 (~84%) | First-child diameter helper with type-5 table gate (`byte_4D8225`). |
+| `sub_4015b0` | `math/Sub4015F0.ts`, `growth/lightTracingSub40E460.ts`, `world/SectionSpatialQueriesSub40x.ts` | ✅ (~92%) | Basis-Y matrix extractor (`[4..6]`), now used in leaf-decay path (`sub_40D6D0` parity). |
+| `sub_440650` | `config/IniRegistrySub408600.ts` | 🟡 (~86%) | Intrusive-list erase by key comparator (wide-string compare semantics). |
+| `sub_401dd0` | `config/IniRegistrySub408600.ts`, `growth/sub40DC90GrowthTick.ts`, `growth/lightTracingSub40E460.ts` | 🟡 (~84%) | Lazy init + registry erase/reset helper wired into active cleanup stubs. |
+| `sub_4720e0` | `growth/sub40DC90GrowthTick.ts` | 🟡 (~90%) | Cleanup wrapper mapped to `sub_401DD0(_energyLeakMeta4DBD14)`. |
+| `sub_4720f0` | `growth/sub40DC90GrowthTick.ts` | 🟡 (~90%) | Cleanup wrapper mapped to `sub_401DD0(_energyUseRateMeta4DBD38)`. |
+| `sub_472100` | `growth/sub40DC90GrowthTick.ts` | 🟡 (~90%) | Cleanup wrapper mapped to `sub_401DD0(_randomAutoCutsMeta4DBD5C)`. |
+| `sub_472110` | `growth/sub40DC90GrowthTick.ts` | 🟡 (~90%) | Cleanup wrapper mapped to `sub_401DD0(_updateGrowthMeta4DBD80)`. |
+| `sub_472170` | `growth/lightTracingSub40E460.ts` | 🟡 (~90%) | Cleanup wrapper mapped to `sub_401DD0(_directLightPercentMeta4DBCEC)`. |
+| `sub_472180` | `growth/lightTracingSub40E460.ts` | 🟡 (~90%) | Cleanup wrapper mapped to `sub_401DD0(_lightDecayAmountMeta4DBCC4)` + lazy INI init in `sub_40E460`. |

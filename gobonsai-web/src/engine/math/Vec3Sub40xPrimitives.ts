@@ -88,6 +88,25 @@ export function sub4084F0NormalizeInPlaceReturnLen(v: THREE.Vector3): number {
     return len;
 }
 
+/**
+ * sub_40CF00: normalize in place with the same near-zero fallback as sub_4084F0,
+ * but returns the input pointer.
+ */
+export function sub40CF00NormalizeInPlace(v: THREE.Vector3): THREE.Vector3 {
+    sub4084F0NormalizeInPlaceReturnLen(v);
+    return v;
+}
+
+/** sub_4085B0: D3DXVec3TransformCoord(out, a1, a3) */
+export function sub4085B0TransformCoord(
+    out: THREE.Vector3,
+    a1: THREE.Vector3,
+    a3: THREE.Matrix4,
+): THREE.Vector3 {
+    out.copy(a1).applyMatrix4(a3);
+    return out;
+}
+
 /** sub_408590: out = -a1 */
 export function sub408590(out: THREE.Vector3, a1: THREE.Vector3): THREE.Vector3 {
     return sub401470(out, a1, -1.0);

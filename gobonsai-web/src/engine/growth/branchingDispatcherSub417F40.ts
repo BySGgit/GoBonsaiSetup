@@ -11,6 +11,7 @@ import { Float32 } from "../math/MathTypes";
 import { TransformService } from "../math/TransformService";
 import { Sub416510Rotation } from "../math/Sub416510Rotation";
 import { sub4084F0NormalizeInPlaceReturnLen, sub408590 } from "../math/Vec3Sub40xPrimitives";
+import { sub401B00ExtractBasisZ } from "../world/SectionSpatialQueriesSub40x";
 import { getSlot36SimulationDay } from "./frameState";
 
 const _tmpInv417FF0 = new THREE.Matrix4();
@@ -18,6 +19,7 @@ const _tmpM3FromInv417FF0 = new THREE.Matrix3();
 const _tmpLocalLight417FF0 = new THREE.Vector3();
 const _tmpAxisZ417FF0 = new THREE.Vector3(0, 0, 1);
 const _tmpForward417FF0 = new THREE.Vector3();
+const _tmpMatrix401B00_417FF0 = new THREE.Matrix4();
 const _tmpA417FF0 = new THREE.Vector3();
 const _tmpB417FF0 = new THREE.Vector3();
 const _tmpNegB417FF0 = new THREE.Vector3();
@@ -47,7 +49,7 @@ function sub415470Years(section: TreeSection): number {
  * - D3DXMatrixInverse(this+104)
  * - sub_401540(+196, inverse) == D3DXVec3TransformNormal (no translation, no transpose)
  * - sub_401180(localLight, zAxis) + normalize
- * - sub_401B00(this) approximated by local forward from current quaternion
+ * - sub_401B00(this) -> basis-Z extraction from this+40 equivalent matrix
  * - sub_401180(forward, A) + normalize
  * - angle/sign via dot/cross like decompiled chain
  */
@@ -60,7 +62,8 @@ function signedBudBaseAngleSub417FF0(section: TreeSection): number {
     _tmpA417FF0.crossVectors(_tmpLocalLight417FF0, _tmpAxisZ417FF0);
     if (sub4084F0NormalizeInPlaceReturnLen(_tmpA417FF0) <= 0) return 0;
 
-    _tmpForward417FF0.set(0, 0, 1).applyQuaternion(section.rotationQuaternion);
+    _tmpMatrix401B00_417FF0.makeRotationFromQuaternion(section.rotationQuaternion);
+    sub401B00ExtractBasisZ({ matrix40: _tmpMatrix401B00_417FF0 }, _tmpForward417FF0);
     if (sub4084F0NormalizeInPlaceReturnLen(_tmpForward417FF0) <= 0) return 0;
 
     _tmpB417FF0.crossVectors(_tmpForward417FF0, _tmpA417FF0);

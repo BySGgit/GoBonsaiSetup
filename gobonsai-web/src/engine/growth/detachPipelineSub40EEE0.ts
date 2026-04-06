@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { TreeSection } from "../TreeSection";
 import { MSVCRand } from "../MSVCRand";
+import { sub450C80RemoveFromParent } from "./sub450C80";
 
 /**
  * sub_40EEE0 — detach pipeline.
@@ -55,9 +56,8 @@ function detachSection(section: TreeSection, rng: MSVCRand): void {
     const parent = section.parent;
     if (!parent) return;
 
-    // Remove from parent's children
-    const idx = parent.children.indexOf(section);
-    if (idx !== -1) parent.children.splice(idx, 1);
+    // sub_450C80: unlink from parent list
+    if (!sub450C80RemoveFromParent(section, parent)) return;
 
     // Keep world position: reparent group to scene root
     const worldPos = new THREE.Vector3();
@@ -87,7 +87,6 @@ function detachSection(section: TreeSection, rng: MSVCRand): void {
 
     section.worldDetached188 = true;
     section.markedForDetach236 = false;
-    section.parent = null;
 
     _worldObjects.push(section);
 }

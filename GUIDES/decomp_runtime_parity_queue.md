@@ -1,72 +1,25 @@
 ﻿# Runtime Parity Queue (full decomp audit)
 
-Generated: 2026-04-06T14:27:27
+Generated: 2026-04-06T19:41:44
 
 - Inputs: `decompiled/sub_*.c`, `GUIDES/decomp_master_manifest.csv`
 - Total sub_* discovered: 1223
-- Unmapped: 1160
+- Unmapped: 1108
 - Runtime roots used: sub_40dc90, sub_4143e0, sub_416510, sub_417c90, sub_417ff0, sub_4188e0, sub_40e0a0, sub_40e230, sub_40e460, sub_40eee0, sub_40f140, sub_414ce0, sub_414e10, sub_408a30, sub_408d60
 
 ## Unmapped by phase
 
 | phase | count |
 | --- | ---: |
-| P0-A | 12 |
-| P0-B | 8 |
-| P1 | 41 |
-| P2 | 35 |
+| P1 | 10 |
+| P2 | 34 |
 | P3-unreached | 1064 |
 
 ## Top 60 execution queue
 
 | sub | phase | score | depth | mapped callers | mapped call sites | total call sites | sample callers |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| sub_401470 | P0-A | 1794 | 1 | 11 | 18 | 44 | sub_402040, sub_402310, sub_402600, sub_402880, sub_408590, sub_408a30, sub_408d60, sub_40a0e0 |
-| sub_4032d0 | P0-A | 1678 | 1 | 8 | 14 | 88 | sub_4033d0, sub_409130, sub_40a8b0, sub_40dc90, sub_40e230, sub_40e460, sub_40ea30, sub_412700 |
-| sub_401430 | P0-A | 1636 | 1 | 8 | 19 | 41 | sub_401690, sub_401b10, sub_402040, sub_402600, sub_408d60, sub_4093b0, sub_409910, sub_40a0e0 |
-| sub_408600 | P0-A | 1522 | 1 | 7 | 11 | 47 | sub_409130, sub_40a8b0, sub_40dc90, sub_40e230, sub_40e460, sub_40ea30, sub_412d20, sub_4130d0 |
-| sub_401500 | P0-A | 1455 | 1 | 6 | 10 | 25 | sub_401b10, sub_402040, sub_40bb50, sub_40c320, sub_40d1a0, sub_40e230, sub_40e460, sub_40eee0 |
-| sub_4013f0 | P0-A | 1446 | 1 | 6 | 9 | 21 | sub_401690, sub_401b10, sub_402310, sub_402880, sub_40d1a0, sub_40e460, sub_411000, sub_412d20 |
-| sub_40fd70 | P0-A | 1366 | 1 | 5 | 5 | 21 | sub_401ce0, sub_4038b0, sub_4039a0, sub_406ae0, sub_408600, sub_408700, sub_40cfa0, sub_40e0a0 |
-| sub_408470 | P0-A | 1349 | 1 | 5 | 8 | 9 | sub_408a30, sub_40d230, sub_414a70, sub_416510, sub_417ff0, sub_418bd0 |
-| sub_401180 | P0-A | 1283 | 1 | 4 | 7 | 8 | sub_401190, sub_414a70, sub_416510, sub_417ff0, sub_418bd0 |
-| sub_408590 | P0-A | 1217 | 1 | 3 | 4 | 17 | sub_408a30, sub_40a0e0, sub_40a320, sub_40a440, sub_40d230, sub_40e230, sub_411000, sub_417ff0 |
-| sub_4085b0 | P0-A | 1186 | 1 | 3 | 4 | 6 | sub_4093b0, sub_409910, sub_40f140, sub_414870 |
-| sub_450c80 | P0-A | 1186 | 1 | 3 | 4 | 6 | sub_40eee0, sub_415c10, sub_415ed0, sub_417620, sub_417c90 |
-| sub_4015f0 | P0-B | 1162 | 1 | 2 | 2 | 12 | sub_401ae0, sub_402aa0, sub_40d6c0, sub_40f140, sub_411000, sub_4139d0, sub_4146f0, sub_4153d0 |
-| sub_4038b0 | P0-B | 1155 | 1 | 2 | 4 | 15 | sub_40dc90, sub_412700, sub_413350, sub_4143e0, sub_46fe60, sub_46ff10, sub_4702a0, sub_4703c0 |
-| sub_451210 | P0-B | 1141 | 1 | 2 | 3 | 6 | sub_40cd30, sub_40d8c0, sub_40e0a0, sub_40f140, sub_413350 |
-| sub_44e5d0 | P0-B | 1138 | 1 | 2 | 3 | 3 | sub_40e460, sub_4143e0 |
-| sub_4084f0 | P0-B | 1134 | 1 | 2 | 2 | 4 | sub_408d60, sub_40d1a0, sub_414a70 |
-| sub_40cf00 | P0-B | 1133 | 1 | 2 | 2 | 3 | sub_40d230, sub_40e460, sub_4143e0 |
-| sub_413cf0 | P0-B | 1115 | 1 | 2 | 2 | 5 | sub_40eee0, sub_412bf0, sub_415ef0 |
-| sub_40d6c0 | P1 | 1079 | 1 | 1 | 2 | 9 | sub_40e460, sub_411000, sub_4139d0, sub_415650 |
-| sub_4153d0 | P1 | 1077 | 1 | 1 | 1 | 12 | sub_404c10, sub_406400, sub_408a30, sub_4102c0 |
-| sub_40a310 | P1 | 1069 | 1 | 1 | 1 | 4 | sub_40bb50, sub_40c320, sub_40e460, sub_4139d0 |
-| sub_4033d0 | P1 | 1068 | 1 | 1 | 1 | 3 | sub_40a8b0, sub_412d20, sub_416510 |
-| sub_403410 | P1 | 1068 | 1 | 1 | 1 | 3 | sub_416510, sub_440d50 |
-| sub_403ba0 | P1 | 1068 | 1 | 1 | 1 | 3 | sub_404c10, sub_406400, sub_408a30 |
-| sub_401690 | P1 | 1067 | 1 | 1 | 1 | 2 | sub_402600, sub_408a30 |
-| sub_401b00 | P1 | 1067 | 1 | 1 | 1 | 2 | sub_402310, sub_417ff0 |
-| sub_401b10 | P1 | 1067 | 1 | 1 | 1 | 2 | sub_402600, sub_408a30 |
-| sub_40fc70 | P1 | 1066 | 1 | 1 | 1 | 1 | sub_40eee0 |
-| sub_40fcf0 | P1 | 1066 | 1 | 1 | 1 | 1 | sub_40eee0 |
-| sub_401dd0 | P1 | 970 | 2 | 0 | 0 | 70 | sub_471e90, sub_471ea0, sub_471eb0, sub_472010, sub_472040, sub_472070, sub_472080, sub_472090 |
-| sub_401730 | P0-B | 786 | 2 | 2 | 3 | 11 | sub_4017d0, sub_401830, sub_402bc0, sub_403a90, sub_4079c0, sub_40a200, sub_40f8f0 |
-| sub_4017d0 | P1 | 721 | 2 | 1 | 2 | 11 | sub_401730, sub_401830, sub_402bc0, sub_4079c0, sub_40a200, sub_40f8f0 |
-| sub_4037b0 | P1 | 719 | 2 | 0 | 0 | 19 | sub_401ce0, sub_4032d0, sub_4038b0, sub_4039a0, sub_408600, sub_40cfa0, sub_40ffc0, sub_4403f0 |
-| sub_43fd00 | P1 | 688 | 2 | 0 | 0 | 28 | sub_401ce0, sub_401dd0, sub_4038b0, sub_4039a0, sub_406770, sub_407bb0, sub_407eb0, sub_408600 |
-| sub_408450 | P1 | 687 | 2 | 1 | 1 | 2 | sub_408470, sub_450a80 |
-| sub_403580 | P1 | 687 | 2 | 0 | 0 | 7 | sub_4032d0, sub_4036f0, sub_4037b0, sub_444b50, sub_4468b0, sub_44a460, sub_44bc80 |
-| sub_40fa00 | P1 | 669 | 2 | 1 | 1 | 4 | sub_40fcf0, sub_4142b0, sub_417220, sub_418e40 |
-| sub_4015b0 | P1 | 667 | 2 | 1 | 1 | 2 | sub_402880, sub_40d6d0 |
 | sub_451320 | P1 | 666 | 2 | 1 | 1 | 1 | sub_450e30 |
-| sub_4720e0 | P1 | 666 | 1 | 1 | 1 | 1 | sub_40dc90 |
-| sub_4720f0 | P1 | 666 | 1 | 1 | 1 | 1 | sub_40dc90 |
-| sub_472100 | P1 | 666 | 1 | 1 | 1 | 1 | sub_40dc90 |
-| sub_472110 | P1 | 666 | 1 | 1 | 1 | 1 | sub_40dc90 |
-| sub_472170 | P1 | 666 | 1 | 1 | 1 | 1 | sub_40e230 |
-| sub_472180 | P1 | 666 | 1 | 1 | 1 | 1 | sub_40e460 |
 | sub_472410 | P1 | 666 | 1 | 1 | 1 | 1 | sub_4143e0 |
 | sub_472420 | P1 | 666 | 1 | 1 | 1 | 1 | sub_4143e0 |
 | sub_472460 | P1 | 666 | 1 | 1 | 1 | 1 | sub_416510 |
@@ -75,12 +28,57 @@ Generated: 2026-04-06T14:27:27
 | sub_472490 | P1 | 666 | 1 | 1 | 1 | 1 | sub_416510 |
 | sub_4724a0 | P1 | 666 | 1 | 1 | 1 | 1 | sub_417c90 |
 | sub_4724b0 | P1 | 666 | 1 | 1 | 1 | 1 | sub_417ff0 |
-| sub_44a640 | P1 | 646 | 2 | 0 | 0 | 6 | sub_401ce0, sub_4038b0, sub_4039a0, sub_408600, sub_40cfa0, sub_40ffc0 |
-| sub_4014b0 | P1 | 643 | 2 | 0 | 0 | 3 | sub_401690, sub_408450 |
-| sub_4015d0 | P1 | 643 | 2 | 0 | 0 | 3 | sub_401b00, sub_402040, sub_40a310 |
-| sub_401120 | P1 | 627 | 2 | 0 | 0 | 7 | sub_401180, sub_40a320, sub_40a440 |
-| sub_401610 | P1 | 621 | 2 | 0 | 0 | 1 | sub_401b10 |
+| sub_441e00 | P2 | 405 | 3 | 1 | 5 | 20 | sub_43fd00, sub_4401a0, sub_440720, sub_440d50, sub_441ef0, sub_442410 |
+| sub_44b900 | P2 | 388 | 3 | 1 | 1 | 3 | sub_44a640, sub_44c260 |
+| sub_44c260 | P2 | 378 | 3 | 1 | 3 | 3 | sub_44a640 |
+| sub_403440 | P2 | 375 | 3 | 1 | 2 | 5 | sub_4037b0, sub_440d50, sub_44bfe0 |
 | sub_403b40 | P2 | 372 | 3 | 1 | 2 | 2 | sub_403a90 |
+| sub_4440f0 | P2 | 372 | 3 | 1 | 2 | 2 | sub_44a640 |
+| sub_401830 | P2 | 371 | 3 | 1 | 1 | 6 | sub_401c10, sub_408700, sub_40d6f0, sub_4100e0, sub_413f50, sub_451d70 |
+| sub_43fbb0 | P2 | 366 | 3 | 1 | 1 | 1 | sub_472560 |
+| sub_444090 | P2 | 366 | 3 | 1 | 1 | 1 | sub_44a640 |
+| sub_44a600 | P2 | 366 | 3 | 1 | 1 | 1 | sub_43fd00 |
+| sub_451460 | P2 | 321 | 3 | 0 | 0 | 1 | sub_451320 |
+| sub_4517d0 | P2 | 321 | 3 | 0 | 0 | 1 | sub_451320 |
+| sub_4518f0 | P2 | 321 | 3 | 0 | 0 | 1 | sub_451320 |
+| sub_451990 | P2 | 321 | 3 | 0 | 0 | 1 | sub_451320 |
+| sub_472430 | P1 | 266 | 2 | 1 | 1 | 1 | sub_414bb0 |
+| sub_42dbc0 | P3-unreached | 65 |  | 0 | 0 | 65 | sub_406d10, sub_428830, sub_428dd0, sub_429000, sub_429330, sub_4293c0, sub_4294f0, sub_429810 |
+| sub_402cd0 | P2 | 62 | 4 | 0 | 0 | 2 | sub_401830, sub_402e10 |
+| sub_44bb00 | P3-unreached | 50 |  | 0 | 0 | 50 | sub_4458e0, sub_445bd0, sub_445d60, sub_445ee0, sub_446040, sub_4461a0, sub_446300, sub_446460 |
+| sub_444ae0 | P2 | 48 | 4 | 0 | 0 | 8 | sub_440d50, sub_444e90, sub_444ff0, sub_44a600 |
+| sub_434240 | P3-unreached | 47 |  | 0 | 0 | 47 | sub_4392b0, sub_43b270, sub_43b930, sub_43ca00, sub_43cf10, sub_43d1b0, sub_43d7e0, sub_43d8d0 |
+| sub_413df0 | P3-unreached | 46 |  | 1 | 1 | 1 | sub_4151b0 |
+| sub_417bb0 | P3-unreached | 46 |  | 1 | 1 | 1 | sub_415c10 |
+| sub_446b40 | P2 | 45 | 4 | 0 | 0 | 5 | sub_43fbb0, sub_440d50, sub_4442b0, sub_446a30 |
+| sub_444140 | P2 | 42 | 4 | 0 | 0 | 2 | sub_43fbb0, sub_442640 |
+| sub_44bc80 | P2 | 42 | 4 | 0 | 0 | 2 | sub_44a600, sub_44b1c0 |
+| sub_44a460 | P2 | 41.67 | 5 | 0 | 0 | 5 | sub_4458e0, sub_44b1c0, sub_44bc80 |
+| sub_451a80 | P2 | 41.67 | 5 | 0 | 0 | 5 | sub_451720 |
+| sub_403230 | P2 | 41 | 4 | 0 | 0 | 1 | sub_401830 |
+| sub_444ce0 | P2 | 41 | 4 | 0 | 0 | 1 | sub_43fbb0 |
+| sub_44c360 | P2 | 41 | 4 | 0 | 0 | 1 | sub_441e00 |
+| sub_451720 | P2 | 41 | 4 | 0 | 0 | 1 | sub_451460 |
+| sub_451b10 | P2 | 41 | 4 | 0 | 0 | 1 | sub_4518f0 |
+| sub_451c10 | P2 | 41 | 4 | 0 | 0 | 1 | sub_4517d0 |
+| sub_402e10 | P2 | 37.67 | 5 | 0 | 0 | 1 | sub_402cd0 |
+| sub_402ee0 | P2 | 37.67 | 5 | 0 | 0 | 1 | sub_402cd0 |
+| sub_44ede0 | P2 | 37.67 | 5 | 0 | 0 | 1 | sub_402cd0 |
+| sub_4032a0 | P2 | 36.5 | 7 | 0 | 0 | 4 | sub_402f60 |
+| sub_402f60 | P2 | 36.29 | 6 | 0 | 0 | 2 | sub_402e10, sub_451110 |
+| sub_4031b0 | P2 | 34.5 | 7 | 0 | 0 | 2 | sub_402f60, sub_4082f0 |
+| sub_403210 | P2 | 34.5 | 7 | 0 | 0 | 2 | sub_402f60 |
+| sub_41b5d0 | P3-unreached | 34 |  | 0 | 0 | 34 | sub_407bb0, sub_41d000, sub_41dd60, sub_41e880, sub_4224f0, sub_4256b0, sub_426190, sub_426710 |
+| sub_42fae0 | P3-unreached | 33 |  | 0 | 0 | 33 | sub_403c50, sub_438b90 |
+| sub_434340 | P3-unreached | 33 |  | 0 | 0 | 33 | sub_433370, sub_4392b0, sub_43b270, sub_43b5a0, sub_43b930, sub_43c070, sub_43c2f0, sub_43c650 |
+| sub_44db70 | P3-unreached | 32 |  | 0 | 0 | 32 | sub_4426b0, sub_4428a0, sub_442ab0, sub_442ca0, sub_442e90, sub_443080, sub_443270, sub_443460 |
+| sub_434450 | P3-unreached | 30 |  | 0 | 0 | 30 | sub_4392b0, sub_43b270, sub_43b930, sub_43ca00, sub_43cf10, sub_43d1b0, sub_43d7e0, sub_43d8d0 |
+| sub_41b6c0 | P3-unreached | 29 |  | 0 | 0 | 29 | sub_41e880 |
+| sub_42fa10 | P3-unreached | 28 |  | 0 | 0 | 28 | sub_431990 |
+| sub_4371f0 | P3-unreached | 28 |  | 0 | 0 | 28 | sub_431990 |
+| sub_419430 | P3-unreached | 27 |  | 0 | 0 | 27 | sub_421960, sub_422b80, sub_42a8d0, sub_42bdd0, sub_42d070, sub_44f510 |
+| sub_444b50 | P3-unreached | 24 |  | 0 | 0 | 24 | sub_440d50, sub_4417c0, sub_4458e0, sub_44bfe0 |
+| sub_4344d0 | P3-unreached | 23 |  | 0 | 0 | 23 | sub_4392b0, sub_43b270, sub_43b5a0, sub_43b930, sub_43c070, sub_43c2f0, sub_43c650, sub_43ca00 |
 
 Machine-readable queue: `GUIDES/decomp_runtime_parity_queue.csv`.
 

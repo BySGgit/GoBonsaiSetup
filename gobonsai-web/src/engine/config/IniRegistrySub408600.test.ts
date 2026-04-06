@@ -9,8 +9,11 @@ import {
     setIniBooleanValueByKey,
     setIniNumericValueByKey,
     sub4038B0Register,
+    sub4033D0InitAssign,
+    sub403410Reset,
     sub4032D0Assign,
     sub4032View,
+    sub401DD0DestroyIniEntry,
     sub408600Register,
 } from "./IniRegistrySub408600";
 
@@ -32,6 +35,24 @@ describe("IniRegistrySub408600 parity helpers", () => {
         sub4032D0Assign(s, sub4032View(s, 2), 3);
         expect(s.value).toBe("cde");
         expect(s.length16).toBe(3);
+    });
+
+    it("sub_4033D0 initializes small string and assigns full source", () => {
+        const dest = createSub4032WideString("will-be-reset");
+        dest.capacity20 = 128;
+        sub4033D0InitAssign("lightDecayAmount", dest);
+        expect(dest.value).toBe("lightDecayAmount");
+        expect(dest.length16).toBe("lightDecayAmount".length);
+        expect(dest.capacity20).toBeGreaterThanOrEqual(7);
+    });
+
+    it("sub_403410 resets to empty small-string state", () => {
+        const dest = createSub4032WideString("abcdefghi");
+        expect(dest.capacity20).toBeGreaterThanOrEqual(9);
+        sub403410Reset(dest);
+        expect(dest.value).toBe("");
+        expect(dest.length16).toBe(0);
+        expect(dest.capacity20).toBe(7);
     });
 
     it("sub_408600 lazily initializes registry once and keeps sorted keys", () => {
@@ -77,5 +98,26 @@ describe("IniRegistrySub408600 parity helpers", () => {
         const ok = setIniBooleanValueByKey("updateGrowth", true);
         expect(ok).toBe(true);
         expect(target.value).toBe(true);
+    });
+
+    it("sub_401DD0 removes matching registry entry and resets key storage", () => {
+        const firstName = createSub4032WideString();
+        sub4032D0Assign(firstName, "alpha", 5);
+        const firstMeta = createSub408600Entry();
+        sub408600Register(firstName, firstMeta, createNumericPropertyBinding({ v: 1 }, "v"));
+
+        const secondName = createSub4032WideString();
+        sub4032D0Assign(secondName, "zeta", 4);
+        const secondMeta = createSub408600Entry();
+        sub408600Register(secondName, secondMeta, createNumericPropertyBinding({ v: 2 }, "v"));
+
+        sub401DD0DestroyIniEntry(secondMeta);
+
+        const snap = getIniRegistrySnapshot();
+        expect(snap.size).toBe(1);
+        expect(snap.keys).toEqual(["alpha"]);
+        expect(secondMeta.keyStorage20.value).toBe("");
+        expect(secondMeta.keyStorage20.length16).toBe(0);
+        expect(secondMeta.keyStorage20.capacity20).toBe(7);
     });
 });

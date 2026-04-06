@@ -3,7 +3,11 @@ import { TreeSection } from "../TreeSection";
 import { GrowthConstants, byte4D8226ForSectionType } from "../config/GrowthConstants";
 import { Float32 } from "../math/MathTypes";
 import { TransformService } from "../math/TransformService";
-import { sub4084F0NormalizeInPlaceReturnLen } from "../math/Vec3Sub40xPrimitives";
+import {
+    sub40CF00NormalizeInPlace,
+    sub4084F0NormalizeInPlaceReturnLen,
+    sub4085B0TransformCoord,
+} from "../math/Vec3Sub40xPrimitives";
 import { SectionRuntimeType } from "../SectionRuntimeType";
 
 /**
@@ -117,9 +121,8 @@ function computeCentroidSub414870(section: TreeSection): void {
         section.centroid468.multiplyScalar(section.totalWeight460);
 
         for (const child of section.children) {
-            _tmpVec.copy(child.centroid468);
-            // sub_4085B0: D3DXVec3TransformCoord(child+468, out, child+40) — полная локальная матрица ребёнка
-            _tmpVec.applyMatrix4(child.group.matrix);
+            // sub_4085B0: D3DXVec3TransformCoord(child+468, out, child+40)
+            sub4085B0TransformCoord(_tmpVec, child.centroid468, child.group.matrix);
             _tmpVec.multiplyScalar(child.totalWeight460);
             section.centroid468.add(_tmpVec);
             section.totalWeight460 += child.totalWeight460;
@@ -212,13 +215,8 @@ function smoothLightDirections(section: TreeSection): void {
     const v11 = v10 * 0.10000000149011612;
     const v12 = 1.0 - v11;
     _tmpVec.set(px * v12 + lx * v11, py * v12 + ly * v11, pz * v12 + lz * v11);
-    const lenSq = _tmpVec.x * _tmpVec.x + _tmpVec.y * _tmpVec.y + _tmpVec.z * _tmpVec.z;
-    if (lenSq <= 1.000000013351432e-10) {
-        section.prevDirectionVec.set(0, 0, 1);
-    } else {
-        const inv = 1 / Math.sqrt(lenSq);
-        section.prevDirectionVec.set(_tmpVec.x * inv, _tmpVec.y * inv, _tmpVec.z * inv);
-    }
+    sub40CF00NormalizeInPlace(_tmpVec);
+    section.prevDirectionVec.copy(_tmpVec);
 }
 
 /**

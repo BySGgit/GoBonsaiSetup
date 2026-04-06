@@ -7,7 +7,9 @@ import {
     sub401430,
     sub401470,
     sub401500,
+    sub40CF00NormalizeInPlace,
     sub408470,
+    sub4085B0TransformCoord,
     sub4084F0NormalizeInPlaceReturnLen,
     sub408590,
 } from "./Vec3Sub40xPrimitives";
@@ -66,5 +68,30 @@ describe("Vec3Sub40xPrimitives", () => {
         const out = new THREE.Vector3();
         sub408590(out, new THREE.Vector3(1.25, -2, 3));
         expect(out.toArray()).toEqual([-1.25, 2, -3]);
+    });
+
+    it("sub_4085B0 transforms coord and returns out pointer", () => {
+        const out = new THREE.Vector3();
+        const inVec = new THREE.Vector3(1, 2, 3);
+        const m = new THREE.Matrix4().makeTranslation(10, -5, 1);
+        const ret = sub4085B0TransformCoord(out, inVec, m);
+        expect(ret).toBe(out);
+        expect(out.toArray()).toEqual([11, -3, 4]);
+    });
+
+    it("sub_40CF00 normalizes in place and returns same ref", () => {
+        const v = new THREE.Vector3(3, 0, 4);
+        const ret = sub40CF00NormalizeInPlace(v);
+        expect(ret).toBe(v);
+        expect(v.x).toBeCloseTo(0.6, 6);
+        expect(v.y).toBeCloseTo(0.0, 6);
+        expect(v.z).toBeCloseTo(0.8, 6);
+    });
+
+    it("sub_40CF00 falls back to +Z for near-zero vectors", () => {
+        const v = new THREE.Vector3(0, 0, 0);
+        const ret = sub40CF00NormalizeInPlace(v);
+        expect(ret).toBe(v);
+        expect(v.toArray()).toEqual([0, 0, 1]);
     });
 });

@@ -7,11 +7,12 @@ import { Float32 } from "../math/MathTypes";
 import {
   GrowthConstants,
   byte4D822AForSectionType,
-  byte4D8225ForSectionType,
 } from "../config/GrowthConstants";
+import { sub413CF0FilterByType5 } from "../config/SectionTypeRegistrySub401730";
 import { TransformService } from "../math/TransformService";
 import { Sub416510Rotation } from "../math/Sub416510Rotation";
 import { twigUpdateSub417C90 } from "./twigUpdateSub417C90";
+import { sub450C80RemoveFromParent } from "./sub450C80";
 
 /**
  * Виртуальный слот +36 по типу секции (spec_update_growth_sub_40DC90 §2.5).
@@ -157,11 +158,8 @@ function postDispatchByType(
  *       → sub_401A70 (recursively worldDetach + orphan all children).
  */
 function budQuietDetachSub415ED0(bud: TreeSection): void {
-  if (bud.parent) {
-    const idx = bud.parent.children.indexOf(bud);
-    if (idx !== -1) bud.parent.children.splice(idx, 1);
+  if (bud.parent && sub450C80RemoveFromParent(bud, bud.parent)) {
     if (bud.group.parent) bud.group.parent.remove(bud.group);
-    bud.parent = null;
   }
   markWorldDetachedRecursive(bud);
 }
@@ -272,10 +270,7 @@ function sub415C10ConvertBudToTwig(
   _tmpMatrix415C10.copy(bud.localTemplate240);
 
   // sub_413CF0: check if parent is a registered twig-like type
-  let v4: TreeSection | null = null;
-  if (budParent) {
-    v4 = byte4D8225ForSectionType(budParent.sectionRuntimeType4) ? budParent : null;
-  }
+  const v4 = sub413CF0FilterByType5(budParent);
 
   // Early exit: world flag + leafCount > 2 + parent is valid twig → kill parent
   if (v4 !== null && worldFlagByte220 && bud.leafCount516 > 2) {
@@ -284,11 +279,8 @@ function sub415C10ConvertBudToTwig(
   }
 
   // ── Step 1: Remove bud from its current parent's children ──
-  if (budParent) {
-    const idx = budParent.children.indexOf(bud);
-    if (idx !== -1) budParent.children.splice(idx, 1);
+  if (budParent && sub450C80RemoveFromParent(bud, budParent)) {
     if (bud.group.parent) bud.group.parent.remove(bud.group);
-    bud.parent = null;
   }
 
   // ── Step 2: Create new twig as child of bud's former parent ──

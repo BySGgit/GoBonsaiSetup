@@ -45,6 +45,7 @@ export const GrowthConstants = {
   BYTE_4D8226_STRIDE11: buildTypeTable([[6, 1]]),
   // flag #7: light decay in sub_40E460 — Leaf only
   BYTE_4D8227_STRIDE11: buildTypeTable([[7, 1]]),
+  BYTE_4D8228_STRIDE11: new Uint8Array(11 * 16),
   // flag #9: parent energy copy in sub_414CE0 — Stump
   BYTE_4D8229_STRIDE11: buildTypeTable([[9, 1]]),
   // flag #10: geometric screening in sub_40E460, pow recalc in sub_414CE0 — Twig
@@ -197,6 +198,18 @@ export function byte4D822AForSectionType(typeIndex: number): boolean {
 export function byte4D8226ForSectionType(typeIndex: number): boolean {
   const i = 11 * typeIndex;
   const a = GrowthConstants.BYTE_4D8226_STRIDE11;
+  return i >= 0 && i < a.length && a[i] !== 0;
+}
+
+export function byte4D8227ForSectionType(typeIndex: number): boolean {
+  const i = 11 * typeIndex;
+  const a = GrowthConstants.BYTE_4D8227_STRIDE11;
+  return i >= 0 && i < a.length && a[i] !== 0;
+}
+
+export function byte4D8228ForSectionType(typeIndex: number): boolean {
+  const i = 11 * typeIndex;
+  const a = GrowthConstants.BYTE_4D8228_STRIDE11;
   return i >= 0 && i < a.length && a[i] !== 0;
 }
 

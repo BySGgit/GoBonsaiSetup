@@ -90,11 +90,13 @@ export function createSub408600Entry(): Sub408600Entry {
     };
 }
 
-function sub43FD00Stub(): void {
+/** sub_43FD00: lazy init hook (stubbed engine-side bootstrap). */
+export function sub43FD00Stub(): void {
     dword4D8E20.initCalls43FD00++;
 }
 
-function sub472560Stub(): void {
+/** sub_472560: atexit teardown hook (stub in web runtime). */
+export function sub472560Stub(): void {
     // Runtime teardown hook placeholder.
 }
 
@@ -102,7 +104,59 @@ export function subAtexitRegister(handler: () => void): void {
     dword4D8E20.atexitHandlers.push(handler);
 }
 
-function sub44A640SortList(): void {
+function sub440650CompareWide(a: Sub4032WideString, b: Sub4032WideString): number {
+    const aLen = a.length16 >>> 0;
+    const bLen = b.length16 >>> 0;
+    const minLen = Math.min(aLen, bLen);
+    for (let i = 0; i < minLen; i++) {
+        const aCode = a.value.charCodeAt(i) || 0;
+        const bCode = b.value.charCodeAt(i) || 0;
+        if (aCode !== bCode) {
+            return aCode < bCode ? -1 : 1;
+        }
+    }
+    if (aLen < bLen) return -1;
+    if (aLen > bLen) return 1;
+    return 0;
+}
+
+/**
+ * sub_440650:
+ *   remove first intrusive-list entry matching `a2` key string.
+ */
+export function sub440650RemoveEntryByKey(keyStorage: Sub4032WideString): void {
+    const head = dword4D8E20.listHead4D8E20;
+    for (let it = head.next; it !== head; ) {
+        const next = it.next;
+        if (sub440650CompareWide(it.payload.keyStorage20, keyStorage) === 0) {
+            it.prev.next = it.next;
+            it.next.prev = it.prev;
+            if (dword4D8E20.size4D8E24 > 0) {
+                dword4D8E20.size4D8E24--;
+            }
+            return;
+        }
+        it = next;
+    }
+}
+
+/**
+ * sub_401DD0:
+ *   lazy init (sub_43FD00 + atexit sub_472560), erase entry from registry list,
+ *   reset key storage to SSO empty state.
+ */
+export function sub401DD0DestroyIniEntry(entry: Sub408600Entry): void {
+    if ((dword4D8E20.initMask4D8EC0 & 1) === 0) {
+        dword4D8E20.initMask4D8EC0 |= 1;
+        sub43FD00Stub();
+        subAtexitRegister(sub472560Stub);
+    }
+    sub440650RemoveEntryByKey(entry.keyStorage20);
+    sub403410Reset(entry.keyStorage20);
+}
+
+/** sub_44A640: keep intrusive registry list sorted by key. */
+export function sub44A640SortList(): void {
     const head = dword4D8E20.listHead4D8E20;
     const nodes: Sub40FD70Node[] = [];
     for (let it = head.next; it !== head; it = it.next) {
@@ -205,6 +259,36 @@ export function sub4032D0Assign(
     }
     const next = resolved.text.slice(resolved.offset16, resolved.offset16 + c);
     return setWideStringValue(dest, next);
+}
+
+/**
+ * sub_4033D0:
+ *   dest->capacity = 7; dest->length = 0; dest[0] = 0;
+ *   sub_4032D0(dest, src, wcslen(src));
+ */
+export function sub4033D0InitAssign(
+    source: string | Sub4032WideString | Sub4032SourceView,
+    dest: Sub4032WideString,
+): Sub4032WideString {
+    dest.capacity20 = SUB_4032D0_SSO_CAPACITY;
+    dest.length16 = 0;
+    dest.value = "";
+    const resolved = resolveSource(source);
+    const text = resolved.text.slice(resolved.offset16);
+    sub4032D0Assign(dest, text, text.length);
+    return dest;
+}
+
+/**
+ * sub_403410:
+ *   if (capacity >= 8) free(heap_ptr);
+ *   capacity = 7; length = 0; first wchar = 0;
+ */
+export function sub403410Reset(dest: Sub4032WideString): void {
+    // TS GC: nothing to free explicitly.
+    dest.capacity20 = SUB_4032D0_SSO_CAPACITY;
+    dest.length16 = 0;
+    dest.value = "";
 }
 
 export function sub40FD70AllocateNode(

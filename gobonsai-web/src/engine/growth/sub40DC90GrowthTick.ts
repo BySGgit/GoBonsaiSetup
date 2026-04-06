@@ -22,6 +22,7 @@ import {
     createNumericPropertyBinding,
     createSub4032WideString,
     createSub408600Entry,
+    sub401DD0DestroyIniEntry,
     sub4032D0Assign,
     sub4038B0Register,
     sub408600Register,
@@ -34,10 +35,22 @@ const _randomAutoCutsMeta4DBD5C = createSub408600Entry();
 const _energyUseRateMeta4DBD38 = createSub408600Entry();
 const _energyLeakMeta4DBD14 = createSub408600Entry();
 
-function sub472110CleanupStub(): void {}
-function sub472100CleanupStub(): void {}
-function sub4720F0CleanupStub(): void {}
-function sub4720E0CleanupStub(): void {}
+/** sub_472110 -> sub_401DD0(&unk_4DBD80) */
+function sub472110CleanupStub(): void {
+    sub401DD0DestroyIniEntry(_updateGrowthMeta4DBD80);
+}
+/** sub_472100 -> sub_401DD0(&unk_4DBD5C) */
+function sub472100CleanupStub(): void {
+    sub401DD0DestroyIniEntry(_randomAutoCutsMeta4DBD5C);
+}
+/** sub_4720F0 -> sub_401DD0(&unk_4DBD38) */
+function sub4720F0CleanupStub(): void {
+    sub401DD0DestroyIniEntry(_energyUseRateMeta4DBD38);
+}
+/** sub_4720E0 -> sub_401DD0(&unk_4DBD14) */
+function sub4720E0CleanupStub(): void {
+    sub401DD0DestroyIniEntry(_energyLeakMeta4DBD14);
+}
 
 function ensureSub40DC90IniInits(): void {
     if ((_sub40DC90InitMask4DBDA4 & 1) === 0) {

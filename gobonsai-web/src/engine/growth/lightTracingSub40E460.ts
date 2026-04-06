@@ -6,12 +6,14 @@ import {
     createNumericPropertyBinding,
     createSub4032WideString,
     createSub408600Entry,
+    sub401DD0DestroyIniEntry,
     sub4032D0Assign,
     sub408600Register,
     subAtexitRegister,
 } from "../config/IniRegistrySub408600";
 import { SectionRuntimeType } from "../SectionRuntimeType";
 import { Float32 } from "../math/MathTypes";
+import { sub4015B0ExtractBasisY } from "../math/Sub4015F0";
 
 /**
  * sub_40E230 + sub_40E460 вЂ” light tracing pipeline.
@@ -69,9 +71,17 @@ let _lightQueueIsLeafOnly = false;
 let _sub40E230InitFlags4DBD10 = 0;
 /** sub_40E230: metadata slot for key L"directLightPercent". */
 const _directLightPercentMeta4DBCEC = createSub408600Entry();
+/** sub_40E460: dword_4DBCE8 lazy init bitmask. */
+let _sub40E460InitFlags4DBCE8 = 0;
+/** sub_40E460: metadata slot for key L"lightDecayAmount". */
+const _lightDecayAmountMeta4DBCC4 = createSub408600Entry();
 
 function sub472170CleanupStub(): void {
-    // Browser runtime has no native C atexit; keep parity hook bookkeeping only.
+    sub401DD0DestroyIniEntry(_directLightPercentMeta4DBCEC);
+}
+
+function sub472180CleanupStub(): void {
+    sub401DD0DestroyIniEntry(_lightDecayAmountMeta4DBCC4);
 }
 
 function ensureSub40E230Inits(): void {
@@ -87,6 +97,21 @@ function ensureSub40E230Inits(): void {
         createNumericPropertyBinding(GrowthConstants, "FLT_4D8CF0_DIRECT_LIGHT_PERCENT"),
     );
     subAtexitRegister(sub472170CleanupStub);
+}
+
+function ensureSub40E460Inits(): void {
+    if ((_sub40E460InitFlags4DBCE8 & 1) !== 0) {
+        return;
+    }
+    _sub40E460InitFlags4DBCE8 |= 1;
+    const keyBuf = createSub4032WideString();
+    sub4032D0Assign(keyBuf, "lightDecayAmount", 0x10);
+    sub408600Register(
+        keyBuf,
+        _lightDecayAmountMeta4DBCC4,
+        createNumericPropertyBinding(GrowthConstants, "FLT_4D62EC_LIGHT_DECAY_AMOUNT"),
+    );
+    subAtexitRegister(sub472180CleanupStub);
 }
 
 /** Р”РµС‚РµСЂРјРёРЅРёСЂРѕРІР°РЅРЅС‹Р№ RNG, РµСЃР»Рё РїР°Р№РїР»Р°Р№РЅ РІС‹Р·РІР°РЅ Р±РµР· rng (СЂРµРґРєРѕ). */
@@ -237,6 +262,8 @@ function rayMarchSub40E460(
     dir: THREE.Vector3,
     initialIntensity: number,
 ): void {
+    ensureSub40E460Inits();
+
     // sub_40E460.c:68вЂ“73 в†’ sub_450E30: p0 = pos в€’ dirВ·200, p1 = pos + dirВ·200, delta = p1в€’p0
     _rayP0.copy(dir).multiplyScalar(-RAY_HALF_LEN).add(pos);
     _rayP1.copy(dir).multiplyScalar(RAY_HALF_LEN).add(pos);
@@ -274,12 +301,12 @@ function rayMarchSub40E460(
         const typeId = section.sectionRuntimeType4;
         const decayAmt = GrowthConstants.FLT_4D62EC_LIGHT_DECAY_AMOUNT as number;
         if (typeId === SectionRuntimeType.TreeSectionLeaf) {
-            // Leaf decay (byte_4D8227): sub_40D6D0(section) В· dir
-            if (section.directionVector.lengthSq() > 1e-12) {
-                _tmpDir.copy(section.directionVector).normalize();
-            } else {
-                _tmpDir.set(0, 1, 0).applyQuaternion(section.group.quaternion).normalize();
+            // Leaf decay (byte_4D8227): sub_40D6D0(section) -> sub_4015B0(this+104)
+            sub4015B0ExtractBasisY(_tmpDir, section.group.matrixWorld);
+            if (_tmpDir.lengthSq() <= 1e-12) {
+                _tmpDir.set(0, 1, 0).applyQuaternion(section.group.quaternion);
             }
+            _tmpDir.normalize();
             const absDot = Math.abs(_tmpDir.dot(dir));
             intensity *= (1.0 - decayAmt * absDot);
         } else if (typeId === SectionRuntimeType.TreeSectionTwig) {

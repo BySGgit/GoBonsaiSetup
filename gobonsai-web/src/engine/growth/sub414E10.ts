@@ -1,5 +1,6 @@
 import { TreeSection } from "../TreeSection";
 import { GrowthConstants } from "../config/GrowthConstants";
+import { sub4079C0EnsureInitialized } from "../config/SectionTypeRegistrySub401730";
 import { Float32 } from "../math/MathTypes";
 import { TREE_CONSTANTS } from "../TreeConstants";
 import { MSVCRand } from "../MSVCRand";
@@ -28,6 +29,7 @@ function maybeRunLazy4079C0Once(root: TreeSection): void {
     while (stack.length) {
         const s = stack.pop()!;
         if (s.parent != null) {
+            sub4079C0EnsureInitialized();
             lazy4079C0Triggered = true;
             return;
         }
