@@ -36,8 +36,6 @@ import {
 const MAX_HITS = 30;
 /** sub_40E0A0: РІ exe РѕРґРёРЅ Р»РёСЃС‚ Р·Р° С‚РёРє; РїСЂРё РЅР°Р»РёС‡РёРё Р»РёСЃС‚СЊРµРІ РґРµСЂР¶РёРј 1 РґР»СЏ РїР°СЂРёС‚РµС‚Р°. */
 const TRACES_PER_FRAME_LEAVES = 1;
-/** РџРѕРєР° РЅРµС‚ Р»РёСЃС‚СЊРµРІ (С‚РѕР»СЊРєРѕ twig-РёСЃС‚РѕС‡РЅРёРєРё) вЂ” С‡СѓС‚СЊ Р±РѕР»СЊС€Рµ Р»СѓС‡РµР№, РёРЅР°С‡Рµ +196 РїРѕС‡С‚Рё РЅРµ РѕР±РЅРѕРІР»СЏРµС‚СЃСЏ. */
-const TRACES_PER_FRAME_TWIG_FALLBACK = 8;
 /** sub_40E460.c:66вЂ“71 вЂ” РґР»РёРЅР° РїРѕР»СѓРѕС‚СЂРµР·РєР° Р»СѓС‡Р° РґР»СЏ sub_450E30/sub_44EE20 */
 const RAY_HALF_LEN = 200.0;
 
@@ -69,8 +67,6 @@ const _hitRecords: Sub450E10HitRecord<TreeSection>[] = [];
 /** sub_40E0A0: РѕС‡РµСЂРµРґСЊ РёСЃС‚РѕС‡РЅРёРєРѕРІ Р»СѓС‡РµР№ (РІ C вЂ” С‚РѕР»СЊРєРѕ Р»РёСЃС‚СЊСЏ). */
 let _leafQueue: TreeSection[] = [];
 let _leafQueueIndex = 0;
-/** true РµСЃР»Рё РІ РѕС‡РµСЂРµРґРё С‚РѕР»СЊРєРѕ РЅР°СЃС‚РѕСЏС‰РёРµ Р»РёСЃС‚СЊСЏ (РЅРµ twig-fallback). */
-let _lightQueueIsLeafOnly = false;
 /** sub_40E230: dword_4DBD10 lazy init bitmask. */
 let _sub40E230InitFlags4DBD10 = 0;
 /** sub_40E230: metadata slot for key L"directLightPercent". */
@@ -167,25 +163,9 @@ function getLightTraceRayOrigin(section: TreeSection, out: THREE.Vector3): void 
     }
 }
 
-function collectTerminalTwigs(section: TreeSection, out: TreeSection[]): void {
-    if (section.worldDetached188) return;
-    if (section.sectionRuntimeType4 === SectionRuntimeType.TreeSectionTwig) {
-        const hasTwigChild = section.children.some(
-            (c) => c.sectionRuntimeType4 === SectionRuntimeType.TreeSectionTwig,
-        );
-        if (!hasTwigChild) {
-            out.push(section);
-        }
-    }
-    for (const c of section.children) {
-        collectTerminalTwigs(c, out);
-    }
-}
-
-export function rebuildLeafQueue(root: TreeSection, strictExeSimPath = false): void {
+export function rebuildLeafQueue(root: TreeSection): void {
     _leafQueue = [];
     _leafQueueIndex = 0;
-    _lightQueueIsLeafOnly = false;
     const stack: TreeSection[] = [root];
     while (stack.length) {
         const s = stack.pop()!;
@@ -195,16 +175,6 @@ export function rebuildLeafQueue(root: TreeSection, strictExeSimPath = false): v
         }
         for (const c of s.children) stack.push(c);
     }
-    if (_leafQueue.length > 0) {
-        _lightQueueIsLeafOnly = true;
-        return;
-    }
-    if (strictExeSimPath) {
-        // EXE parity path: without leaves queue stays empty.
-        return;
-    }
-    // APPROX(original): РІ exe Р±РµР· Р»РёСЃС‚СЊРµРІ РѕС‡РµСЂРµРґРё РЅРµС‚; Р±РµСЂС‘Рј С‚РѕР»СЊРєРѕ РєРѕРЅС†РµРІС‹Рµ twig (РєРѕРЅС‡РёРєРё РєСЂРѕРЅС‹), РЅРµ РІСЃРµ СЃРµРіРјРµРЅС‚С‹.
-    collectTerminalTwigs(root, _leafQueue);
 }
 
 /**
@@ -222,10 +192,7 @@ export function serviceLightTraceQueue(
     const r = traceRng(rng);
     const directP = GrowthConstants.FLT_4D8CF0_DIRECT_LIGHT_PERCENT as number;
 
-    const budget = _lightQueueIsLeafOnly
-        ? TRACES_PER_FRAME_LEAVES
-        : TRACES_PER_FRAME_TWIG_FALLBACK;
-    const n = Math.min(budget, _leafQueue.length);
+    const n = Math.min(TRACES_PER_FRAME_LEAVES, _leafQueue.length);
     for (let i = 0; i < n; i++) {
         _leafQueueIndex = _leafQueueIndex % _leafQueue.length;
         const leaf = _leafQueue[_leafQueueIndex];

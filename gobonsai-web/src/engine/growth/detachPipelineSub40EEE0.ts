@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { TreeSection } from "../TreeSection";
 import { MSVCRand } from "../MSVCRand";
 import { sub450C80RemoveFromParent } from "./sub450C80";
+import { GrowthConstants } from "../config/GrowthConstants";
 
 /**
  * sub_40EEE0 — detach pipeline.
@@ -38,6 +39,39 @@ export function processDetachFlags(root: TreeSection, rng: MSVCRand): void {
     processDetachRecursive(root, rng);
 }
 
+/**
+ * sub_401A50: sets this+188 and applies sub_401A70 recursive child detach semantics.
+ */
+export function markWorldManagedSub401A50(section: TreeSection): void {
+    section.worldDetached188 = true;
+    markChildrenWorldManagedSub401A70(section);
+}
+
+/**
+ * Helper used by sub_417C90 branch:
+ * if childCount==0 -> sub_450C80(this,parent) + (*this+8)(this == sub_401A50).
+ */
+export function detachFromParentAndMarkWorldManagedSub417C90(
+    section: TreeSection,
+): void {
+    if (section.parent) {
+        sub450C80RemoveFromParent(section, section.parent);
+    }
+    markWorldManagedSub401A50(section);
+}
+
+/**
+ * Immediate sub_40EEE0 path used by C parity branches (for example in sub_417C90).
+ * Keeps the same detach mechanics as deferred flag processing.
+ */
+export function detachImmediatelySub40EEE0(
+    section: TreeSection,
+    rng: MSVCRand,
+): void {
+    if (!section.parent) return;
+    detachSection(section, rng);
+}
+
 function processDetachRecursive(section: TreeSection, rng: MSVCRand): void {
     // Process children first (iterate backwards to safely remove)
     for (let i = section.children.length - 1; i >= 0; i--) {
@@ -58,6 +92,14 @@ function detachSection(section: TreeSection, rng: MSVCRand): void {
 
     // sub_450C80: unlink from parent list
     if (!sub450C80RemoveFromParent(section, parent)) return;
+
+    // sub_40EEE0 fast path in C when flt_4D526C == 150:
+    // no debris/world-object push, only detach + mark world managed.
+    if ((GrowthConstants.FLT_4D526C_GAME_SPEED as number) === 150.0) {
+        markWorldManagedSub401A50(section);
+        section.markedForDetach236 = false;
+        return;
+    }
 
     // Keep world position: reparent group to scene root
     const worldPos = new THREE.Vector3();
@@ -89,4 +131,13 @@ function detachSection(section: TreeSection, rng: MSVCRand): void {
     section.markedForDetach236 = false;
 
     _worldObjects.push(section);
+}
+
+function markChildrenWorldManagedSub401A70(section: TreeSection): void {
+    const children = section.children.slice();
+    for (const child of children) {
+        markWorldManagedSub401A50(child);
+        child.parent = null;
+    }
+    section.children.length = 0;
 }

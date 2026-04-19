@@ -348,6 +348,8 @@ export class TreeSection
     Sub416510Rotation.syncBlob80FromQuaternion(bud);
     // sub_417440 → sub_4159C0: один rand на *(bud+452)
     bud.maxGrowth = sampleMaxGrowth452Sub4159C0(rng);
+    // Initial seed→bud path is the main apical continuation chain.
+    bud.isContinuation = true;
     parent.children.push(bud);
     bud.updateAttachmentPosition(parent);
     return bud;
@@ -375,10 +377,15 @@ export class TreeSection
     return baseRadius * (1.0 - t) + tipRadius * t;
   }
 
-  public getAttachmentSpan(): number {
+  public getAttachmentSpan(strictExeSimVisuals: boolean = false): number {
     const { GEOMETRY } = TREE_CONSTANTS;
     const baseHeight = GEOMETRY.HEIGHT_FACTOR;
     const twigLen = this.twigLength448 as number;
+
+    if (strictExeSimVisuals) {
+      // sub_418F10: Z scale uses twigLength448 * 0.51 (draw path), no TS growth heuristics.
+      return Math.max(baseHeight * 0.02, twigLen * VISUAL_LENGTH_SCALE_418F10);
+    }
 
     if (twigLen > 0.001) {
       return Math.max(baseHeight * 0.02, twigLen * VISUAL_LENGTH_SCALE_418F10);
@@ -398,8 +405,11 @@ export class TreeSection
   }
 
   /** Позиция дочерней секции вдоль локальной оси Y родителя (sub_415C10 / иерархия сцены). */
-  public updateAttachmentPosition(parent: TreeSection): void {
-    const visualHeight = parent.getAttachmentSpan();
+  public updateAttachmentPosition(
+    parent: TreeSection,
+    strictExeSimVisuals: boolean = false,
+  ): void {
+    const visualHeight = parent.getAttachmentSpan(strictExeSimVisuals);
     const branchPos = Math.max(0, this.branchPosition as number);
     const lat = this.lateralTransY4158 as number;
     const roll = this.lateralRoll4158Z as number;
@@ -492,7 +502,8 @@ export class TreeSection
     const maxGrowth = Math.max(1e-4, this.maxGrowth as number);
     const growth01 = Math.max(0, Math.min(1, twigLen / maxGrowth));
     const youthRamp = growth01 * growth01 * (3 - 2 * growth01);
-    const currentHeightScale = this.getAttachmentSpan() / baseHeight;
+    const currentHeightScale =
+      this.getAttachmentSpan(strictExeSimVisuals) / baseHeight;
 
     let youthRadiusScale = 1.0;
     if (
@@ -520,17 +531,25 @@ export class TreeSection
       ),
     );
     const thicknessInput = Math.max(0.05, trunkParams.thickness as number);
-    let radScale =
-      thicknessInput *
-      VISUAL_TRUNK_RADIUS_SCALE *
-      stateRadiusNorm *
-      youthRadiusScale;
-    if (this.parent) {
-      const parentLimit = this.isContinuation ? 0.95 : 0.74;
-      radScale = Math.min(
-        radScale,
-        Math.max(0.015, (this.parent.mesh.scale.x as number) * parentLimit),
-      );
+    let radScale: number;
+    if (strictExeSimVisuals) {
+      // sub_418F10/sub_417070: draw scale uses runtime radius (+444) directly.
+      radScale =
+        Math.max(1e-4, this.twigRadius444 as number) /
+        Math.max(1e-4, this.branchBaseRadius);
+    } else {
+      radScale =
+        thicknessInput *
+        VISUAL_TRUNK_RADIUS_SCALE *
+        stateRadiusNorm *
+        youthRadiusScale;
+      if (this.parent) {
+        const parentLimit = this.isContinuation ? 0.95 : 0.74;
+        radScale = Math.min(
+          radScale,
+          Math.max(0.015, (this.parent.mesh.scale.x as number) * parentLimit),
+        );
+      }
     }
 
     if (thicknessInput > 0.01) {
@@ -543,7 +562,9 @@ export class TreeSection
         this.wireMesh.scale.set(wireScale, currentHeightScale, wireScale);
       }
 
-      this.children.forEach((child) => child.updateAttachmentPosition(this));
+      this.children.forEach((child) =>
+        child.updateAttachmentPosition(this, strictExeSimVisuals),
+      );
     } else {
       this.group.visible = false;
     }
@@ -742,11 +763,14 @@ export class TreeSection
     section.energyProduction420 = data.energyProduction420 ?? 0;
     section.energyBudget432 = data.energyBudget432 ?? 0;
     section.energySpent436 = data.energySpent436 ?? 0;
-    section.energyWeight428 = data.energyWeight428 ?? 1.0;
+    const loadedWeight428 = data.energyWeight428 ?? 1.0;
     section.worldDetached188 = data.worldDetached188 ?? false;
     section.energyAccumulator424 = data.energyAccumulator424 ?? 0;
     section.energyTickCounter440 = data.energyTickCounter440 ?? 0;
-    section.sub414CE0SeedBudget428 = data.sub414CE0SeedBudget428 ?? 0;
+    const loadedSeed428 = data.sub414CE0SeedBudget428 ?? 0;
+    const unified428 = loadedSeed428 !== 0 ? loadedSeed428 : loadedWeight428;
+    section.energyWeight428 = unified428;
+    section.sub414CE0SeedBudget428 = unified428;
     section.twigRadius444 = data.twigRadius444 ?? section.branchBaseRadius;
     section.twigLength448 =
       data.twigLength448 ?? (TREE_CONSTANTS.GEOMETRY.HEIGHT_FACTOR as number);

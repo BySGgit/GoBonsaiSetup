@@ -6,6 +6,10 @@ import { TransformService } from "../math/TransformService";
 import { twigLengthGrowthSub418BD0 } from "./twigLengthGrowthSub418BD0";
 import { branchingDispatcherSub417F40 } from "./branchingDispatcherSub417F40";
 import {
+    detachFromParentAndMarkWorldManagedSub417C90,
+    detachImmediatelySub40EEE0,
+} from "./detachPipelineSub40EEE0";
+import {
     createNumericPropertyBinding,
     createSub4032WideString,
     createSub408600Entry,
@@ -29,6 +33,7 @@ const DEATH_THICK_GIRTH_THRESHOLD = 0.1;
 const DEATH_RARE_PROBABILITY = 0.01;
 const _healthEnergyAdjustmentMeta4DBAEC = createSub408600Entry();
 let _sub417C90InitFlags4DBB10 = 0;
+const _fallbackRngSub417C90 = new MSVCRand(1);
 
 function sub4724A0CleanupStub(): void {
     sub401DD0DestroyIniEntry(_healthEnergyAdjustmentMeta4DBAEC);
@@ -54,19 +59,19 @@ export function twigUpdateSub417C90(
     section: TreeSection,
     rng: MSVCRand | undefined,
 ): void {
+    const rand = rng ?? _fallbackRngSub417C90;
+
     // ++this+484 tick counter
     section.rollupDword484 = (section.rollupDword484 + 1) >>> 0;
 
     // Girth growth: always happens regardless of +512.
     const radiusGrowRate = GrowthConstants.FLT_4D8618 as number;
     const currentRadius = section.twigRadius444 as number;
-    if (currentRadius > 0) {
-        let v9 =
-            ((section.energyProduction420 as number) * radiusGrowRate) /
-            currentRadius;
-        if (v9 > GIRTH_CAP) v9 = GIRTH_CAP;
-        section.twigRadius444 = (currentRadius + v9) as Float32;
-    }
+    let v9 =
+        ((section.energyProduction420 as number) * radiusGrowRate) /
+        currentRadius;
+    if (!Number.isFinite(v9) || v9 > GIRTH_CAP) v9 = GIRTH_CAP;
+    section.twigRadius444 = (currentRadius + v9) as Float32;
 
     // Slerp current quaternion (+304) toward target (+320).
     const slerpFactor = GrowthConstants.FLT_4D8624 as number;
@@ -80,9 +85,12 @@ export function twigUpdateSub417C90(
 
     // Growth vs branching dispatch on +512 flag.
     if (section.growthFlag512) {
+        if (section.children.length === 0 && !section.isContinuation) {
+            detachFromParentAndMarkWorldManagedSub417C90(section);
+        }
         twigLengthGrowthSub418BD0(section, rng);
     } else {
-        if (rng) branchingDispatcherSub417F40(section, rng);
+        branchingDispatcherSub417F40(section, rand);
     }
 
     ensureSub417C90IniBindings();
@@ -105,31 +113,24 @@ export function twigUpdateSub417C90(
         (section.healthEnergy456 as number) <= 0 &&
         parent &&
         (parent.healthEnergy456 as number) > 0 &&
-        rng
+        !section.isContinuation
     ) {
-        // Prevent catastrophic trunk collapse: keep continuations/internal backbone alive.
-        const canDetachByHealth =
-            !section.isContinuation &&
-            section.children.length === 0 &&
-            section.level > 1;
-        if (!canDetachByHealth) {
-            return;
-        }
-
-        const r1 = rng.randFloat();
-        const r2 = rng.randFloat();
         const oldTicks = section.energyTickCounter440 as number;
         const thick = section.twigRadius444 as number;
         const radiusGate = thick * DEATH_GIRTH_SCALE;
-
+        const detachByRadius = rand.randFloat() > radiusGate;
+        let detachByRare = false;
         if (
-            r1 > radiusGate ||
-            (((oldTicks <= DEATH_THICK_TICK_THRESHOLD ||
+            !detachByRadius &&
+            (oldTicks <= DEATH_THICK_TICK_THRESHOLD ||
                 thick <= DEATH_THICK_GIRTH_THRESHOLD) &&
-                oldTicks > DEATH_OLD_TICK_THRESHOLD) &&
-                r2 < DEATH_RARE_PROBABILITY)
+            oldTicks > DEATH_OLD_TICK_THRESHOLD
         ) {
-            section.markedForDetach236 = true;
+            detachByRare = rand.randFloat() < DEATH_RARE_PROBABILITY;
+        }
+
+        if (detachByRadius || detachByRare) {
+            detachImmediatelySub40EEE0(section, rand);
         }
     }
 }

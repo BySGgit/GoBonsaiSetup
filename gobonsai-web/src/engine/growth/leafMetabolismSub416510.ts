@@ -14,6 +14,7 @@ import {
     sub408600Register,
     subAtexitRegister,
 } from "../config/IniRegistrySub408600";
+import { invokeSlot44ForSection } from "./slot44Dispatch";
 
 /**
  * sub_416510 — leaf metabolism: light → energy → production → growth.
@@ -199,7 +200,7 @@ function updateLeafSub416510(
 
     // §4: sub_416510 — отрыв листа (один вызов rand, как в декомпиле листовой ветки)
     if (energyVal === 0 || (1.0 - energyVal) * bC > rng.randFloat()) {
-        section.markedForDetach236 = true;
+        invokeSlot44ForSection(section, rng);
         section.skipGrowthTick = true;
         const localSpent = Math.max(0, energyAtStart - (section.energy as number));
         section.energySpent436 = Math.min(1, localSpent * spentScale) as Float32;

@@ -9,6 +9,7 @@ import { SectionRuntimeType } from "./SectionRuntimeType";
 import { Sub416510Rotation } from "./math/Sub416510Rotation";
 import { TreeRoot } from "./TreeRoot";
 import { GrowthConstants } from "./config/GrowthConstants";
+import { writeUnifiedBudget428 } from "./growth/sub414CE0";
 import {
   parityDay0,
   parityEnergyPoolByDay,
@@ -20,7 +21,7 @@ function createMinimalGrowthHarness(seed: number) {
   const stats = growth.initStats();
   const root = new TreeSection(null, 0, rng);
   root.sectionRuntimeType4 = SectionRuntimeType.TreeSectionSeed;
-  root.sub414CE0SeedBudget428 = 1.0;
+  writeUnifiedBudget428(root, 1.0);
   root.targetRotation.identity();
   root.rotationQuaternion.identity();
   root.rotation.identity();

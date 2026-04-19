@@ -4,6 +4,7 @@ import { SectionRuntimeType } from "../SectionRuntimeType";
 import { TreeSection } from "../TreeSection";
 import { GrowthConstants } from "../config/GrowthConstants";
 import { sub413F50InitSection } from "./sub413F50Ctor";
+import { writeUnifiedBudget428 } from "./sub414CE0";
 
 /**
  * sub_417BB0: max-growth sampling for new twig segment.
@@ -41,7 +42,8 @@ export function sub417BB0CreateTwig(
   );
   twig.sectionRuntimeType4 = SectionRuntimeType.TreeSectionTwig;
   twig.maxGrowth = sub417BB0SampleMaxGrowth(normalizedEnergy, rng);
-  twig.energyWeight428 = 1.0;
+  writeUnifiedBudget428(twig, 1.0);
+  twig.energyAccumulator424 = 1.0;
   twig.growthFlag512 = false;
 
   return twig;

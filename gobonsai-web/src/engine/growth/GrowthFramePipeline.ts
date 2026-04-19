@@ -144,14 +144,14 @@ export class GrowthFramePipeline {
                 rng,
                 strictExe,
             );
-            propagateTransformsSub450BD0(root);
+            propagateTransformsSub450BD0(root, strictExe);
         }
         // exe trace: flt_4D7EF8 = 0.0 at sub_40E0A0 entry after while-loop
         worldGrowth.growthAccumulator4D7EF8 = 0;
 
         // После цикла: метаболизм и rollup scratch → пул (один раз за sub_4130D0)
         root.group.updateMatrixWorld(true);
-        syncGroupQuaternionsFromRotationForMetabolism(root);
+        syncGroupQuaternionsFromRotationForMetabolism(root, strictExe);
         TreeSection.syncTransformMatricesFromWorld(root);
 
         const simulationDay = worldGrowth.simulationDay;
@@ -172,21 +172,17 @@ export class GrowthFramePipeline {
         // sub_40E230 + sub_40E460: очередь листьев → лучи, обновление +196..+212 (lightResponseVec / smoothedLight*)
         root.group.updateMatrixWorld(true);
         updateLightSpatialBoundsSub450BD0(root);
-        rebuildLeafQueue(root, strictExe);
+        rebuildLeafQueue(root);
         serviceLightTraceQueue(root, wind, rng);
 
         // sub_414A70: this+352 к миру после лучей (updateMatrixWorld выше)
         TreeSection.syncTransformMatricesFromWorld(root);
 
-        // sub_4130D0.c: sub_412D20() перед (*vtable+12) → sub_4143E0
-        if (!strictExe) {
-            tickEnvironment();
-        }
+        // sub_4130D0.c: sub_412D20() always runs before (*vtable+12) -> sub_4143E0.
+        tickEnvironment();
 
         // --- sub_4143E0 (slot +12): centroid, 414A70/414BB0, сглаживание +216..+232 ---
-        perFramePhysicsSub4143E0(root, wind, {
-            twigPhototropismApprox: !strictExe,
-        });
+        perFramePhysicsSub4143E0(root, wind);
 
         const ageFactor = stats.age / 10.0;
         const dayOfYear =
@@ -212,7 +208,7 @@ export class GrowthFramePipeline {
         TreeSection.syncTransformMatricesFromWorld(root);
 
         // Хвост sub_4130D0: второй vtable+16 (sub_450BD0), затем vtable+48 (sub_414270)
-        propagateTransformsSub450BD0(root);
+        propagateTransformsSub450BD0(root, strictExe);
 
         if (rng) {
             processDetachFlags(root, rng);

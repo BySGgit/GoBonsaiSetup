@@ -48,7 +48,8 @@ export const GrowthConstants = {
   BYTE_4D8226_STRIDE11: buildTypeTable([[6, 1]]),
   // flag #7: light decay in sub_40E460 — Leaf only
   BYTE_4D8227_STRIDE11: buildTypeTable([[7, 1]]),
-  BYTE_4D8228_STRIDE11: new Uint8Array(11 * 16),
+  // sub_40FA00 initializes this table; gameplay-relevant guard is Seed (type 8).
+  BYTE_4D8228_STRIDE11: buildTypeTable([[8, 1]]),
   // flag #9: parent energy copy in sub_414CE0 — Stump
   BYTE_4D8229_STRIDE11: buildTypeTable([[9, 1]]),
   // flag #10: geometric screening in sub_40E460, pow recalc in sub_414CE0 — Twig

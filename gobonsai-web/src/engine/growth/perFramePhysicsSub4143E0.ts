@@ -2,7 +2,6 @@ import * as THREE from "three";
 import { TreeSection } from "../TreeSection";
 import { GrowthConstants, byte4D8226ForSectionType } from "../config/GrowthConstants";
 import { Float32 } from "../math/MathTypes";
-import { TransformService } from "../math/TransformService";
 import {
     createBooleanPropertyBinding,
     createNumericPropertyBinding,
@@ -18,7 +17,6 @@ import {
     sub4084F0NormalizeInPlaceReturnLen,
     sub4085B0TransformCoord,
 } from "../math/Vec3Sub40xPrimitives";
-import { SectionRuntimeType } from "../SectionRuntimeType";
 
 /**
  * sub_4143E0 — per-frame physics/smoothing (vtable slot +12).
@@ -34,15 +32,10 @@ import { SectionRuntimeType } from "../SectionRuntimeType";
 
 const GRAVITY_DIRECTION = new THREE.Vector3(0, -1, 0);
 const _tmpVec = new THREE.Vector3();
-const _tmpVec2 = new THREE.Vector3();
 const _tmpAxis = new THREE.Vector3();
 const _tmpQuat = new THREE.Quaternion();
 const _tmpNorm3 = new THREE.Matrix3();
 const _centNorm = new THREE.Vector3();
-const _parentWorldQuat = new THREE.Quaternion();
-const _worldQuat = new THREE.Quaternion();
-const _yUp = new THREE.Vector3(0, 1, 0);
-const _alignLight = new THREE.Quaternion();
 const _physicsEnabledMeta4DBC40 = createSub408600Entry();
 const _debugLightVecMeta4DBC1C = createSub408600Entry();
 const _resistanceRadiusBiasMeta4DBBF4 = createSub408600Entry();
@@ -98,34 +91,23 @@ function ensureSub4143E0IniBindings(): void {
     }
 }
 
-/**
- * Entry point: call once per frame on the root section.
- * Mirrors sub_4143E0 recursive call pattern.
- */
-export type PerFramePhysicsOptions = {
-    /** false в strict-exe режиме: в C в sub_4143E0 нет блока «twig → свет» */
-    twigPhototropismApprox?: boolean;
-};
-
 export function perFramePhysicsSub4143E0(
     root: TreeSection,
     wind: THREE.Vector3,
-    options?: PerFramePhysicsOptions,
 ): void {
     ensureSub4143E0IniBindings();
-    walkPhysics(root, wind, options);
+    walkPhysics(root, wind);
 }
 
 function walkPhysics(
     section: TreeSection,
     wind: THREE.Vector3,
-    options?: PerFramePhysicsOptions,
 ): void {
     if (section.worldDetached188) return;
 
     // Step 1: recurse children first
     for (const child of section.children) {
-        walkPhysics(child, wind, options);
+        walkPhysics(child, wind);
     }
 
     // Step 2: compute centroid + totalWeight (sub_414870)
@@ -143,12 +125,6 @@ function walkPhysics(
 
     // Step 5: smooth light direction vectors
     smoothLightDirections(section);
-
-    // В sub_4143E0.c отдельного блока «twig → свет» нет; ориентация twig — sub_416510 / слот +36.
-    // APPROX(original): мягкий разворот targetRotation к prevDirectionVec (после smoothLightDirections).
-    if (options?.twigPhototropismApprox !== false) {
-        applyTwigLightSeeking(section);
-    }
 
     // Step 6: exponential smoothing of accumulators
     section.smoothTargetA = ((section.smoothTargetA as number)
@@ -280,34 +256,4 @@ function smoothLightDirections(section: TreeSection): void {
     _tmpVec.set(px * v12 + lx * v11, py * v12 + ly * v11, pz * v12 + lz * v11);
     sub40CF00NormalizeInPlace(_tmpVec);
     section.prevDirectionVec.copy(_tmpVec);
-}
-
-/**
- * Локально поворачивает targetRotation ветки так, чтобы ось +Y приближалась к prevDirectionVec (мир).
- * Вызывается после smoothLightDirections; сила от smoothedLightA (sub_40E460).
- *
- * Мировая ориентация до догонки +320 в sub_417C90 = parentWorld · rotationQuaternion (+304), не · targetRotation.
- * Смешение «факт родителя» с «цель ребёнка» давало неверный локальный вектор света → вечное кручение и рывки.
- */
-function applyTwigLightSeeking(section: TreeSection): void {
-    if (section.sectionRuntimeType4 !== SectionRuntimeType.TreeSectionTwig) return;
-    const w = section.smoothedLightA as number;
-    if (w < 0.08 || section.prevDirectionVec.lengthSq() < 1e-10) return;
-
-    if (section.parent) {
-        section.parent.group.getWorldQuaternion(_parentWorldQuat);
-    } else {
-        _parentWorldQuat.identity();
-    }
-    _worldQuat.copy(_parentWorldQuat).multiply(section.rotationQuaternion);
-    _tmpQuat.copy(_worldQuat).invert();
-    _tmpVec.copy(section.prevDirectionVec).applyQuaternion(_tmpQuat);
-    _tmpVec.normalize();
-    if (_tmpVec.lengthSq() < 1e-10) return;
-
-    _alignLight.setFromUnitVectors(_yUp, _tmpVec);
-    // APPROX: меньший шаг — меньше дрожания от шума лучей после исправления кадра
-    const t = Math.min(0.018, 0.008 + 0.014 * Math.min(1, w));
-    section.targetRotation.slerp(_alignLight, t);
-    section.targetRotation.normalize();
 }

@@ -15,6 +15,8 @@ import { twigUpdateSub417C90 } from "./twigUpdateSub417C90";
 import { sub450C80RemoveFromParent } from "./sub450C80";
 import { sub417BB0CreateTwig } from "./sub417BB0TwigCtor";
 import { sub413F50AttachChild } from "./sub413F50Ctor";
+import { readUnifiedBudget428, writeUnifiedBudget428 } from "./sub414CE0";
+import { invokeSlot44ForSection } from "./slot44Dispatch";
 
 /**
  * Виртуальный слот +36 по типу секции (spec_update_growth_sub_40DC90 §2.5).
@@ -48,7 +50,7 @@ function effectiveGrowthWeightForBudget(section: TreeSection): number {
     return 0;
   }
   // Recovery guard for trees created during weight=0 regressions.
-  return Math.max(1e-4, section.energyWeight428 as number);
+  return Math.max(1e-4, readUnifiedBudget428(section));
 }
 
 /**
@@ -151,30 +153,6 @@ function postDispatchByType(
   }
 }
 
-// ─── sub_415ED0: bud quiet detach (vtable+44 for buds) ──────────────
-/**
- * EXE sub_415ED0: when budget == 0 (winter), the bud and its entire subtree
- * are quietly orphaned — NOT the falling-animation markedForDetach236 path.
- *
- * Flow: sub_450C80 (remove from parent) → sub_401A50 (set worldDetached188=1)
- *       → sub_401A70 (recursively worldDetach + orphan all children).
- */
-function budQuietDetachSub415ED0(bud: TreeSection): void {
-  if (bud.parent && sub450C80RemoveFromParent(bud, bud.parent)) {
-    if (bud.group.parent) bud.group.parent.remove(bud.group);
-  }
-  markWorldDetachedRecursive(bud);
-}
-
-function markWorldDetachedRecursive(section: TreeSection): void {
-  section.worldDetached188 = true;
-  for (const child of section.children) {
-    markWorldDetachedRecursive(child);
-    child.parent = null;
-  }
-  section.children.length = 0;
-}
-
 // ─── sub_415EF0: Bud +36 post-dispatch ─────────────────────────────
 
 /**
@@ -197,11 +175,11 @@ function budAfterSub414E10From415EF0(
   rng: MSVCRand | undefined,
   worldFlagByte220: boolean,
 ): void {
-  const baseGrowth = bud.baseGrowth as number;
-  if (baseGrowth <= 0.0) {
-    // NOTE: mapping of EXE field at this check is not finalized yet.
-    // Keep soft detach path to avoid catastrophic branch loss in TS.
-    bud.markedForDetach236 = true;
+  // C: if (0.0 == *((float*)this + 108)) -> slot+44.
+  // This is float-index 108 => byte offset +432 (energy budget), not this+108 bytes.
+  const energyBudget = bud.energyBudget432 as number;
+  if (energyBudget === 0.0) {
+    invokeSlot44ForSection(bud, rng);
     return;
   }
 
@@ -216,7 +194,7 @@ function budAfterSub414E10From415EF0(
     const maxE = GrowthConstants.FLT_4D8630 as number;
     const v7 = Math.max(
       0,
-      Math.min(1, (baseGrowth - minE) / (maxE - minE)),
+      Math.min(1, (energyBudget - minE) / (maxE - minE)),
     );
 
     // sub_416300: check bud's PARENT — in chain model the parent twig gates spawning
@@ -232,7 +210,7 @@ function budAfterSub414E10From415EF0(
     // §4: girth still growing — sub_415EF0.c else-branch
     const maxE = GrowthConstants.FLT_4D8630 as number;
     const growRate = GrowthConstants.FLT_4D8620 as number;
-    const capped = maxE <= baseGrowth ? maxE : baseGrowth;
+    const capped = maxE <= energyBudget ? maxE : energyBudget;
     bud.currentGrowth = capped as Float32;
     let newRadius = twigRadius + capped * growRate;
     if (maxGrowth <= newRadius) {
@@ -276,7 +254,7 @@ function sub415C10ConvertBudToTwig(
 
   // Early exit: world flag + leafCount > 2 + parent is valid twig → kill parent
   if (v4 !== null && worldFlagByte220 && bud.leafCount516 > 2) {
-    v4.markedForDetach236 = true;
+    invokeSlot44ForSection(v4, rng);
     return 0;
   }
 
@@ -308,6 +286,8 @@ function sub415C10ConvertBudToTwig(
   newTwig.branchPosition = oldBudBranchPos;
   newTwig.lateralTransY4158 = oldBudLat;
   newTwig.lateralRoll4158Z = oldBudRoll;
+  // sub_415C10 chain model: parent -> newTwig -> bud (apical continuation).
+  newTwig.isContinuation = true;
 
   newTwig.twigRadius444 = GrowthConstants.FLT_4D861C_INITIAL_TWIG_GIRTH;
   newTwig.twigLength448 = 0 as Float32;
@@ -319,6 +299,7 @@ function sub415C10ConvertBudToTwig(
 
   // ── Step 3: Add bud as child of new twig ──
   sub413F50AttachChild(newTwig, bud);
+  bud.isContinuation = true;
   bud.branchPosition = 1.0 as Float32;
   bud.lateralTransY4158 = 0 as Float32;
   bud.lateralRoll4158Z = 0 as Float32;
@@ -335,7 +316,7 @@ function sub415C10ConvertBudToTwig(
   Sub416510Rotation.syncBlob80FromQuaternion(newTwig);
 
   // ── Step 5: Copy energy fields from bud to twig ──
-  newTwig.energyWeight428 = bud.energyWeight428;
+  writeUnifiedBudget428(newTwig, readUnifiedBudget428(bud));
   newTwig.energyProduction420 = bud.energyProduction420;
   newTwig.energyAccumulator424 = bud.energyAccumulator424;
   newTwig.growthFlag512 = true;
@@ -408,7 +389,7 @@ function createLeafSection(
   const leaf = new TreeSection(parentTwig, parentTwig.level + 1, rng, 0.01);
   leaf.sectionRuntimeType4 = SectionRuntimeType.TreeSectionLeaf;
   leaf.maxGrowth = maxLeafSize as Float32;
-  leaf.energyWeight428 = 0 as Float32;
+  writeUnifiedBudget428(leaf, 0);
 
   const yaw = Math.atan2(dirX, dirZ);
   const pitch = dirY;

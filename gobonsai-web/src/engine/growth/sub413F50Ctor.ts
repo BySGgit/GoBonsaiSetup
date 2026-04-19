@@ -44,6 +44,7 @@ export function sub413F50InitSection(
   section.energyProduction420 = 0 as Float32;
   section.energyAccumulator424 = 0 as Float32;
   section.energyWeight428 = 0 as Float32;
+  section.sub414CE0SeedBudget428 = 0 as Float32;
   section.energyBudget432 = 0 as Float32;
   section.energySpent436 = 0 as Float32;
   section.energyTickCounter440 = 0 as Float32;

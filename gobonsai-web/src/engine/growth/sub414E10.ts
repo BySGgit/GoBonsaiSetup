@@ -6,6 +6,7 @@ import { TREE_CONSTANTS } from "../TreeConstants";
 import { MSVCRand } from "../MSVCRand";
 import { runVirtualSlot36Tree } from "./virtualSlot36";
 import { SectionRuntimeType } from "../SectionRuntimeType";
+import { writeUnifiedBudget428 } from "./sub414CE0";
 
 /**
  * sub_414E10.c — базовый слот +36 для TreeSection: сброс +420/+436/+480/+484, доли child+432
@@ -50,7 +51,7 @@ export function syncEnergyWeight428FromGeometry(root: TreeSection): void {
     const walk = (s: TreeSection): void => {
         const w =
             (s.branchBaseRadius as number) + (s.branchTipRadius as number);
-        s.energyWeight428 = Math.max(1e-6, w) as Float32;
+        writeUnifiedBudget428(s, Math.max(1e-6, w));
         for (const c of s.children) walk(c);
     };
     walk(root);

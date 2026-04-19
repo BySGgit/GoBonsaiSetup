@@ -15,7 +15,7 @@ import {
 } from "./sub414E10";
 import { syncGroupQuaternionsFromRotationForMetabolism } from "./transformChainSub450BD0";
 import { setSlot36SimulationDay } from "./frameState";
-import { sub414CE0Yearly } from "./sub414CE0";
+import { sub414CE0Yearly, writeUnifiedBudget428 } from "./sub414CE0";
 import { GrowthConstants } from "../config/GrowthConstants";
 import {
     createBooleanPropertyBinding,
@@ -126,7 +126,7 @@ export function runSub40DC90GrowthTick(
     if (yearCrossed) {
         growth.updateYearlyTargets(stats, root, worldGrowth);
         sub414CE0Yearly(root);
-        root.sub414CE0SeedBudget428 = 1.0;
+        writeUnifiedBudget428(root, 1.0);
         onSimulationYearCrossed?.();
     }
 
@@ -143,7 +143,10 @@ export function runSub40DC90GrowthTick(
         worldGrowth.worldFlagByte220,
     );
 
-    syncGroupQuaternionsFromRotationForMetabolism(root);
+    syncGroupQuaternionsFromRotationForMetabolism(
+        root,
+        strictExeParity === true,
+    );
     root.group.updateMatrixWorld(true);
     TreeSection.syncTransformMatricesFromWorld(root);
 

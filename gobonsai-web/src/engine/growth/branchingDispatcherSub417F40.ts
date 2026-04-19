@@ -12,6 +12,7 @@ import { sub4084F0NormalizeInPlaceReturnLen, sub408590 } from "../math/Vec3Sub40
 import { sub401B00ExtractBasisZ } from "../world/SectionSpatialQueriesSub40x";
 import { getSlot36SimulationDay } from "./frameState";
 import { sub413F50AttachChild, sub413F50InitSection } from "./sub413F50Ctor";
+import { readUnifiedBudget428, writeUnifiedBudget428 } from "./sub414CE0";
 import {
     createNumericPropertyBinding,
     createSub4032WideString,
@@ -125,12 +126,7 @@ export function branchingDispatcherSub417F40(
         return;
     }
 
-    // EXE +172 list for this path effectively tracks branch chain children.
-    // In TS leaf sections share `children`, so ignore leaves for branching gates.
-    const growthChildren = section.children.filter(
-        (c) => c.sectionRuntimeType4 !== SectionRuntimeType.TreeSectionLeaf,
-    );
-    const childCount = growthChildren.length;
+    const childCount = section.children.length;
     if (childCount > 1) return;
 
     if (childCount === 0) {
@@ -138,7 +134,7 @@ export function branchingDispatcherSub417F40(
         return;
     }
 
-    const firstTwig = sub416300Filter(growthChildren[0] ?? null);
+    const firstTwig = sub416300Filter(section.children[0] ?? null);
     const okChild = firstTwig !== null && sub415470Years(firstTwig) !== 0;
     if (okChild) {
         apicalBranchSub417FF0(section, rng);
@@ -191,7 +187,7 @@ function lateralBranchSub4188E0(
 
     let sumWeights = 0;
     for (const c of section.children) {
-        sumWeights += c.energyWeight428 as number;
+        sumWeights += readUnifiedBudget428(c);
     }
 
     let v24 = 1.0;
@@ -203,7 +199,7 @@ function lateralBranchSub4188E0(
         }
     }
 
-    bud.energyWeight428 = v24 as Float32;
+    writeUnifiedBudget428(bud, v24);
     bud.energyAccumulator424 = v24 as Float32;
 }
 
@@ -219,12 +215,9 @@ function apicalBranchSub417FF0(
     const available =
         (section.energyBudget432 as number) - (section.energySpent436 as number);
 
-    const growthChildren = section.children.filter(
-        (c) => c.sectionRuntimeType4 !== SectionRuntimeType.TreeSectionLeaf,
-    );
-    const childCount = growthChildren.length >>> 0;
+    const childCount = section.children.length >>> 0;
     let oldChildWeight428 =
-        childCount === 1 ? (growthChildren[0].energyWeight428 as number) : 0.0;
+        childCount === 1 ? readUnifiedBudget428(section.children[0]) : 0.0;
     // Recovery guard: old saves may contain zeroed weights from previous regressions.
     if (childCount === 1 && oldChildWeight428 <= 1e-6) {
         oldChildWeight428 = 1.0;
@@ -281,7 +274,9 @@ function apicalBranchSub417FF0(
         const w1 =
             (rng.randFloat() * 0.800000011920929 + 0.2000000029802322) *
             baseWeight;
-        bud1.energyWeight428 = Math.max(1e-4, w1) as Float32;
+        const weight = Math.max(1e-4, w1);
+        writeUnifiedBudget428(bud1, weight);
+        bud1.energyAccumulator424 = weight as Float32;
     }
 
     const v32 = v31 + Math.PI;
@@ -305,7 +300,9 @@ function apicalBranchSub417FF0(
         const w2 =
             (rng.randFloat() * 0.800000011920929 + 0.2000000029802322) *
             baseWeight;
-        bud2.energyWeight428 = Math.max(1e-4, w2) as Float32;
+        const weight = Math.max(1e-4, w2);
+        writeUnifiedBudget428(bud2, weight);
+        bud2.energyAccumulator424 = weight as Float32;
     }
 }
 
@@ -352,7 +349,8 @@ function simplifiedBranchSub418660(
             const w428 =
                 (rng.randFloat() * 0.1000000238418579 + 0.8999999761581421) *
                 v17;
-            bud2.energyWeight428 = w428 as Float32;
+            writeUnifiedBudget428(bud2, w428);
+            bud2.energyAccumulator424 = w428 as Float32;
         }
     }
 }
@@ -383,8 +381,8 @@ function createBudChild(
     bud.sectionRuntimeType4 = SectionRuntimeType.TreeSectionBud;
     bud.twigRadius444 = 0.01 as Float32;
     bud.twigLength448 = 0 as Float32;
-    bud.energyWeight428 = 1.0 as Float32;
-    bud.sub414CE0SeedBudget428 = 1.0 as Float32;
+    writeUnifiedBudget428(bud, 1.0);
+    bud.energyAccumulator424 = 1.0 as Float32;
     bud.growthFlag512 = true;
 
     if (opts.branchPosition !== undefined) {

@@ -15,12 +15,13 @@ const _tmpCombinedQuat4146F0 = new Quaternion();
  */
 export function syncGroupQuaternionsFromRotationForMetabolism(
     root: TreeSection,
+    strictExeSimVisuals = false,
 ): void {
     const walk = (section: TreeSection): void => {
         if (section.worldDetached188) return;
 
         if (section.parent) {
-            rebuildLocalTransformSub4146F0(section);
+            rebuildLocalTransformSub4146F0(section, strictExeSimVisuals);
         } else {
             section.group.quaternion.copy(section.rotationQuaternion);
         }
@@ -35,10 +36,13 @@ export function syncGroupQuaternionsFromRotationForMetabolism(
 /**
  * sub_4146F0-style local transform rebuild from +240 template and rotation.
  */
-export function rebuildLocalTransformSub4146F0(section: TreeSection): void {
+export function rebuildLocalTransformSub4146F0(
+    section: TreeSection,
+    strictExeSimVisuals = false,
+): void {
     if (!section.parent) return;
 
-    section.updateAttachmentPosition(section.parent);
+    section.updateAttachmentPosition(section.parent, strictExeSimVisuals);
     section.localTemplate240.decompose(
         _tmpLocalPos4146F0,
         _tmpLocalQuat4146F0,
@@ -57,12 +61,15 @@ export function rebuildLocalTransformSub4146F0(section: TreeSection): void {
  * Propagate local transforms down the tree, then update world matrices and
  * cache inverse world matrices for light/metabolism calculations.
  */
-export function propagateTransformsSub450BD0(root: TreeSection): void {
+export function propagateTransformsSub450BD0(
+    root: TreeSection,
+    strictExeSimVisuals = false,
+): void {
     const walk = (section: TreeSection): void => {
         if (section.worldDetached188) return;
 
         if (section.parent) {
-            rebuildLocalTransformSub4146F0(section);
+            rebuildLocalTransformSub4146F0(section, strictExeSimVisuals);
         } else {
             section.group.quaternion.copy(section.rotationQuaternion);
         }

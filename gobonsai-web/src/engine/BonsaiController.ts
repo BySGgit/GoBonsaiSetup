@@ -9,6 +9,7 @@ import { GrowthFramePipeline } from './growth/GrowthFramePipeline';
 import { SectionRuntimeType } from './SectionRuntimeType';
 import { GrowthConstants } from './config/GrowthConstants';
 import { TREE_CONSTANTS } from './TreeConstants';
+import { writeUnifiedBudget428 } from './growth/sub414CE0';
 
 export class BonsaiController {
     private scene: THREE.Scene;
@@ -76,7 +77,8 @@ export class BonsaiController {
         this.root = new TreeSection(null, 0, this.rng);
         // sub_417220 TreeSectionSeed: *(this+4)=8, *(float*)(this+428)=1.0
         this.root.sectionRuntimeType4 = SectionRuntimeType.TreeSectionSeed;
-        this.root.sub414CE0SeedBudget428 = 1.0;
+        this.root.isContinuation = true;
+        writeUnifiedBudget428(this.root, 1.0);
         
         // РЎРµРјСЏ/РєРѕСЂРµРЅСЊ: Р±РµР· РЅР°С‡Р°Р»СЊРЅРѕРіРѕ РЅР°РєР»РѕРЅР° вЂ” РЅР°РєР»РѕРЅ Р·Р°РґР°С‘С‚СЃСЏ СЂРѕСЃС‚РѕРј РІРµС‚РѕРє Рё С„РёР·РёРєРѕР№.
         // (СЂР°РЅСЊС€Рµ: trunkRotation * 0.05 РґР°РІР°Р»Рѕ Р·Р°РјРµС‚РЅС‹Р№ СѓРіРѕР» В«СЃ РїРµСЂРІРѕРіРѕ РєР°РґСЂР°В».)
@@ -228,7 +230,7 @@ export class BonsaiController {
     }
 
     private updateEnvironment(): void {
-        const timeScale = (Date.now() * 0.001) % (Math.PI * 2);
+        const timeScale = this.gameTime % (Math.PI * 2);
         // РЎР»Р°Р±Р°СЏ РјРѕРґСѓР»СЏС†РёСЏ вЂ” РёРЅР°С‡Рµ sub_414A70 РЅР°РєР°РїР»РёРІР°РµС‚ РєСЂРµРЅ В«РІ СЃС‚РѕСЂРѕРЅСѓВ» Р·Р° С‚С‹СЃСЏС‡Рё РєР°РґСЂРѕРІ
         this.wind.x = 0.004 + Math.sin(timeScale) * 0.002;
         this.wind.z = 0.002 + Math.cos(timeScale * 0.5) * 0.002;
@@ -345,6 +347,8 @@ export class BonsaiController {
                 });
                 
                 this.root = TreeSection.deserialize(data.tree, null, this.rng);
+                this.normalizeUnifiedBudget428(this.root);
+                this.normalizeContinuationChain(this.root);
                 this.scene.add(this.root.group);
 
                 if (data.roots) {
@@ -358,6 +362,60 @@ export class BonsaiController {
             }
         }
         return false;
+    }
+
+    /**
+     * Backward-compat repair for old saves where continuation flags were not populated.
+     * Marks the main apical Seed/Twig/Bud chain so detach/visual branches don't treat it as lateral.
+     */
+    private normalizeContinuationChain(root: TreeSection): void {
+        const all: TreeSection[] = [];
+        const stack: TreeSection[] = [root];
+        while (stack.length) {
+            const s = stack.pop()!;
+            all.push(s);
+            for (const c of s.children) stack.push(c);
+        }
+        for (const s of all) {
+            s.isContinuation = false;
+        }
+
+        let current: TreeSection | null = root;
+        while (current) {
+            current.isContinuation = true;
+            const candidates: TreeSection[] = current.children.filter(
+                (c: TreeSection) =>
+                    !c.worldDetached188 &&
+                    (c.sectionRuntimeType4 === SectionRuntimeType.TreeSectionTwig ||
+                        c.sectionRuntimeType4 === SectionRuntimeType.TreeSectionBud),
+            );
+            if (candidates.length === 0) break;
+            let next: TreeSection = candidates[0] as TreeSection;
+            for (let i = 1; i < candidates.length; i++) {
+                if ((candidates[i].branchPosition as number) > (next.branchPosition as number)) {
+                    next = candidates[i];
+                }
+            }
+            current = next;
+        }
+    }
+
+    /**
+     * Backward-compat repair for old saves where +428 aliases could diverge.
+     * Keeps `energyWeight428` as source of truth and mirrors it into yearly alias.
+     */
+    private normalizeUnifiedBudget428(root: TreeSection): void {
+        const stack: TreeSection[] = [root];
+        while (stack.length) {
+            const s = stack.pop()!;
+            const runtime = s.energyWeight428 as number;
+            const yearly = s.sub414CE0SeedBudget428 as number;
+            const unified = runtime !== 0 ? runtime : yearly;
+            const v = unified as typeof s.energyWeight428;
+            s.energyWeight428 = v;
+            s.sub414CE0SeedBudget428 = v;
+            for (const c of s.children) stack.push(c);
+        }
     }
 
     public get health() { return this.stats.health; }

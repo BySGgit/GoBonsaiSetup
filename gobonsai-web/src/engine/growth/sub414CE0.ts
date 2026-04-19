@@ -14,14 +14,23 @@ import {
  * LABEL_11: this+424 = 0, затем для каждого ребёнка (*child+40).
  *
  * Ленивые sub_413C20/sub_40FBA0 (INI) в TS не вызываются — таблицы в GrowthConstants.
- * Запись в exe идёт в единый this+428; в TS годовой смысл переносим в `sub414CE0SeedBudget428`
- * (см. TODO(original): слить с energyWeight428 как в C).
+ * Запись в exe идёт в единый this+428; в TS обе alias-переменные синхронизируются через
+ * `readUnifiedBudget428`/`writeUnifiedBudget428`, чтобы сохранить C-like единое поле.
  */
 
-function readApproxC428(s: TreeSection): number {
-    const seed = s.sub414CE0SeedBudget428 as number;
-    if (seed !== 0) return seed;
+/**
+ * Unified view of original C field +428.
+ * Runtime parity: read from `energyWeight428` only (single C field semantics).
+ */
+export function readUnifiedBudget428(s: TreeSection): number {
     return s.energyWeight428 as number;
+}
+
+/** Keep both TS aliases synchronized to the same C-like +428 value. */
+export function writeUnifiedBudget428(s: TreeSection, value: number): void {
+    const v = value as Float32;
+    s.energyWeight428 = v;
+    s.sub414CE0SeedBudget428 = v;
 }
 
 function applyBeforeLabel11(section: TreeSection): void {
@@ -31,10 +40,8 @@ function applyBeforeLabel11(section: TreeSection): void {
         const parent = section.parent;
         if (parent) {
             const v2 =
-                readApproxC428(parent) * (section.ce512EnergyAllowanceScale as number);
-            // C writes into unified +428 field; keep both fields synchronized.
-            section.energyWeight428 = v2 as Float32;
-            section.sub414CE0SeedBudget428 = v2 as Float32;
+                readUnifiedBudget428(parent) * (section.ce512EnergyAllowanceScale as number);
+            writeUnifiedBudget428(section, v2);
         }
         return;
     }
@@ -44,11 +51,9 @@ function applyBeforeLabel11(section: TreeSection): void {
         const reb = GrowthConstants.FLT_4D863C_ENERGY_REBALANCE_PERCENT as number;
         const acc = Math.max(0, section.energyAccumulator424 as number);
         const v6 = Math.pow(acc, powExp);
-        const old428 = readApproxC428(section);
+        const old428 = readUnifiedBudget428(section);
         const v2 = (1.0 - reb) * old428 + reb * v6;
-        // C writes back to +428 directly; this is the source for next year's 432 distribution.
-        section.energyWeight428 = v2 as Float32;
-        section.sub414CE0SeedBudget428 = v2 as Float32;
+        writeUnifiedBudget428(section, v2);
     }
 }
 
