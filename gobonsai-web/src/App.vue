@@ -15,6 +15,10 @@ const stats = ref({
   log: [] as any[],
 });
 
+const debug = ref<boolean>(
+  localStorage.getItem("gobonsai_debug_growth_chain") === "1",
+);
+
 const settings = ref({
   timeSpeed: 10.0,
   manualLight: false,
@@ -46,6 +50,13 @@ const handleReset = () => {
   }
 };
 
+const toggleDebug = () => {
+  localStorage.removeItem("gobonsai_debug_growth_chain");
+  localStorage.setItem("gobonsai_debug_growth_chain", debug.value ? "0" : "1");
+  debug.value = !debug.value;
+  location.reload();
+};
+
 const handleExport = () => {
   viewerRef.value?.exportBonsai();
 };
@@ -60,11 +71,13 @@ const handleImport = () => {
     <Dashboard
       :stats="stats"
       :settings="settings"
+      :debug="debug"
       @reset="handleReset"
       @update-settings="handleUpdateSettings"
       @update-mode="handleUpdateMode"
       @export="handleExport"
       @import="handleImport"
+      @toggle-debug="toggleDebug"
     />
     <BonsaiViewer
       ref="viewerRef"

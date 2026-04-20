@@ -1,4 +1,4 @@
-import { TreeSection } from "../TreeSection";
+﻿import { TreeSection } from "../TreeSection";
 import { GrowthConstants } from "../config/GrowthConstants";
 import { sub4079C0EnsureInitialized } from "../config/SectionTypeRegistrySub401730";
 import { Float32 } from "../math/MathTypes";
@@ -9,21 +9,21 @@ import { SectionRuntimeType } from "../SectionRuntimeType";
 import { writeUnifiedBudget428 } from "./sub414CE0";
 
 /**
- * sub_414E10.c — базовый слот +36 для TreeSection: сброс +420/+436/+480/+484, доли child+432
- * от parent+432 по весам this+428, суммирование детей, хвост +424/+440/+36.
+ * sub_414E10.c вЂ” Р±Р°Р·РѕРІС‹Р№ СЃР»РѕС‚ +36 РґР»СЏ TreeSection: СЃР±СЂРѕСЃ +420/+436/+480/+484, РґРѕР»Рё child+432
+ * РѕС‚ parent+432 РїРѕ РІРµСЃР°Рј this+428, СЃСѓРјРјРёСЂРѕРІР°РЅРёРµ РґРµС‚РµР№, С…РІРѕСЃС‚ +424/+440/+36.
  *
- * Ветка `dword_4D7CF8` + sub_4079C0: однократный side-effect в exe; в TS не переносится,
- * фиксируется флагом `lazy4079C0Triggered` при первом узле с родителем (эквивалент this+180).
+ * Р’РµС‚РєР° `dword_4D7CF8` + sub_4079C0: РѕРґРЅРѕРєСЂР°С‚РЅС‹Р№ side-effect РІ exe; РІ TS РЅРµ РїРµСЂРµРЅРѕСЃРёС‚СЃСЏ,
+ * С„РёРєСЃРёСЂСѓРµС‚СЃСЏ С„Р»Р°РіРѕРј `lazy4079C0Triggered` РїСЂРё РїРµСЂРІРѕРј СѓР·Р»Рµ СЃ СЂРѕРґРёС‚РµР»РµРј (СЌРєРІРёРІР°Р»РµРЅС‚ this+180).
  */
 
-/** Соответствует «глобальный бит установлен» после первого sub_4079C0 в процессе. */
+/** РЎРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ В«РіР»РѕР±Р°Р»СЊРЅС‹Р№ Р±РёС‚ СѓСЃС‚Р°РЅРѕРІР»РµРЅВ» РїРѕСЃР»Рµ РїРµСЂРІРѕРіРѕ sub_4079C0 РІ РїСЂРѕС†РµСЃСЃРµ. */
 let lazy4079C0Triggered = false;
 
 function u32(x: number): number {
     return x >>> 0;
 }
 
-/** decompiled/sub_414E10.c:16–19 — при ненулевом родителе и сброшенном бите dword_4D7CF8 вызывается sub_4079C0. */
+/** decompiled/sub_414E10.c:16вЂ“19 вЂ” РїСЂРё РЅРµРЅСѓР»РµРІРѕРј СЂРѕРґРёС‚РµР»Рµ Рё СЃР±СЂРѕС€РµРЅРЅРѕРј Р±РёС‚Рµ dword_4D7CF8 РІС‹Р·С‹РІР°РµС‚СЃСЏ sub_4079C0. */
 function maybeRunLazy4079C0Once(root: TreeSection): void {
     if (lazy4079C0Triggered) return;
     const stack: TreeSection[] = [root];
@@ -38,19 +38,24 @@ function maybeRunLazy4079C0Once(root: TreeSection): void {
     }
 }
 
-/** this+188 == 1 — секция «отцеплена», в C sub_414E10 не трогает узел (spec_detach_pipeline). */
+/** this+188 == 1 вЂ” СЃРµРєС†РёСЏ В«РѕС‚С†РµРїР»РµРЅР°В», РІ C sub_414E10 РЅРµ С‚СЂРѕРіР°РµС‚ СѓР·РµР» (spec_detach_pipeline). */
 function skipDetached(section: TreeSection): boolean {
     return section.worldDetached188;
 }
 
 /**
- * Прокси для this+428 — вес доли бюджета у ребёнка; в exe связан с радиусом/энергией побега.
- * Синхронизируем из геометрии перед распределением +432.
+ * РџСЂРѕРєСЃРё РґР»СЏ this+428 вЂ” РІРµСЃ РґРѕР»Рё Р±СЋРґР¶РµС‚Р° Сѓ СЂРµР±С‘РЅРєР°; РІ exe СЃРІСЏР·Р°РЅ СЃ СЂР°РґРёСѓСЃРѕРј/СЌРЅРµСЂРіРёРµР№ РїРѕР±РµРіР°.
+ * РЎРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµРј РёР· РіРµРѕРјРµС‚СЂРёРё РїРµСЂРµРґ СЂР°СЃРїСЂРµРґРµР»РµРЅРёРµРј +432.
  */
 export function syncEnergyWeight428FromGeometry(root: TreeSection): void {
     const walk = (s: TreeSection): void => {
-        const w =
-            (s.branchBaseRadius as number) + (s.branchTipRadius as number);
+        const liveBase = Math.max(1e-6, s.twigRadius444 as number);
+        const ctorTaper =
+            (s.branchBaseRadius as number) > 1e-6
+                ? (s.branchTipRadius as number) / (s.branchBaseRadius as number)
+                : 1.0;
+        const liveTip = Math.max(1e-6, liveBase * ctorTaper);
+        const w = liveBase + liveTip;
         writeUnifiedBudget428(s, Math.max(1e-6, w));
         for (const c of s.children) walk(c);
     };
@@ -58,29 +63,33 @@ export function syncEnergyWeight428FromGeometry(root: TreeSection): void {
 }
 
 /**
- * this+444 / this+448 — до полного sub_417C90/sub_418BD0 синхронизируем из текущей геометрии TS
- * (радиус основания и длина сегмента по branchPosition × HEIGHT_FACTOR).
+ * this+444 / this+448 вЂ” РґРѕ РїРѕР»РЅРѕРіРѕ sub_417C90/sub_418BD0 СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµРј РёР· С‚РµРєСѓС‰РµР№ РіРµРѕРјРµС‚СЂРёРё TS
+ * (СЂР°РґРёСѓСЃ РѕСЃРЅРѕРІР°РЅРёСЏ Рё РґР»РёРЅР° СЃРµРіРјРµРЅС‚Р° РїРѕ branchPosition Г— HEIGHT_FACTOR).
  */
 export function syncTwigFloat444448FromGeometry(root: TreeSection): void {
     const { GEOMETRY } = TREE_CONSTANTS;
     const walk = (s: TreeSection): void => {
-        s.twigRadius444 = s.branchBaseRadius as Float32;
-        const len =
-            GEOMETRY.HEIGHT_FACTOR * Math.max(0.05, s.branchPosition as number);
-        s.twigLength448 = len as Float32;
+        if ((s.twigRadius444 as number) <= 0) {
+            s.twigRadius444 = s.branchBaseRadius as Float32;
+        }
+        if ((s.twigLength448 as number) <= 0) {
+            const len =
+                GEOMETRY.HEIGHT_FACTOR * Math.max(0.05, s.branchPosition as number);
+            s.twigLength448 = len as Float32;
+        }
         for (const c of s.children) walk(c);
     };
     walk(root);
 }
 
 /**
- * sub_414E10: v10 = sum(child+428); child+432 = share * parent+432; затем (*child+36)(child).
- * Реализация — runVirtualSlot36Tree (virtualSlot36.ts): порядок как в C.
+ * sub_414E10: v10 = sum(child+428); child+432 = share * parent+432; Р·Р°С‚РµРј (*child+36)(child).
+ * Р РµР°Р»РёР·Р°С†РёСЏ вЂ” runVirtualSlot36Tree (virtualSlot36.ts): РїРѕСЂСЏРґРѕРє РєР°Рє РІ C.
  */
 export function distributeEnergyBudget432DownTree(
     root: TreeSection,
     rng?: MSVCRand,
-    /** *(_BYTE *)(dword_4D7EE8 + 220) — см. WorldGrowthState.worldFlagByte220, sub_415C10 */
+    /** *(_BYTE *)(dword_4D7EE8 + 220) вЂ” СЃРј. WorldGrowthState.worldFlagByte220, sub_415C10 */
     worldFlagByte220 = false,
 ): void {
     maybeRunLazy4079C0Once(root);
@@ -88,9 +97,9 @@ export function distributeEnergyBudget432DownTree(
 }
 
 /**
- * Лист: +420 из growthScratchA × масштаб (прокси sub_416510 → this+420).
- * Узел с детьми: суммы детей для +420/+436/+480/+484; +480 учитывает spawnDelta480 (sub_4188E0 ++);
- * внутренний узел: +484 += 1 после суммы детей (sub_417C90 ++ после sub_414E10 в twig).
+ * Р›РёСЃС‚: +420 РёР· growthScratchA Г— РјР°СЃС€С‚Р°Р± (РїСЂРѕРєСЃРё sub_416510 в†’ this+420).
+ * РЈР·РµР» СЃ РґРµС‚СЊРјРё: СЃСѓРјРјС‹ РґРµС‚РµР№ РґР»СЏ +420/+436/+480/+484; +480 СѓС‡РёС‚С‹РІР°РµС‚ spawnDelta480 (sub_4188E0 ++);
+ * РІРЅСѓС‚СЂРµРЅРЅРёР№ СѓР·РµР»: +484 += 1 РїРѕСЃР»Рµ СЃСѓРјРјС‹ РґРµС‚РµР№ (sub_417C90 ++ РїРѕСЃР»Рµ sub_414E10 РІ twig).
  */
 export function aggregateEnergy420436PostOrder(root: TreeSection): void {
     const scale = GrowthConstants.SUB40DC90_PRODUCTION_FROM_SCRATCH_SCALE as number;
@@ -136,7 +145,7 @@ export function aggregateEnergy420436PostOrder(root: TreeSection): void {
 }
 
 /**
- * Хвост sub_414E10.c:53–59 — пост-ордер: +424 += +420, +440 += 1, this+36 = max(+444, +448*0.5).
+ * РҐРІРѕСЃС‚ sub_414E10.c:53вЂ“59 вЂ” РїРѕСЃС‚-РѕСЂРґРµСЂ: +424 += +420, +440 += 1, this+36 = max(+444, +448*0.5).
  */
 export function applySub414E10PostOrderTail(root: TreeSection): void {
     const go = (section: TreeSection): void => {
@@ -155,5 +164,6 @@ export function applySub414E10PostOrderTail(root: TreeSection): void {
     go(root);
 }
 
-/** Алиас для совместимости с ранними вызовами. */
+/** РђР»РёР°СЃ РґР»СЏ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё СЃ СЂР°РЅРЅРёРјРё РІС‹Р·РѕРІР°РјРё. */
 export const applySub414E10Tail424440 = applySub414E10PostOrderTail;
+

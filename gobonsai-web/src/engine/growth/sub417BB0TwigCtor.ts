@@ -32,6 +32,7 @@ export function sub417BB0CreateTwig(
   yawPitchRoll: readonly [number, number, number],
   inheritedBaseRadius: number,
   rng: MSVCRand,
+  preserveExactLocalTemplateAttachment240: boolean = false,
 ): TreeSection {
   const twig = new TreeSection(parent, level, rng, inheritedBaseRadius);
   sub413F50InitSection(
@@ -44,6 +45,8 @@ export function sub417BB0CreateTwig(
   twig.maxGrowth = sub417BB0SampleMaxGrowth(normalizedEnergy, rng);
   writeUnifiedBudget428(twig, 1.0);
   twig.energyAccumulator424 = 1.0;
+  twig.useExactLocalTemplateAttachment240 =
+    preserveExactLocalTemplateAttachment240;
   twig.growthFlag512 = false;
 
   return twig;

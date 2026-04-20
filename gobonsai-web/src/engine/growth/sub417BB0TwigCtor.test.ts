@@ -44,5 +44,24 @@ describe("sub_417BB0 twig ctor parity", () => {
     expect(twig.rotationQuaternion.z).toBeCloseTo(twig.targetRotation.z, 6);
     expect(twig.rotationQuaternion.w).toBeCloseTo(twig.targetRotation.w, 6);
   });
-});
 
+  it("can preserve exact local-template attachment mode for continuation twig", () => {
+    const rng = new MSVCRand(9);
+    const parent = new TreeSection(null, 0, new MSVCRand(1), 0.2);
+    const template = new THREE.Matrix4().makeTranslation(0, 0.7, 1.0);
+
+    const twig = sub417BB0CreateTwig(
+      template,
+      parent,
+      1,
+      0.5,
+      [0.1, 0.0, 0.0],
+      0.08,
+      rng,
+      true,
+    );
+
+    expect(twig.useExactLocalTemplateAttachment240).toBe(true);
+    expect(twig.localTemplate240.elements).toEqual(template.elements);
+  });
+});

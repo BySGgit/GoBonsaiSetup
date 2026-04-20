@@ -85,8 +85,16 @@ export function twigUpdateSub417C90(
 
     // Growth vs branching dispatch on +512 flag.
     if (section.growthFlag512) {
-        if (section.children.length === 0 && !section.isContinuation) {
-            detachFromParentAndMarkWorldManagedSub417C90(section);
+        // In the current TS port this path was severing the active apical chain:
+        // a terminal continuation twig naturally has no children while it is still
+        // extending in length. Detaching it here visually "cuts" the trunk.
+        //
+        // Keep the detach behavior only for non-continuation twigs until the exact
+        // world-managed semantics of the original path are reproduced end-to-end.
+        if (section.children.length === 0) {
+            if (!section.isContinuation) {
+                detachFromParentAndMarkWorldManagedSub417C90(section);
+            }
         }
         twigLengthGrowthSub418BD0(section, rng);
     } else {

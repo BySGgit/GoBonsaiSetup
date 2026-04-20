@@ -4,6 +4,7 @@ import { byte4D8225ForSectionType } from "../config/GrowthConstants";
 import { TransformService } from "../math/TransformService";
 import { Sub416510Rotation } from "../math/Sub416510Rotation";
 import { Float32 } from "../math/MathTypes";
+import { getSlot36SimulationDay } from "./frameState";
 
 const _identity4x4 = new THREE.Matrix4();
 
@@ -48,6 +49,7 @@ export function sub413F50InitSection(
   section.energyBudget432 = 0 as Float32;
   section.energySpent436 = 0 as Float32;
   section.energyTickCounter440 = 0 as Float32;
+  section.branchBirthSimulationDay = getSlot36SimulationDay() as Float32;
   section.twigRadius444 = 0 as Float32;
   section.twigLength448 = 0 as Float32;
   section.healthEnergy456 = 1 as Float32;

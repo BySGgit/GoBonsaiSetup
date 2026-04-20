@@ -24,6 +24,7 @@ const emit = defineEmits([
   "update-mode",
   "export",
   "import",
+  "toggle-debug",
 ]);
 
 const props = defineProps<{
@@ -41,6 +42,7 @@ const props = defineProps<{
       type: "info" | "warning" | "success";
     }[];
   };
+  debug: boolean;
   settings: {
     timeSpeed: number;
     manualLight: boolean;
@@ -349,6 +351,12 @@ const seasonInfo = computed(() => {
           class="w-full py-2 bg-red-500/20 hover:bg-red-500/40 border border-red-500/50 rounded-xl text-red-400 text-xs font-bold uppercase tracking-widest transition-all cursor-pointer"
         >
           Сбросить бонсай
+        </button>
+        <button
+          @click="$emit('toggle-debug')"
+          class="w-full py-2 bg-red-500/20 hover:bg-red-500/40 border border-red-500/50 rounded-xl text-red-400 text-xs font-bold uppercase tracking-widest transition-all cursor-pointer"
+        >
+          Дебаг ({{ debug ? "ВКЛ" : "ВЫКЛ" }})
         </button>
         <div
           class="text-[10px] text-white/30 text-center uppercase tracking-widest font-bold"

@@ -17,6 +17,8 @@ import { sub417BB0CreateTwig } from "./sub417BB0TwigCtor";
 import { sub413F50AttachChild } from "./sub413F50Ctor";
 import { readUnifiedBudget428, writeUnifiedBudget428 } from "./sub414CE0";
 import { invokeSlot44ForSection } from "./slot44Dispatch";
+import { growthDebugEnabled, growthDebugLog, growthDebugSectionLabel } from "./growthDebug";
+import { getSlot36SimulationDay } from "./frameState";
 
 /**
  * Виртуальный слот +36 по типу секции (spec_update_growth_sub_40DC90 §2.5).
@@ -51,6 +53,27 @@ function effectiveGrowthWeightForBudget(section: TreeSection): number {
   }
   // Recovery guard for trees created during weight=0 regressions.
   return Math.max(1e-4, readUnifiedBudget428(section));
+}
+
+function yearsSinceBranchLocal(section: TreeSection): number {
+  const worldTime = getSlot36SimulationDay();
+  const worldYears = worldTime / 365.0;
+  const birthYears = (section.branchBirthSimulationDay as number) / 365.0;
+  const trunc = (v: number): number => (v < 0 ? Math.ceil(v) : Math.floor(v));
+  return trunc(worldYears) - trunc(birthYears);
+}
+
+function isParentTwigReadyForContinuation(parentTwig: TreeSection | null): boolean {
+  if (parentTwig === null) return true;
+  if (parentTwig.growthFlag512) return false;
+
+  const length = parentTwig.twigLength448 as number;
+  const maxGrowth = parentTwig.maxGrowth as number;
+  const reachedLengthCap = length >= maxGrowth - 1e-4;
+  const hasSimulationTicks = (parentTwig.rollupDword484 >>> 0) > 0;
+  const hasLivedAtLeastOneYear = yearsSinceBranchLocal(parentTwig) > 0;
+
+  return reachedLengthCap || hasSimulationTicks || hasLivedAtLeastOneYear;
 }
 
 /**
@@ -203,7 +226,10 @@ function budAfterSub414E10From415EF0(
       ? (byte4D822AForSectionType(parentSection.sectionRuntimeType4) ? parentSection : null)
       : null;
 
-    if (activeParentTwig === null || !activeParentTwig.growthFlag512) {
+    if (
+      isParentTwigReadyForContinuation(activeParentTwig) &&
+      (activeParentTwig === null || !activeParentTwig.growthFlag512)
+    ) {
       sub415C10ConvertBudToTwig(bud, v7, rng, worldFlagByte220);
     }
   } else {
@@ -244,9 +270,6 @@ function sub415C10ConvertBudToTwig(
   if (!rng) return 0;
 
   const budParent = bud.parent;
-  const oldBudBranchPos = bud.branchPosition;
-  const oldBudLat = bud.lateralTransY4158;
-  const oldBudRoll = bud.lateralRoll4158Z;
   _tmpMatrix415C10.copy(bud.localTemplate240);
 
   // sub_413CF0: check if parent is a registered twig-like type
@@ -282,10 +305,8 @@ function sub415C10ConvertBudToTwig(
     [yawJitter, 0, 0],
     inheritedBaseRadius,
     rng,
+    true,
   );
-  newTwig.branchPosition = oldBudBranchPos;
-  newTwig.lateralTransY4158 = oldBudLat;
-  newTwig.lateralRoll4158Z = oldBudRoll;
   // sub_415C10 chain model: parent -> newTwig -> bud (apical continuation).
   newTwig.isContinuation = true;
 
@@ -333,6 +354,34 @@ function sub415C10ConvertBudToTwig(
   // ── Step 7: Spawn 2 symmetric leaves on the new twig ──
   sub415AB0SpawnLeaves(bud, newTwig, normalizedEnergy, rng);
 
+  if (growthDebugEnabled()) {
+    growthDebugLog("bud_to_twig", {
+      bud: growthDebugSectionLabel(bud),
+      newTwig: growthDebugSectionLabel(newTwig),
+      parent: growthDebugSectionLabel(budParent),
+      normalizedEnergy: Number(normalizedEnergy.toFixed(5)),
+      newTwigRadius444: Number((newTwig.twigRadius444 as number).toFixed(5)),
+      newTwigLength448: Number((newTwig.twigLength448 as number).toFixed(5)),
+      newTwigGrowthFlag512: newTwig.growthFlag512,
+      budGrowthFlag512: bud.growthFlag512,
+      budBirthDay: Number((bud.branchBirthSimulationDay as number).toFixed(2)),
+      twigBirthDay: Number((newTwig.branchBirthSimulationDay as number).toFixed(2)),
+      parentChildrenTypes: budParent ? budParent.children.map((child) => child.sectionRuntimeType4) : [],
+      newTwigChildrenTypes: newTwig.children.map((child) => child.sectionRuntimeType4),
+      localTemplatePos: {
+        x: Number(_tmpMatrix415C10.elements[12].toFixed(5)),
+        y: Number(_tmpMatrix415C10.elements[13].toFixed(5)),
+        z: Number(_tmpMatrix415C10.elements[14].toFixed(5)),
+      },
+      newTwigQuat: {
+        x: Number(newTwig.rotationQuaternion.x.toFixed(5)),
+        y: Number(newTwig.rotationQuaternion.y.toFixed(5)),
+        z: Number(newTwig.rotationQuaternion.z.toFixed(5)),
+        w: Number(newTwig.rotationQuaternion.w.toFixed(5)),
+      },
+    });
+  }
+
   return 1;
 }
 
@@ -362,8 +411,24 @@ function sub415AB0SpawnLeaves(
   const dirX = Math.sin(angle);
   const dirZ = Math.cos(angle);
 
-  createLeafSection(parentTwig, normalizedEnergy, dirX, 0, dirZ, rng);
-  createLeafSection(parentTwig, normalizedEnergy, -dirX, 0, -dirZ, rng);
+  createLeafSection(
+    parentTwig,
+    normalizedEnergy,
+    dirX,
+    0,
+    dirZ,
+    rng,
+    buildLeafPairTemplateSub415AB0(angle),
+  );
+  createLeafSection(
+    parentTwig,
+    normalizedEnergy,
+    -dirX,
+    0,
+    -dirZ,
+    rng,
+    buildLeafPairTemplateSub415AB0(angle + Math.PI),
+  );
 
   bud.leafCount516++;
 }
@@ -379,6 +444,7 @@ function createLeafSection(
   dirY: number,
   dirZ: number,
   rng: MSVCRand,
+  localTemplate240?: THREE.Matrix4,
 ): TreeSection {
   const minLeaf = GrowthConstants.FLT_4D85F0 as number;
   const maxLeaf = GrowthConstants.FLT_4D85F4 as number;
@@ -390,6 +456,10 @@ function createLeafSection(
   leaf.sectionRuntimeType4 = SectionRuntimeType.TreeSectionLeaf;
   leaf.maxGrowth = maxLeafSize as Float32;
   writeUnifiedBudget428(leaf, 0);
+  if (localTemplate240) {
+    leaf.localTemplate240.copy(localTemplate240);
+    leaf.useExactLocalTemplateAttachment240 = true;
+  }
 
   const yaw = Math.atan2(dirX, dirZ);
   const pitch = dirY;
@@ -402,13 +472,14 @@ function createLeafSection(
   leaf.updateAttachmentPosition(parentTwig);
   leaf.mesh.visible = false;
 
-  const leafVisual = new TreeLeaf(leaf.group, rng);
+  const visualRng = createLeafVisualRng(parentTwig, leaf, dirX, dirZ);
+  const leafVisual = new TreeLeaf(leaf.group, visualRng);
   leafVisual.energy = 0.9;
   const parentRadius = Math.max(0.015, parentTwig.twigRadius444 as number);
   const radiusFactor = Math.max(0.75, Math.min(1.15, parentRadius / 0.06));
   const sizeFromLeafType = Math.max(0.55, Math.min(1.5, maxLeafSize / 2.4));
   leafVisual.size =
-    (0.22 + rng.randFloat() * 0.12) * radiusFactor * sizeFromLeafType;
+    (0.22 + visualRng.randFloat() * 0.12) * radiusFactor * sizeFromLeafType;
   leafVisual.targetSize = Math.min(
     1.9,
     Math.max(0.55, maxLeafSize * 0.34 * radiusFactor),
@@ -416,6 +487,29 @@ function createLeafSection(
   leaf.leaves.push(leafVisual);
 
   return leaf;
+}
+
+function buildLeafPairTemplateSub415AB0(rollZ: number): THREE.Matrix4 {
+  const translate = new THREE.Matrix4().makeTranslation(0, 0, 1);
+  const rotate = new THREE.Matrix4().makeRotationZ(rollZ);
+  return new THREE.Matrix4().multiplyMatrices(translate, rotate);
+}
+
+function createLeafVisualRng(
+  parentTwig: TreeSection,
+  leaf: TreeSection,
+  dirX: number,
+  dirZ: number,
+): MSVCRand {
+  // Visual-only leaf randomness must not advance the gameplay RNG stream.
+  let seed = 0x51f15e;
+  seed = Math.imul(seed ^ ((parentTwig.level + 1) | 0), 0x45d9f3b);
+  seed = Math.imul(seed ^ ((leaf.level + 1) | 0), 0x45d9f3b);
+  seed = Math.imul(seed ^ (parentTwig.children.length | 0), 0x45d9f3b);
+  seed = Math.imul(seed ^ ((Math.round(dirX * 10000) | 0) & 0xffff), 0x45d9f3b);
+  seed = Math.imul(seed ^ ((Math.round(dirZ * 10000) | 0) & 0xffff), 0x45d9f3b);
+  seed = (seed ^ (seed >>> 16)) & 0x7fffffff;
+  return new MSVCRand(seed || 1);
 }
 
 /** Один узел как корень поддерева — для тестов и внешних вызовов. */

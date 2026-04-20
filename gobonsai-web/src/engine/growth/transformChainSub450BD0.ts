@@ -1,5 +1,11 @@
 import { TreeSection } from "../TreeSection";
 import { Quaternion, Vector3 } from "three";
+import {
+    growthDebugEnabled,
+    growthDebugFrameModulo,
+    growthDebugLog,
+    growthDebugSectionLabel,
+} from "./growthDebug";
 
 /**
  * sub_450BD0 (slot +16) + sub_4146F0 (slot +32): transform chain.
@@ -9,6 +15,7 @@ const _tmpLocalPos4146F0 = new Vector3();
 const _tmpLocalQuat4146F0 = new Quaternion();
 const _tmpLocalScale4146F0 = new Vector3(1, 1, 1);
 const _tmpCombinedQuat4146F0 = new Quaternion();
+let _transformDebugCounter = 0;
 
 /**
  * Keep scene transforms in sync before metabolism/light passes.
@@ -55,6 +62,46 @@ export function rebuildLocalTransformSub4146F0(
     );
     section.group.quaternion.copy(_tmpCombinedQuat4146F0);
     section.group.scale.copy(_tmpLocalScale4146F0);
+
+    if (
+        growthDebugEnabled() &&
+        section.isContinuation &&
+        (section.sectionRuntimeType4 === 10 || section.sectionRuntimeType4 === 6)
+    ) {
+        _transformDebugCounter++;
+        if ((_transformDebugCounter % growthDebugFrameModulo()) === 0) {
+            growthDebugLog("transform_rebuild", {
+                section: growthDebugSectionLabel(section),
+                parent: growthDebugSectionLabel(section.parent),
+                exactTemplate: section.useExactLocalTemplateAttachment240,
+                localPos: {
+                    x: Number(_tmpLocalPos4146F0.x.toFixed(5)),
+                    y: Number(_tmpLocalPos4146F0.y.toFixed(5)),
+                    z: Number(_tmpLocalPos4146F0.z.toFixed(5)),
+                },
+                localQuat: {
+                    x: Number(_tmpLocalQuat4146F0.x.toFixed(5)),
+                    y: Number(_tmpLocalQuat4146F0.y.toFixed(5)),
+                    z: Number(_tmpLocalQuat4146F0.z.toFixed(5)),
+                    w: Number(_tmpLocalQuat4146F0.w.toFixed(5)),
+                },
+                sectionQuat: {
+                    x: Number(section.rotationQuaternion.x.toFixed(5)),
+                    y: Number(section.rotationQuaternion.y.toFixed(5)),
+                    z: Number(section.rotationQuaternion.z.toFixed(5)),
+                    w: Number(section.rotationQuaternion.w.toFixed(5)),
+                },
+                combinedQuat: {
+                    x: Number(section.group.quaternion.x.toFixed(5)),
+                    y: Number(section.group.quaternion.y.toFixed(5)),
+                    z: Number(section.group.quaternion.z.toFixed(5)),
+                    w: Number(section.group.quaternion.w.toFixed(5)),
+                },
+                radius444: Number((section.twigRadius444 as number).toFixed(5)),
+                length448: Number((section.twigLength448 as number).toFixed(5)),
+            });
+        }
+    }
 }
 
 /**

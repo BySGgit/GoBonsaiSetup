@@ -223,10 +223,6 @@ export class BonsaiController {
 
     private updateClock(deltaTime: number): void {
         this.gameTime += deltaTime * this.timeSpeed * 5;
-
-        if (this.stats.health > 0.7 && this.stats.energy > 0.5) {
-            this.stats.targetAge += 0.05 * deltaTime * this.timeSpeed;
-        }
     }
 
     private updateEnvironment(): void {
@@ -420,7 +416,7 @@ export class BonsaiController {
 
     public get health() { return this.stats.health; }
     public get energy() { return this.stats.energy; }
-    public get age() { return this.stats.age; }
-    public get targetAge() { return this.stats.targetAge; }
+    public get age() { return this.worldGrowth.simulationDay / 365.0; }
+    public get targetAge() { return this.worldGrowth.simulationDay / 365.0; }
     public get simulationDay() { return this.worldGrowth.simulationDay; }
 }

@@ -1,4 +1,4 @@
-import * as THREE from "three";
+﻿import * as THREE from "three";
 import { TreeLeaf } from "./TreeLeaf";
 import { TreeFlower } from "./TreeFlower";
 import { MSVCRand } from "./MSVCRand";
@@ -22,6 +22,7 @@ import { TransformService } from "./math/TransformService";
 import { Sub416510Rotation } from "./math/Sub416510Rotation";
 import { SectionRuntimeType } from "./SectionRuntimeType";
 import { sampleMaxGrowth452Sub4159C0 } from "./config/GrowthConstants";
+import { getSlot36SimulationDay } from "./growth/frameState";
 
 /** Debug: show wireframe skeleton instead of solid meshes */
 export let DEBUG_WIREFRAME = false;
@@ -30,18 +31,18 @@ export function setDebugWireframe(on: boolean): void {
 }
 
 const VISUAL_SEGMENTS_PER_SECTION = 6;
-const VISUAL_TRUNK_RADIUS_SCALE = 0.23;
 const VISUAL_LENGTH_SCALE_418F10 = 0.51;
-const MIN_YOUNG_RADIUS_SCALE = 0.12;
-const NATURAL_MIN_YOUNG_RADIUS_SCALE = 0.55;
 const _tmpTemplatePos240 = new THREE.Vector3();
 const _tmpTemplateQuat240 = new THREE.Quaternion();
 const _axisY240 = new THREE.Vector3(0, 1, 0);
 const _tmpTemplateScale240 = new THREE.Vector3(1, 1, 1);
+const _tmpCombinedLocalQuat240 = new THREE.Quaternion();
+let _nextTreeSectionDebugId = 1;
 
 export class TreeSection
   implements ITreeSectionData, IVisualState, ITransformState, IWorkingBuffers
 {
+  public readonly debugId: number;
   public parent: TreeSection | null;
   public level: number;
   public children: TreeSection[] = [];
@@ -51,12 +52,18 @@ export class TreeSection
   public currentBranchScale: Float32 = 0.0;
   public branchPosition: Float32 = 1.0;
   /**
-   * sub_4158D0(sub_4188E0): Translation(0, v22, v11) — v22 = parent.twigRadius*0.85.
-   * В сцене родителя: отвод от оси вдоль локального Z (ось роста дочери — +Y).
+   * sub_4158D0(sub_4188E0): Translation(0, v22, v11) вЂ” v22 = parent.twigRadius*0.85.
+   * Р’ СЃС†РµРЅРµ СЂРѕРґРёС‚РµР»СЏ: РѕС‚РІРѕРґ РѕС‚ РѕСЃРё РІРґРѕР»СЊ Р»РѕРєР°Р»СЊРЅРѕРіРѕ Z (РѕСЃСЊ СЂРѕСЃС‚Р° РґРѕС‡РµСЂРё вЂ” +Y).
    */
   public lateralTransY4158: Float32 = 0;
-  /** sub_4158D0: Roll (4-й аргумент v12); в TS — доп. поворот вокруг локальной Z после YPR почки. */
+  /** sub_4158D0: Roll (4-Р№ Р°СЂРіСѓРјРµРЅС‚ v12); РІ TS вЂ” РґРѕРї. РїРѕРІРѕСЂРѕС‚ РІРѕРєСЂСѓРі Р»РѕРєР°Р»СЊРЅРѕР№ Z РїРѕСЃР»Рµ YPR РїРѕС‡РєРё. */
   public lateralRoll4158Z: Float32 = 0;
+  /**
+   * Some original C spawn paths materialize exact local attachment matrices via sub_4158D0
+   * and then consume them in sub_4146F0. Those paths must not be re-synthesized every frame
+   * from branchPosition/lateral* approximations.
+   */
+  public useExactLocalTemplateAttachment240: boolean = false;
   public branchBaseRadius: Float32;
   public branchTipRadius: Float32;
 
@@ -64,7 +71,7 @@ export class TreeSection
   public rotationQuaternion: D3DXQUATERNION = new THREE.Quaternion(); // this + 320
   /** sub_413F50/4158D0: base local template matrix at +240 */
   public localTemplate240: D3DXMATRIX = new THREE.Matrix4();
-  /** sub_4146F0: qmemcpy(this+352, D3DXMatrixInverse(world)); не прямой matrixWorld. */
+  /** sub_4146F0: qmemcpy(this+352, D3DXMatrixInverse(world)); РЅРµ РїСЂСЏРјРѕР№ matrixWorld. */
   public transformMatrix: D3DXMATRIX = new THREE.Matrix4();
 
   public rotation: D3DXQUATERNION = new THREE.Quaternion(); // Alias for rotationQuaternion
@@ -81,7 +88,7 @@ export class TreeSection
   public prevData1: number = 0; // this + 77
   public prevData2: number = 0; // this + 78
   public prevData3: number = 0; // this + 79
-  /** sub_416510 «рабочие» DWORD кватерниона (+80..+83), копируются в prevData перед slerp */
+  /** sub_416510 В«СЂР°Р±РѕС‡РёРµВ» DWORD РєРІР°С‚РµСЂРЅРёРѕРЅР° (+80..+83), РєРѕРїРёСЂСѓСЋС‚СЃСЏ РІ prevData РїРµСЂРµРґ slerp */
   public quaternionBlob80u0: number = 0;
   public quaternionBlob80u1: number = 0;
   public quaternionBlob80u2: number = 0;
@@ -91,117 +98,119 @@ export class TreeSection
   public age: Float32 = 0.0; // this + 110
   public growthRate: Float32 = 0.0; // this + 111
   public growthTarget: Float32 = 0.0; // this + 112
-  /** C exe: float at this+452 (sub_4159C0 / twig cap в sub_418BD0); в TS имя историческое «maxGrowth». */
+  /** C exe: float at this+452 (sub_4159C0 / twig cap РІ sub_418BD0); РІ TS РёРјСЏ РёСЃС‚РѕСЂРёС‡РµСЃРєРѕРµ В«maxGrowthВ». */
   public maxGrowth: Float32 = 5.0;
   public energy: Float32 = 1.0; // this + 114
 
-  /** this+420 — накопление «production» за кадр (агрегат как в sub_414E10 / sub_40DC90) */
+  /** this+420 вЂ” РЅР°РєРѕРїР»РµРЅРёРµ В«productionВ» Р·Р° РєР°РґСЂ (Р°РіСЂРµРіР°С‚ РєР°Рє РІ sub_414E10 / sub_40DC90) */
   public energyProduction420: Float32 = 0;
-  /** this+432 — энергетический бюджет, выставляется до слота +36 (sub_40DC90) */
+  /** this+432 вЂ” СЌРЅРµСЂРіРµС‚РёС‡РµСЃРєРёР№ Р±СЋРґР¶РµС‚, РІС‹СЃС‚Р°РІР»СЏРµС‚СЃСЏ РґРѕ СЃР»РѕС‚Р° +36 (sub_40DC90) */
   public energyBudget432: Float32 = 0;
-  /** this+436 — расход за кадр; на корне — сумма по поддереву после sub_414E10 */
+  /** this+436 вЂ” СЂР°СЃС…РѕРґ Р·Р° РєР°РґСЂ; РЅР° РєРѕСЂРЅРµ вЂ” СЃСѓРјРјР° РїРѕ РїРѕРґРґРµСЂРµРІСѓ РїРѕСЃР»Рµ sub_414E10 */
   public energySpent436: Float32 = 0;
-  /** this+428 — вес доли parent+432 у ребёнка (sub_414E10); синхронизируется из геометрии */
+  /** this+428 вЂ” РІРµСЃ РґРѕР»Рё parent+432 Сѓ СЂРµР±С‘РЅРєР° (sub_414E10); СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚СЃСЏ РёР· РіРµРѕРјРµС‚СЂРёРё */
   public energyWeight428: Float32 = 1.0;
-  /** this+188 — «отцеплен» от иерархии роста; sub_414E10 пропускает узел */
+  /** this+188 вЂ” В«РѕС‚С†РµРїР»РµРЅВ» РѕС‚ РёРµСЂР°СЂС…РёРё СЂРѕСЃС‚Р°; sub_414E10 РїСЂРѕРїСѓСЃРєР°РµС‚ СѓР·РµР» */
   public worldDetached188: boolean = false;
 
-  /** this+424 — накопительный интеграл +420 (sub_414E10: += this+420 каждый кадр) */
+  /** this+424 вЂ” РЅР°РєРѕРїРёС‚РµР»СЊРЅС‹Р№ РёРЅС‚РµРіСЂР°Р» +420 (sub_414E10: += this+420 РєР°Р¶РґС‹Р№ РєР°РґСЂ) */
   public energyAccumulator424: Float32 = 0;
-  /** this+440 — счётчик проходов sub_414E10 (sub_414E10: += 1.0 на узел за кадр) */
+  /** this+440 вЂ” СЃС‡С‘С‚С‡РёРє РїСЂРѕС…РѕРґРѕРІ sub_414E10 (sub_414E10: += 1.0 РЅР° СѓР·РµР» Р·Р° РєР°РґСЂ) */
   public energyTickCounter440: Float32 = 0;
+  /** Runtime parity helper: simulation day when this section was created/spawned. */
+  public branchBirthSimulationDay: Float32 = 0;
   /**
-   * После sub_40DC90 на границе года: *(root+428)=1.0 (отдельно от веса child+432 в sub_414E10).
-   * Используется как семя годового бюджета; полная семантика C — см. sub_414CE0 + тип секции.
+   * РџРѕСЃР»Рµ sub_40DC90 РЅР° РіСЂР°РЅРёС†Рµ РіРѕРґР°: *(root+428)=1.0 (РѕС‚РґРµР»СЊРЅРѕ РѕС‚ РІРµСЃР° child+432 РІ sub_414E10).
+   * РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РєР°Рє СЃРµРјСЏ РіРѕРґРѕРІРѕРіРѕ Р±СЋРґР¶РµС‚Р°; РїРѕР»РЅР°СЏ СЃРµРјР°РЅС‚РёРєР° C вЂ” СЃРј. sub_414CE0 + С‚РёРї СЃРµРєС†РёРё.
    */
   public sub414CE0SeedBudget428: Float32 = 0;
 
-  /** this+444 — радиус ветки (sub_417C90, sub_4188E0; матрицы в sub_418F10) */
+  /** this+444 вЂ” СЂР°РґРёСѓСЃ РІРµС‚РєРё (sub_417C90, sub_4188E0; РјР°С‚СЂРёС†С‹ РІ sub_418F10) */
   public twigRadius444: Float32 = 0;
-  /** this+448 — длина/масштаб сегмента (sub_418BD0, sub_418F10) */
+  /** this+448 вЂ” РґР»РёРЅР°/РјР°СЃС€С‚Р°Р± СЃРµРіРјРµРЅС‚Р° (sub_418BD0, sub_418F10) */
   public twigLength448: Float32 = 0;
-  /** this+36 — скаляр толщины: max(+444, +448*0.5) в хвосте sub_414E10 */
+  /** this+36 вЂ” СЃРєР°Р»СЏСЂ С‚РѕР»С‰РёРЅС‹: max(+444, +448*0.5) РІ С…РІРѕСЃС‚Рµ sub_414E10 */
   public meshScalar36: Float32 = 0;
 
   /**
-   * this+4 — класс/тип секции в exe (`*(_DWORD *)(this+4)` для byte_4D8229/822A и др.).
-   * Пока 0 у всех узлов; задать при появлении Seed/Bud/Twig/Leaf как в rdata.
+   * this+4 вЂ” РєР»Р°СЃСЃ/С‚РёРї СЃРµРєС†РёРё РІ exe (`*(_DWORD *)(this+4)` РґР»СЏ byte_4D8229/822A Рё РґСЂ.).
+   * РџРѕРєР° 0 Сѓ РІСЃРµС… СѓР·Р»РѕРІ; Р·Р°РґР°С‚СЊ РїСЂРё РїРѕСЏРІР»РµРЅРёРё Seed/Bud/Twig/Leaf РєР°Рє РІ rdata.
    */
-  /** По умолчанию базовая секция (5); корень перезаписывается на Seed (8). */
+  /** РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ Р±Р°Р·РѕРІР°СЏ СЃРµРєС†РёСЏ (5); РєРѕСЂРµРЅСЊ РїРµСЂРµР·Р°РїРёСЃС‹РІР°РµС‚СЃСЏ РЅР° Seed (8). */
   public sectionRuntimeType4: number = SectionRuntimeType.TreeSection;
   /**
-   * this+512 — множитель к parent+428 в sub_414CE0 при byte_4D8229 (см. v2/BonsaiNode pruneRatio).
+   * this+512 вЂ” РјРЅРѕР¶РёС‚РµР»СЊ Рє parent+428 РІ sub_414CE0 РїСЂРё byte_4D8229 (СЃРј. v2/BonsaiNode pruneRatio).
    */
   public ce512EnergyAllowanceScale: Float32 = 1.0;
 
-  /** this+480 — DWORD: lateral spawn (sub_4188E0 ++); в sub_414E10 суммируется с детьми */
+  /** this+480 вЂ” DWORD: lateral spawn (sub_4188E0 ++); РІ sub_414E10 СЃСѓРјРјРёСЂСѓРµС‚СЃСЏ СЃ РґРµС‚СЊРјРё */
   public rollupDword480: number = 0;
-  /** this+484 — DWORD: тик twig (sub_417C90 ++); в sub_414E10 суммируется с детьми +1 на внутреннем узле */
+  /** this+484 вЂ” DWORD: С‚РёРє twig (sub_417C90 ++); РІ sub_414E10 СЃСѓРјРјРёСЂСѓРµС‚СЃСЏ СЃ РґРµС‚СЊРјРё +1 РЅР° РІРЅСѓС‚СЂРµРЅРЅРµРј СѓР·Р»Рµ */
   public rollupDword484: number = 0;
-  /** Кадровый вклад в +480 при sub_4188E0 (не сериализуется — обнуляется каждый кадр) */
+  /** РљР°РґСЂРѕРІС‹Р№ РІРєР»Р°Рґ РІ +480 РїСЂРё sub_4188E0 (РЅРµ СЃРµСЂРёР°Р»РёР·СѓРµС‚СЃСЏ вЂ” РѕР±РЅСѓР»СЏРµС‚СЃСЏ РєР°Р¶РґС‹Р№ РєР°РґСЂ) */
   public spawnDelta480: number = 0;
 
-  /** this+512 — byte flag: true = length growing (sub_418BD0), false = branching (sub_417F40) */
+  /** this+512 вЂ” byte flag: true = length growing (sub_418BD0), false = branching (sub_417F40) */
   public growthFlag512: boolean = true;
-  /** this+456 — smoothed health energy (sub_417C90: += (prod/20 - this)*0.1) */
+  /** this+456 вЂ” smoothed health energy (sub_417C90: += (prod/20 - this)*0.1) */
   public healthEnergy456: Float32 = 0.5;
-  /** this+516 — leaf count (sub_415AB0 increments) */
+  /** this+516 вЂ” leaf count (sub_415AB0 increments) */
   public leafCount516: number = 0;
-  /** this+236 — marked for detach (vtable slot +44 → sub_40EEE0) */
+  /** this+236 вЂ” marked for detach (vtable slot +44 в†’ sub_40EEE0) */
   public markedForDetach236: boolean = false;
   /** Bud: accumulated leaf spawn angle (sub_415AB0 uses this+512 as float on bud) */
   public leafSpawnAngle: number = 0;
 
-  // ─── Light tracing fields (sub_40E460 / sub_4143E0) ─────────────
-  /** this+196..+204 — light response direction (updated by ray-march sub_40E460) */
+  // в”Ђв”Ђв”Ђ Light tracing fields (sub_40E460 / sub_4143E0) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  /** this+196..+204 вЂ” light response direction (updated by ray-march sub_40E460) */
   public lightResponseVec: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
-  /** this+208 — smoothed scalar: (dot*intensity + old*10)/11 from sub_40E460 */
+  /** this+208 вЂ” smoothed scalar: (dot*intensity + old*10)/11 from sub_40E460 */
   public smoothedLightA: Float32 = 0.1;
-  /** this+212 — smoothed scalar: (intensity + old*20)/21 from sub_40E460 */
+  /** this+212 вЂ” smoothed scalar: (intensity + old*20)/21 from sub_40E460 */
   public smoothedLightB: Float32 = 0.1;
-  /** this+216..+224 — previous direction, slerps toward +196 in sub_4143E0 */
+  /** this+216..+224 вЂ” previous direction, slerps toward +196 in sub_4143E0 */
   public prevDirectionVec: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
-  /** this+228 — slow copy of +208 (coeff 0.1) from sub_4143E0 */
+  /** this+228 вЂ” slow copy of +208 (coeff 0.1) from sub_4143E0 */
   public smoothTargetA: Float32 = 0.1;
-  /** this+232 — slow copy of +212 (coeff 0.1) from sub_4143E0 */
+  /** this+232 вЂ” slow copy of +212 (coeff 0.1) from sub_4143E0 */
   public smoothTargetB: Float32 = 0.1;
 
   /**
-   * sub_450BD0 + sub_450A80: объединённая сфера поддерева для broad-phase sub_450860
-   * (this+8..+16 центр, this+20 радиус). Узкий тест sub_450970 остаётся по this+24 и +36.
+   * sub_450BD0 + sub_450A80: РѕР±СЉРµРґРёРЅС‘РЅРЅР°СЏ СЃС„РµСЂР° РїРѕРґРґРµСЂРµРІР° РґР»СЏ broad-phase sub_450860
+   * (this+8..+16 С†РµРЅС‚СЂ, this+20 СЂР°РґРёСѓСЃ). РЈР·РєРёР№ С‚РµСЃС‚ sub_450970 РѕСЃС‚Р°С‘С‚СЃСЏ РїРѕ this+24 Рё +36.
    */
   public lightSpatialCenter8: THREE.Vector3 = new THREE.Vector3();
   public lightSpatialRadius20: number = 0;
 
-  // ─── Physics fields (sub_414870 / sub_414A70 / sub_414BB0) ──────
-  /** this+460 — total weight of subtree (mass + children) */
+  // в”Ђв”Ђв”Ђ Physics fields (sub_414870 / sub_414A70 / sub_414BB0) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  /** this+460 вЂ” total weight of subtree (mass + children) */
   public totalWeight460: number = 0;
-  /** this+464 — stored mass of this section alone */
+  /** this+464 вЂ” stored mass of this section alone */
   public storedMass464: number = 0;
-  /** this+468..+476 — center of mass in local coords */
+  /** this+468..+476 вЂ” center of mass in local coords */
   public centroid468: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
 
-  // ─── World object fields (sub_40F140) ───────────────────────────
-  /** this+488..+496 — linear velocity for detached sections */
+  // в”Ђв”Ђв”Ђ World object fields (sub_40F140) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  /** this+488..+496 вЂ” linear velocity for detached sections */
   public velocity488: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
-  /** this+500..+508 — angular velocity for detached sections */
+  /** this+500..+508 вЂ” angular velocity for detached sections */
   public angularVelocity500: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
 
-  /** sub_416510 v34 — отклик секции на свет (0..1), обновляется метаболизмом */
+  /** sub_416510 v34 вЂ” РѕС‚РєР»РёРє СЃРµРєС†РёРё РЅР° СЃРІРµС‚ (0..1), РѕР±РЅРѕРІР»СЏРµС‚СЃСЏ РјРµС‚Р°Р±РѕР»РёР·РјРѕРј */
   public lastLightFactor: Float32 = 1.0;
-  /** sub_416510 *((float*)this+52) — множитель в v34 (синхронизируется с baseGrowth в росте) */
+  /** sub_416510 *((float*)this+52) вЂ” РјРЅРѕР¶РёС‚РµР»СЊ РІ v34 (СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚СЃСЏ СЃ baseGrowth РІ СЂРѕСЃС‚Рµ) */
   public metabolismLightScale: Float32 = 1.0;
-  /** sub_416510 *((float*)this+53) — в формуле v34 умножается на 0.5 */
+  /** sub_416510 *((float*)this+53) вЂ” РІ С„РѕСЂРјСѓР»Рµ v34 СѓРјРЅРѕР¶Р°РµС‚СЃСЏ РЅР° 0.5 */
   public metabolismLightOffset: Float32 = 0.5;
-  /** sub_416510.c:286–287 — вспомогательные накопления (this+105 / +106) */
+  /** sub_416510.c:286вЂ“287 вЂ” РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Рµ РЅР°РєРѕРїР»РµРЅРёСЏ (this+105 / +106) */
   public growthScratchA: Float32 = 0;
   public growthScratchB: Float32 = 0;
-  /** sub_416510.c:161 — пропуск прироста на этот кадр */
+  /** sub_416510.c:161 вЂ” РїСЂРѕРїСѓСЃРє РїСЂРёСЂРѕСЃС‚Р° РЅР° СЌС‚РѕС‚ РєР°РґСЂ */
   public skipGrowthTick: boolean = false;
 
   public isContinuation: boolean = false;
 
-  // IVisualState (from C offsets) — стартовая тёплая кора (до первого кадра роста)
+  // IVisualState (from C offsets) вЂ” СЃС‚Р°СЂС‚РѕРІР°СЏ С‚С‘РїР»Р°СЏ РєРѕСЂР° (РґРѕ РїРµСЂРІРѕРіРѕ РєР°РґСЂР° СЂРѕСЃС‚Р°)
   public colorR: Float32 = 0.45; // this + 128
   public colorG: Float32 = 0.3; // this + 129
   public colorB: Float32 = 0.19; // this + 130
@@ -227,6 +236,7 @@ export class TreeSection
     rng: MSVCRand,
     overrideBaseRadius?: number,
   ) {
+    this.debugId = _nextTreeSectionDebugId++;
     this.parent = parent;
     this.level = level;
     this.rng = rng;
@@ -243,7 +253,7 @@ export class TreeSection
     this.mesh = new THREE.Group();
     this.group.add(this.mesh);
 
-    // Радиус и сужение (sub_4093B0.c)
+    // Р Р°РґРёСѓСЃ Рё СЃСѓР¶РµРЅРёРµ (sub_4093B0.c)
     this.branchBaseRadius =
       overrideBaseRadius ??
       GEOMETRY.BASE_RADIUS_FACTOR * Math.pow(GEOMETRY.RADIUS_DECAY, level);
@@ -321,8 +331,8 @@ export class TreeSection
   }
 
   /**
-   * sub_4159C0 + sub_417440.c — первая почка на семени (без полной геометрии sub_416030).
-   * Углы как в C: v5[0], v5[2] ∈ [-0.08, 0.08], v5[1]=0.
+   * sub_4159C0 + sub_417440.c вЂ” РїРµСЂРІР°СЏ РїРѕС‡РєР° РЅР° СЃРµРјРµРЅРё (Р±РµР· РїРѕР»РЅРѕР№ РіРµРѕРјРµС‚СЂРёРё sub_416030).
+   * РЈРіР»С‹ РєР°Рє РІ C: v5[0], v5[2] в€€ [-0.08, 0.08], v5[1]=0.
    */
   public static createBudFromSeed(
     parent: TreeSection,
@@ -335,6 +345,8 @@ export class TreeSection
     bud.twigRadius444 = 0.01 as Float32;
     bud.twigLength448 = (TREE_CONSTANTS.GEOMETRY.HEIGHT_FACTOR *
       0.12) as Float32;
+    bud.mesh.visible = false;
+    bud.branchBirthSimulationDay = getSlot36SimulationDay() as Float32;
     bud.energyWeight428 = 1.0 as Float32;
     bud.sub414CE0SeedBudget428 = 1.0 as Float32;
     TransformService.rotationYawPitchRoll(
@@ -346,9 +358,9 @@ export class TreeSection
     bud.rotationQuaternion.copy(bud.targetRotation);
     bud.rotation.copy(bud.targetRotation);
     Sub416510Rotation.syncBlob80FromQuaternion(bud);
-    // sub_417440 → sub_4159C0: один rand на *(bud+452)
+    // sub_417440 в†’ sub_4159C0: РѕРґРёРЅ rand РЅР° *(bud+452)
     bud.maxGrowth = sampleMaxGrowth452Sub4159C0(rng);
-    // Initial seed→bud path is the main apical continuation chain.
+    // Initial seedв†’bud path is the main apical continuation chain.
     bud.isContinuation = true;
     parent.children.push(bud);
     bud.updateAttachmentPosition(parent);
@@ -356,8 +368,8 @@ export class TreeSection
   }
 
   /**
-   * После updateMatrixWorld: this+352 как в sub_4146F0 (инверсия мировой матрицы секции).
-   * sub_401540 / D3DXVec3TransformNormal(+196, this+352) — тот же путь, что inverse+normalMatrix в метаболизме.
+   * РџРѕСЃР»Рµ updateMatrixWorld: this+352 РєР°Рє РІ sub_4146F0 (РёРЅРІРµСЂСЃРёСЏ РјРёСЂРѕРІРѕР№ РјР°С‚СЂРёС†С‹ СЃРµРєС†РёРё).
+   * sub_401540 / D3DXVec3TransformNormal(+196, this+352) вЂ” С‚РѕС‚ Р¶Рµ РїСѓС‚СЊ, С‡С‚Рѕ inverse+normalMatrix РІ РјРµС‚Р°Р±РѕР»РёР·РјРµ.
    */
   public static syncTransformMatricesFromWorld(root: TreeSection): void {
     const stack: TreeSection[] = [root];
@@ -370,10 +382,12 @@ export class TreeSection
   }
 
   public getRadiusAt(t: number): number {
-    // sub_4093B0.c:127 - Линейное затухание радиуса от основания к вершине
-    // В оригинале затухание идет по всей длине структуры, здесь аппроксимируем для секции
-    const baseRadius = this.branchBaseRadius;
-    const tipRadius = this.branchTipRadius;
+    const baseRadius = Math.max(1e-4, this.twigRadius444 as number);
+    const ctorTaper =
+      this.branchBaseRadius > 1e-6
+        ? this.branchTipRadius / this.branchBaseRadius
+        : 1.0;
+    const tipRadius = Math.max(1e-4, baseRadius * ctorTaper);
     return baseRadius * (1.0 - t) + tipRadius * t;
   }
 
@@ -381,34 +395,25 @@ export class TreeSection
     const { GEOMETRY } = TREE_CONSTANTS;
     const baseHeight = GEOMETRY.HEIGHT_FACTOR;
     const twigLen = this.twigLength448 as number;
-
-    if (strictExeSimVisuals) {
-      // sub_418F10: Z scale uses twigLength448 * 0.51 (draw path), no TS growth heuristics.
-      return Math.max(baseHeight * 0.02, twigLen * VISUAL_LENGTH_SCALE_418F10);
-    }
-
-    if (twigLen > 0.001) {
-      return Math.max(baseHeight * 0.02, twigLen * VISUAL_LENGTH_SCALE_418F10);
-    }
-
-    const maxGrowth = Math.max(1e-4, this.maxGrowth as number);
-    const growthProgress = Math.max(
-      0,
-      Math.min(1, (this.growthRate as number) / maxGrowth),
-    );
-    const hasContinuation = this.children.some((c) => c.isContinuation);
-    let currentHeightScale = hasContinuation
-      ? 1.0
-      : Math.max(0.01, growthProgress);
-    if (twigLen >= baseHeight - 0.01) currentHeightScale = 1.0;
-    return baseHeight * currentHeightScale;
+    void strictExeSimVisuals;
+    return Math.max(baseHeight * 0.02, twigLen * VISUAL_LENGTH_SCALE_418F10);
   }
 
-  /** Позиция дочерней секции вдоль локальной оси Y родителя (sub_415C10 / иерархия сцены). */
+  /** РџРѕР·РёС†РёСЏ РґРѕС‡РµСЂРЅРµР№ СЃРµРєС†РёРё РІРґРѕР»СЊ Р»РѕРєР°Р»СЊРЅРѕР№ РѕСЃРё Y СЂРѕРґРёС‚РµР»СЏ (sub_415C10 / РёРµСЂР°СЂС…РёСЏ СЃС†РµРЅС‹). */
   public updateAttachmentPosition(
     parent: TreeSection,
     strictExeSimVisuals: boolean = false,
   ): void {
+    if (this.useExactLocalTemplateAttachment240) {
+      this.localTemplate240.decompose(
+        _tmpTemplatePos240,
+        _tmpTemplateQuat240,
+        _tmpTemplateScale240,
+      );
+      this.group.position.copy(_tmpTemplatePos240);
+      return;
+    }
+
     const visualHeight = parent.getAttachmentSpan(strictExeSimVisuals);
     const branchPos = Math.max(0, this.branchPosition as number);
     const lat = this.lateralTransY4158 as number;
@@ -431,15 +436,6 @@ export class TreeSection
     );
   }
 
-  private hasPrunedAncestor(): boolean {
-    let p = this.parent;
-    while (p) {
-      if (p.isPruned) return true;
-      p = p.parent;
-    }
-    return false;
-  }
-
   public update(
     ageFactor: number,
     lightIntensity: number,
@@ -448,7 +444,7 @@ export class TreeSection
     wind: THREE.Vector3,
     dayOfYear: number,
     deltaTime: number,
-    /** strict exe: без визуального sway (Date.now + wind) — в C нет этого слоя на group */
+    /** strict exe: Р±РµР· РІРёР·СѓР°Р»СЊРЅРѕРіРѕ sway (Date.now + wind) вЂ” РІ C РЅРµС‚ СЌС‚РѕРіРѕ СЃР»РѕСЏ РЅР° group */
     strictExeSimVisuals: boolean = false,
   ): void {
     const { ANIMATION } = TREE_CONSTANTS;
@@ -472,7 +468,7 @@ export class TreeSection
       deltaTime,
     );
 
-    // sub_40D6D0 (лист): нормаль пластины для sub_40E460 lightDecay — локальная +Y в мир.
+    // sub_40D6D0 (Р»РёСЃС‚): РЅРѕСЂРјР°Р»СЊ РїР»Р°СЃС‚РёРЅС‹ РґР»СЏ sub_40E460 lightDecay вЂ” Р»РѕРєР°Р»СЊРЅР°СЏ +Y РІ РјРёСЂ.
     if (this.sectionRuntimeType4 === SectionRuntimeType.TreeSectionLeaf) {
       this.directionVector
         .set(0, 1, 0)
@@ -480,81 +476,43 @@ export class TreeSection
       this.directionVector.normalize();
     }
 
-    this.group.quaternion.copy(this.rotationQuaternion);
-    if (!strictExeSimVisuals) {
-      const stabilityFactor = Math.pow(4.0, 6 - this.level);
-      const swayFactor =
-        (0.0007 + (1.0 - globalHealth) * 0.002) *
-        (wind.length() / stabilityFactor);
-      const swayX =
-        Math.sin(Date.now() * 0.0005 + this.level) * wind.x * swayFactor;
-      const swayZ =
-        Math.cos(Date.now() * 0.0006 + this.level) * wind.z * swayFactor;
-      this.group.rotateX(swayX);
-      this.group.rotateZ(swayZ);
+    if (this.parent) {
+      this.localTemplate240.decompose(
+        _tmpTemplatePos240,
+        _tmpTemplateQuat240,
+        _tmpTemplateScale240,
+      );
+      this.group.position.copy(_tmpTemplatePos240);
+      _tmpCombinedLocalQuat240.multiplyQuaternions(
+        _tmpTemplateQuat240,
+        this.rotationQuaternion,
+      );
+      this.group.quaternion.copy(_tmpCombinedLocalQuat240);
+      this.group.scale.copy(_tmpTemplateScale240);
+    } else {
+      this.group.quaternion.copy(this.rotationQuaternion);
     }
 
     const { GEOMETRY } = TREE_CONSTANTS;
 
     // Height: sub_418F10 uses this+448 with ~0.51 multiplier for twig visual length.
     const baseHeight = GEOMETRY.HEIGHT_FACTOR;
-    const twigLen = this.twigLength448 as number;
-    const maxGrowth = Math.max(1e-4, this.maxGrowth as number);
-    const growth01 = Math.max(0, Math.min(1, twigLen / maxGrowth));
-    const youthRamp = growth01 * growth01 * (3 - 2 * growth01);
     const currentHeightScale =
       this.getAttachmentSpan(strictExeSimVisuals) / baseHeight;
 
-    let youthRadiusScale = 1.0;
-    if (
-      this.sectionRuntimeType4 === SectionRuntimeType.TreeSectionTwig ||
-      this.sectionRuntimeType4 === SectionRuntimeType.TreeSectionBud
-    ) {
-      const regrowthMode = this.isPruned || this.hasPrunedAncestor();
-      // In natural growth the continuation axis should stay thick;
-      // thin "young twig" look is mainly for post-prune regrowth/laterals.
-      const minScale =
-        this.isContinuation && !regrowthMode
-          ? 1.0
-          : regrowthMode
-            ? MIN_YOUNG_RADIUS_SCALE
-            : NATURAL_MIN_YOUNG_RADIUS_SCALE;
-      youthRadiusScale = minScale + (1 - minScale) * youthRamp;
-    }
-    const stateRadiusNorm = Math.max(
-      0.15,
-      Math.min(
-        1.0,
-        Math.sqrt(
-          (this.twigRadius444 as number) / Math.max(1e-5, this.branchBaseRadius),
-        ),
-      ),
-    );
     const thicknessInput = Math.max(0.05, trunkParams.thickness as number);
-    let radScale: number;
-    if (strictExeSimVisuals) {
-      // sub_418F10/sub_417070: draw scale uses runtime radius (+444) directly.
-      radScale =
-        Math.max(1e-4, this.twigRadius444 as number) /
-        Math.max(1e-4, this.branchBaseRadius);
-    } else {
-      radScale =
-        thicknessInput *
-        VISUAL_TRUNK_RADIUS_SCALE *
-        stateRadiusNorm *
-        youthRadiusScale;
-      if (this.parent) {
-        const parentLimit = this.isContinuation ? 0.95 : 0.74;
-        radScale = Math.min(
-          radScale,
-          Math.max(0.015, (this.parent.mesh.scale.x as number) * parentLimit),
-        );
-      }
-    }
+    let radScale =
+      Math.max(1e-4, this.twigRadius444 as number) /
+      Math.max(1e-4, this.branchBaseRadius);
 
-    if (thicknessInput > 0.01) {
-      radScale = Math.max(0.012, radScale);
+    const isWoodySection =
+      this.sectionRuntimeType4 !== SectionRuntimeType.TreeSectionLeaf &&
+      this.sectionRuntimeType4 !== SectionRuntimeType.TreeSectionBud;
+
+    if (thicknessInput > 0.01 && isWoodySection) {
+      radScale = Math.max(0.001, radScale);
       this.mesh.scale.set(radScale, currentHeightScale, radScale);
+      this.mesh.visible = true;
       this.group.visible = true;
 
       if (this.wireMesh) {
@@ -566,22 +524,15 @@ export class TreeSection
         child.updateAttachmentPosition(this, strictExeSimVisuals),
       );
     } else {
-      this.group.visible = false;
+      this.mesh.visible = false;
+      if (this.sectionRuntimeType4 !== SectionRuntimeType.TreeSectionLeaf) {
+        this.group.visible = false;
+      }
     }
 
-    const tw = 0.82;
-    const tr = Math.min(
-      1,
-      Math.max(0, this.colorR * (tw + (1 - tw) * trunkParams.color.r)),
-    );
-    const tg = Math.min(
-      1,
-      Math.max(0, this.colorG * (tw + (1 - tw) * trunkParams.color.g)),
-    );
-    const tb = Math.min(
-      1,
-      Math.max(0, this.colorB * (tw + (1 - tw) * trunkParams.color.b)),
-    );
+    const tr = Math.min(1, Math.max(0, this.colorR));
+    const tg = Math.min(1, Math.max(0, this.colorG));
+    const tb = Math.min(1, Math.max(0, this.colorB));
 
     const mat =
       this.mesh.children[0] instanceof THREE.Mesh
@@ -630,7 +581,7 @@ export class TreeSection
     this.leaves.forEach((leaf) => {
       leaf.mesh.visible = foliageVisible;
       if (foliageVisible) {
-        // Листья на фиксированной высоте, так как ветка не растягивается
+        // Р›РёСЃС‚СЊСЏ РЅР° С„РёРєСЃРёСЂРѕРІР°РЅРЅРѕР№ РІС‹СЃРѕС‚Рµ, С‚Р°Рє РєР°Рє РІРµС‚РєР° РЅРµ СЂР°СЃС‚СЏРіРёРІР°РµС‚СЃСЏ
         leaf.update(
           lightIntensity,
           ageFactor,
@@ -661,6 +612,7 @@ export class TreeSection
       branchPosition: this.branchPosition,
       lateralTransY4158: this.lateralTransY4158,
       lateralRoll4158Z: this.lateralRoll4158Z,
+      useExactLocalTemplateAttachment240: this.useExactLocalTemplateAttachment240,
       branchBaseRadius: this.branchBaseRadius,
       branchTipRadius: this.branchTipRadius,
       targetRotation: { x: targetEuler.x, y: targetEuler.y, z: targetEuler.z },
@@ -703,6 +655,7 @@ export class TreeSection
       worldDetached188: this.worldDetached188,
       energyAccumulator424: this.energyAccumulator424,
       energyTickCounter440: this.energyTickCounter440,
+      branchBirthSimulationDay: this.branchBirthSimulationDay,
       sub414CE0SeedBudget428: this.sub414CE0SeedBudget428,
       twigRadius444: this.twigRadius444,
       twigLength448: this.twigLength448,
@@ -734,6 +687,8 @@ export class TreeSection
     section.branchPosition = data.branchPosition ?? 1.0;
     section.lateralTransY4158 = data.lateralTransY4158 ?? 0;
     section.lateralRoll4158Z = data.lateralRoll4158Z ?? 0;
+    section.useExactLocalTemplateAttachment240 =
+      data.useExactLocalTemplateAttachment240 ?? false;
     if (data.branchTipRadius !== undefined)
       section.branchTipRadius = data.branchTipRadius;
 
@@ -767,6 +722,8 @@ export class TreeSection
     section.worldDetached188 = data.worldDetached188 ?? false;
     section.energyAccumulator424 = data.energyAccumulator424 ?? 0;
     section.energyTickCounter440 = data.energyTickCounter440 ?? 0;
+    section.branchBirthSimulationDay =
+      data.branchBirthSimulationDay ?? data.birthSimulationDay ?? 0;
     const loadedSeed428 = data.sub414CE0SeedBudget428 ?? 0;
     const unified428 = loadedSeed428 !== 0 ? loadedSeed428 : loadedWeight428;
     section.energyWeight428 = unified428;
@@ -1018,7 +975,7 @@ export class TreeSection
       roughness: 0.2,
     });
     const segments = 10;
-    const radius = this.branchBaseRadius + 0.01;
+    const radius = Math.max(0.01, (this.twigRadius444 as number) + 0.01);
     for (let i = 0; i < segments; i++) {
       const wireGeo = new THREE.TorusGeometry(radius, 0.005, 8, 12, Math.PI);
       const wire = new THREE.Mesh(wireGeo, wireMaterial);
@@ -1070,3 +1027,4 @@ export class TreeSection
     return null;
   }
 }
+

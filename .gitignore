@@ -8,3 +8,24 @@ GoBonsai.exe_gobonsai_trace.jsonl
 installed game/ida-20260331-193522-16104.dmp
 *.c
 !/decompiled/full.c
+price old orig — копия.html
+price old orig.txt
+price — копия.html
+price.html
+price.txt
+price.html
+*.txt
+*.i64
+/.ida-mcp
+/GUIDES
+*.dmp
+*.pyc
+*.jpg
+*.py
+*.h
+/ida_exported_phase23_full_dump
+/ida_exported_phase17_full_binary_gap_sorted
+/ida_exported_functions
+decompiled/function files.zip
+decompiled.zip
+*.map

@@ -80,7 +80,7 @@ describe("sub_417C90 parity updates", () => {
     expect(section.twigLength448).toBeGreaterThan(0);
   });
 
-  it("does not detach continuation twig in childCount==0 growth branch", () => {
+  it("matches C childCount==0 branch even for continuation twig", () => {
     const parent = new TreeSection(null, 0, new MSVCRand(41), 0.2);
     const section = new TreeSection(parent, 1, new MSVCRand(42), 0.05);
     parent.children.push(section);
@@ -94,9 +94,10 @@ describe("sub_417C90 parity updates", () => {
 
     twigUpdateSub417C90(section, undefined);
 
-    expect(section.parent).toBe(parent);
-    expect(parent.children.includes(section)).toBe(true);
-    expect(section.worldDetached188).toBe(false);
+    expect(section.parent).toBeNull();
+    expect(parent.children.includes(section)).toBe(false);
+    expect(section.worldDetached188).toBe(true);
+    expect(section.twigLength448).toBeGreaterThan(0);
   });
 
   it("matches C-style lazy second rand call in detach branch", () => {

@@ -50,7 +50,7 @@ export class MetabolismService {
             lightIntensity,
             deltaTime,
             rng,
-            stats.trunkThickness
+            root.twigRadius444 as number
         );
         stats.energy = root.energy;
 
@@ -108,7 +108,7 @@ export class MetabolismService {
         lightIntensityUser: number,
         deltaTime: number,
         rng: MSVCRand,
-        trunkThicknessHint: number
+        rootRadiusHint: number
     ): number {
         const lv = GrowthConstants.LIGHT_VECTOR;
         const simTicks = Math.min(2, deltaTime * 60);
@@ -170,8 +170,8 @@ export class MetabolismService {
                 section.skipGrowthTick = true;
             }
 
-            if (isRoot && trunkThicknessHint <= GrowthConstants.METABOLISM_ROOT_THICKNESS_GATE) {
-                const v23 = trunkThicknessHint;
+            if (isRoot && rootRadiusHint <= GrowthConstants.METABOLISM_ROOT_THICKNESS_GATE) {
+                const v23 = rootRadiusHint;
                 section.energy -= rng.randFloat() * 0.025 * (1.0 - v23 / 0.01) * simTicks;
                 if (section.energy < 0) section.energy = 0;
             }

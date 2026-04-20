@@ -12,6 +12,7 @@ import {
   detachImmediatelySub40EEE0,
   markWorldManagedSub401A50,
 } from "./detachPipelineSub40EEE0";
+import { growthDebugEnabled, growthDebugLog, growthDebugSectionLabel } from "./growthDebug";
 
 /**
  * sub_4154B0:
@@ -32,6 +33,16 @@ function countActiveBudOrTwigChildrenSub4154B0(section: TreeSection): number {
  * unlink from parent then mark world-managed recursively (quiet detach).
  */
 function budQuietDetachSub415ED0(bud: TreeSection): void {
+  if (growthDebugEnabled()) {
+    growthDebugLog("slot44_bud_detach", {
+      bud: growthDebugSectionLabel(bud),
+      parent: growthDebugSectionLabel(bud.parent),
+      continuation: bud.isContinuation,
+      budget432: Number((bud.energyBudget432 as number).toFixed(5)),
+      radius444: Number((bud.twigRadius444 as number).toFixed(5)),
+      maxGrowth452: Number((bud.maxGrowth as number).toFixed(5)),
+    });
+  }
   if (bud.parent) {
     if (sub450C80RemoveFromParent(bud, bud.parent)) {
       if (bud.group.parent) bud.group.parent.remove(bud.group);
@@ -40,6 +51,28 @@ function budQuietDetachSub415ED0(bud: TreeSection): void {
   }
   bud.markedForDetach236 = false;
   markWorldManagedSub401A50(bud);
+}
+
+/**
+ * Safe leaf detach:
+ * leaf drop should not cascade into trunk/continuation chain detach.
+ */
+function leafQuietDetach(section: TreeSection): void {
+  if (growthDebugEnabled()) {
+    growthDebugLog("slot44_leaf_detach", {
+      leaf: growthDebugSectionLabel(section),
+      parent: growthDebugSectionLabel(section.parent),
+      parentContinuation: section.parent ? section.parent.isContinuation : false,
+    });
+  }
+  if (section.parent) {
+    if (sub450C80RemoveFromParent(section, section.parent)) {
+      if (section.group.parent) section.group.parent.remove(section.group);
+    }
+    section.parent = null;
+  }
+  section.markedForDetach236 = false;
+  markWorldManagedSub401A50(section);
 }
 
 /**
@@ -71,6 +104,19 @@ function slot44DetachSub4142B0(section: TreeSection, rng?: MSVCRand): void {
   if (!current) return;
   if (!byte4D8225ForSectionType(current.sectionRuntimeType4)) return;
 
+  if (growthDebugEnabled()) {
+    growthDebugLog("slot44_chain_detach", {
+      source: growthDebugSectionLabel(section),
+      target: growthDebugSectionLabel(current),
+      sourceType: section.sectionRuntimeType4,
+      targetType: current.sectionRuntimeType4,
+      sourceContinuation: section.isContinuation,
+      targetContinuation: current.isContinuation,
+      sourceParent: growthDebugSectionLabel(section.parent),
+      targetParent: growthDebugSectionLabel(current.parent),
+    });
+  }
+
   if (rng) {
     detachImmediatelySub40EEE0(current, rng);
   } else {
@@ -86,6 +132,9 @@ export function invokeSlot44ForSection(section: TreeSection, rng?: MSVCRand): vo
   switch (section.sectionRuntimeType4) {
     case SectionRuntimeType.TreeSectionBud:
       budQuietDetachSub415ED0(section);
+      break;
+    case SectionRuntimeType.TreeSectionLeaf:
+      leafQuietDetach(section);
       break;
     case SectionRuntimeType.TreeSectionSeed:
       // seed vtable slot +44 is nullsub

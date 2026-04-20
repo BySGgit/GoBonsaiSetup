@@ -155,6 +155,19 @@ export class GrowthFramePipeline {
         TreeSection.syncTransformMatricesFromWorld(root);
 
         const simulationDay = worldGrowth.simulationDay;
+        const simulationAgeYears = simulationDay / 365.0;
+        stats.age = simulationAgeYears;
+        stats.targetAge = simulationAgeYears;
+        stats.trunkThickness = Math.max(0.0001, root.twigRadius444 as number);
+        stats.targetThickness = stats.trunkThickness;
+        stats.trunkBend = 0.0;
+        stats.targetBend = 0.0;
+        stats.colorR = 1.0;
+        stats.colorG = 1.0;
+        stats.colorB = 1.0;
+        stats.targetColorR = 1.0;
+        stats.targetColorG = 1.0;
+        stats.targetColorB = 1.0;
 
         // --- sub_416510 (часть): свет → энергия на секциях; +436 на листьях (терминальные секции) ---
         const lightDirection = GrowthConstants.LIGHT_VECTOR.clone().normalize();
@@ -184,7 +197,7 @@ export class GrowthFramePipeline {
         // --- sub_4143E0 (slot +12): centroid, 414A70/414BB0, сглаживание +216..+232 ---
         perFramePhysicsSub4143E0(root, wind);
 
-        const ageFactor = stats.age / 10.0;
+        const ageFactor = simulationAgeYears / 10.0;
         const dayOfYear =
             ((Math.floor(simulationDay) % 365) + 365) % 365;
 
@@ -193,9 +206,9 @@ export class GrowthFramePipeline {
             ageFactor,
             lightIntensity,
             {
-                thickness: stats.trunkThickness,
-                bend: stats.trunkBend,
-                color: new THREE.Color(stats.colorR, stats.colorG, stats.colorB),
+                thickness: 1.0,
+                bend: 0.0,
+                color: new THREE.Color(1, 1, 1),
             },
             stats.health,
             wind,

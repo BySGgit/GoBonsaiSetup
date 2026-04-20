@@ -5,7 +5,6 @@ import { MetabolismService, MetabolismUpdateResult } from './MetabolismService';
 import { GrowthService, GrowthState } from './GrowthService';
 import { GrowthConstants } from './config/GrowthConstants';
 import { Float32 } from './math/MathTypes';
-import { TREE_CONSTANTS } from './TreeConstants';
 import { WorldGrowthState } from './world/WorldGrowthState';
 import { SectionRuntimeType } from './SectionRuntimeType';
 export type GrowthStats = GrowthState & {
@@ -62,15 +61,15 @@ export class GrowthController {
      * затем ветвление как часть кадра; virtual (*root+40) sub_414CE0 — отдельно от этого шага.
      */
     public updateYearlyTargets(stats: GrowthStats, root: TreeSection, worldGrowth?: WorldGrowthState): void {
-        GrowthService.updateYearlyTargets(stats, this.rng);
-        this.applySubtleYearlyBendDrift(stats);
-
         const d = GrowthConstants.FLT_4D7EF4 as number;
         if (worldGrowth) {
             worldGrowth.energyPool = worldGrowth.energyPool * 0.9 * (1.0 - d);
             if (worldGrowth.energyPool < 0) worldGrowth.energyPool = 0;
             root.energy = worldGrowth.normalizedEnergy as Float32;
             stats.energy = worldGrowth.normalizedEnergy;
+            const ageYears = worldGrowth.simulationDay / 365.0;
+            stats.age = ageYears;
+            stats.targetAge = ageYears;
         } else {
             let e = stats.energy * 0.9 * (1.0 - d);
             if (e < 0) e = 0;
@@ -113,18 +112,9 @@ export class GrowthController {
         walk(root);
     }
 
-    /**
-     * sub_408A30-style yearly drift on *global* bend only — avoids slamming every branch targetRotation (was causing whole-tree jumps).
-     */
-    private applySubtleYearlyBendDrift(stats: GrowthStats): void {
-        const delta = (this.rng.randFloat() - 0.5) * 0.08;
-        stats.targetBend = Math.min(
-            TREE_CONSTANTS.GROWTH.BEND_LIMIT,
-            Math.max(0, stats.targetBend + delta)
-        );
-    }
-
     public animateGrowth(stats: GrowthStats, deltaTime: number, timeSpeed: number): void {
+        // Legacy UI interpolation only. Runtime truth is projected from
+        // WorldGrowthState/TreeSection in GrowthFramePipeline.
         GrowthService.animate(stats, deltaTime, timeSpeed);
     }
 

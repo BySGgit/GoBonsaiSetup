@@ -14,6 +14,12 @@ import { getSlot36SimulationDay } from "./frameState";
 import { sub413F50AttachChild, sub413F50InitSection } from "./sub413F50Ctor";
 import { readUnifiedBudget428, writeUnifiedBudget428 } from "./sub414CE0";
 import {
+    growthDebugEnabled,
+    growthDebugLog,
+    growthDebugSectionLabel,
+    growthDebugStructuralChildCount,
+} from "./growthDebug";
+import {
     createNumericPropertyBinding,
     createSub4032WideString,
     createSub408600Entry,
@@ -33,6 +39,14 @@ const _tmpA417FF0 = new THREE.Vector3();
 const _tmpB417FF0 = new THREE.Vector3();
 const _tmpNegB417FF0 = new THREE.Vector3();
 const _tmpCross417FF0 = new THREE.Vector3();
+const _tmpRot4158D0 = new THREE.Matrix4();
+const _tmpTrans4158D0 = new THREE.Matrix4();
+const _tmpOut4158D0 = new THREE.Matrix4();
+const _tmpYpr417FF0 = new THREE.Matrix4();
+const _tmpSub4158D0_417FF0 = new THREE.Matrix4();
+const _tmpComposite417FF0 = new THREE.Matrix4();
+const _tmpParentComposite417FF0 = new THREE.Matrix4();
+const _tmpQuat417FF0 = new THREE.Quaternion();
 const _randomBudRotationMeta4DBAC4 = createSub408600Entry();
 let _sub417FF0InitFlags4DBAE8 = 0;
 
@@ -65,7 +79,7 @@ function yearsSinceBranch(section: TreeSection): number {
     const worldTime = getSlot36SimulationDay();
     const worldYears = worldTime / 365.0;
     const birthYears =
-        (worldTime - (section.energyTickCounter440 as number)) / 365.0;
+        (section.branchBirthSimulationDay as number) / 365.0;
     // C cast-to-int truncates toward zero, not Math.floor for negatives.
     const toIntTrunc = (v: number): number => (v < 0 ? Math.ceil(v) : Math.floor(v));
     return toIntTrunc(worldYears) - toIntTrunc(birthYears);
@@ -119,14 +133,39 @@ export function branchingDispatcherSub417F40(
     rng: MSVCRand,
 ): void {
     const years = yearsSinceBranch(section);
-    if (years < 1) return;
+    if (growthDebugEnabled() && section.isContinuation) {
+        growthDebugLog("branching_gate", {
+            section: growthDebugSectionLabel(section),
+            years,
+            growthFlag512: section.growthFlag512,
+            radius444: Number((section.twigRadius444 as number).toFixed(5)),
+            length448: Number((section.twigLength448 as number).toFixed(5)),
+            budget432: Number((section.energyBudget432 as number).toFixed(5)),
+            spent436: Number((section.energySpent436 as number).toFixed(5)),
+            structuralChildren: growthDebugStructuralChildCount(section),
+            allChildren: section.children.length,
+            childTypes: section.children.map((child) => child.sectionRuntimeType4),
+            birthDay: Number((section.branchBirthSimulationDay as number).toFixed(2)),
+            worldDay: Number(getSlot36SimulationDay().toFixed(2)),
+            rollup484: section.rollupDword484 >>> 0,
+        });
+    }
+    // Apical continuation must not stall for a full simulation year after the
+    // previous segment finishes length growth. That year gate is valid for
+    // older/lateral branching behavior, but for the active continuation chain
+    // it freezes the trunk exactly at the point where the next segment should
+    // be spawned.
+    if (years < 1 && !section.isContinuation) return;
 
     if (years > 3 && (section.twigRadius444 as number) > 0.2) {
         lateralBranchSub4188E0(section, rng);
         return;
     }
 
-    const childCount = section.children.length;
+    const structuralChildren = section.children.filter(
+        (child) => child.sectionRuntimeType4 !== SectionRuntimeType.TreeSectionLeaf,
+    );
+    const childCount = structuralChildren.length;
     if (childCount > 1) return;
 
     if (childCount === 0) {
@@ -134,7 +173,7 @@ export function branchingDispatcherSub417F40(
         return;
     }
 
-    const firstTwig = sub416300Filter(section.children[0] ?? null);
+    const firstTwig = sub416300Filter(structuralChildren[0] ?? null);
     const okChild = firstTwig !== null && sub415470Years(firstTwig) !== 0;
     if (okChild) {
         apicalBranchSub417FF0(section, rng);
@@ -162,14 +201,22 @@ function lateralBranchSub4188E0(
 
     const v15 = rng.randFloat() * (Math.PI * 2) - Math.PI;
     const v19 = rng.randFloat() * 1.100000023841858 - 1.600000023841858;
+    const v22 = (section.twigRadius444 as number) * 0.8500000238418579;
+    // C order in sub_4188E0:
+    //   1) rand -> v15
+    //   2) rand -> v19
+    //   operator new
+    //   3) rand -> v20 (roll jitter around v15)
+    //   4) rand -> v11 (branchPosition / translateZ for sub_4158D0)
     const v20 =
         rng.randFloat() * 0.1000000014901161 -
         0.05000000074505806 +
         v15;
     const v11 = rng.randFloat();
-    const v22 = (section.twigRadius444 as number) * 0.8500000238418579;
 
     const bud = createBudChild(section, 0, v19, rng, {
+        localTemplate240: buildLocalTemplateSub4158D0(v11, v22, -v15),
+        preserveExactLocalTemplateAttachment240: true,
         roll: -v15,
         branchPosition: v11,
         lateralTransY4158: v22,
@@ -215,9 +262,12 @@ function apicalBranchSub417FF0(
     const available =
         (section.energyBudget432 as number) - (section.energySpent436 as number);
 
-    const childCount = section.children.length >>> 0;
+    const structuralChildren = section.children.filter(
+        (child) => child.sectionRuntimeType4 !== SectionRuntimeType.TreeSectionLeaf,
+    );
+    const childCount = structuralChildren.length >>> 0;
     let oldChildWeight428 =
-        childCount === 1 ? readUnifiedBudget428(section.children[0]) : 0.0;
+        childCount === 1 ? readUnifiedBudget428(structuralChildren[0]) : 0.0;
     // Recovery guard: old saves may contain zeroed weights from previous regressions.
     if (childCount === 1 && oldChildWeight428 <= 1e-6) {
         oldChildWeight428 = 1.0;
@@ -230,6 +280,18 @@ function apicalBranchSub417FF0(
     }
 
     const v17 = apicalStr * (available * v33);
+    if (growthDebugEnabled() && section.isContinuation) {
+        growthDebugLog("apical_dispatch", {
+            section: growthDebugSectionLabel(section),
+            childCount,
+            allChildren: section.children.length,
+            available: Number(available.toFixed(5)),
+            apicalStrength: apicalStr,
+            v33: Number(v33.toFixed(5)),
+            spendAttempt: Number(v17.toFixed(5)),
+            oldChildWeight428: Number(oldChildWeight428.toFixed(5)),
+        });
+    }
     if (v17 < minE) return;
 
     section.energySpent436 = ((section.energySpent436 as number) + v17) as Float32;
@@ -257,6 +319,14 @@ function apicalBranchSub417FF0(
         v31;
     void v19;
     const bud1 = createBudChild(section, 0, v25, rng, {
+        localTemplate240: buildApicalExistingChildTemplateSub417FF0(
+            section,
+            v25,
+            -v31,
+            v19,
+        ),
+        preserveExactLocalTemplateAttachment240: true,
+        suppressAttachmentRuntimeFields: true,
         roll: -v31,
         lateralRoll4158Z: v19,
     });
@@ -292,6 +362,14 @@ function apicalBranchSub417FF0(
         v32;
     void v22;
     const bud2 = createBudChild(section, 0, v21, rng, {
+        localTemplate240: buildApicalExistingChildTemplateSub417FF0(
+            section,
+            v21,
+            -v32,
+            v22,
+        ),
+        preserveExactLocalTemplateAttachment240: true,
+        suppressAttachmentRuntimeFields: true,
         roll: -v32,
         lateralRoll4158Z: v22,
     });
@@ -324,6 +402,8 @@ function simplifiedBranchSub418660(
         v11;
 
     const bud1 = createBudChild(section, 0, v7, rng, {
+        localTemplate240: buildLocalTemplateSub4158D0(v7, 1.0, -v11),
+        preserveExactLocalTemplateAttachment240: true,
         roll: -v11,
         lateralRoll4158Z: v8,
     });
@@ -341,6 +421,8 @@ function simplifiedBranchSub418660(
             v12;
 
         const bud2 = createBudChild(section, 0, v9, rng, {
+            localTemplate240: buildLocalTemplateSub4158D0(v9, 1.0, -v12),
+            preserveExactLocalTemplateAttachment240: true,
             roll: -v12,
             lateralRoll4158Z: v10,
         });
@@ -361,7 +443,35 @@ type CreateBudChildOpts = {
     lateralTransY4158?: number;
     lateralRoll4158Z?: number;
     maxGrowth452?: number;
+    localTemplate240?: THREE.Matrix4;
+    preserveExactLocalTemplateAttachment240?: boolean;
+    suppressAttachmentRuntimeFields?: boolean;
 };
+
+function buildLocalTemplateSub4158D0(
+    translateY: number,
+    translateZ: number,
+    rollZ: number,
+): THREE.Matrix4 {
+    _tmpTrans4158D0.makeTranslation(0, translateY, translateZ);
+    _tmpRot4158D0.makeRotationZ(rollZ);
+    return _tmpOut4158D0.multiplyMatrices(_tmpTrans4158D0, _tmpRot4158D0).clone();
+}
+
+function buildApicalExistingChildTemplateSub417FF0(
+    parent: TreeSection,
+    pitch: number,
+    roll: number,
+    sub4158d0Roll: number,
+): THREE.Matrix4 {
+    _tmpSub4158D0_417FF0.copy(buildLocalTemplateSub4158D0(0.0, 1.0, sub4158d0Roll));
+    _tmpQuat417FF0.setFromEuler(new THREE.Euler(pitch, 0.0, roll, "YXZ"));
+    _tmpYpr417FF0.makeRotationFromQuaternion(_tmpQuat417FF0);
+    _tmpComposite417FF0.multiplyMatrices(_tmpYpr417FF0, _tmpSub4158D0_417FF0);
+    return _tmpParentComposite417FF0
+        .multiplyMatrices(_tmpComposite417FF0, parent.localTemplate240)
+        .clone();
+}
 
 function createBudChild(
     parent: TreeSection,
@@ -375,23 +485,26 @@ function createBudChild(
     sub413F50InitSection(
         bud,
         parent,
-        parent.localTemplate240,
+        opts.localTemplate240 ?? parent.localTemplate240,
         [yaw, pitch, opts.roll ?? 0],
     );
     bud.sectionRuntimeType4 = SectionRuntimeType.TreeSectionBud;
     bud.twigRadius444 = 0.01 as Float32;
     bud.twigLength448 = 0 as Float32;
+    bud.mesh.visible = false;
     writeUnifiedBudget428(bud, 1.0);
     bud.energyAccumulator424 = 1.0 as Float32;
     bud.growthFlag512 = true;
+    bud.useExactLocalTemplateAttachment240 =
+        opts.preserveExactLocalTemplateAttachment240 === true;
 
-    if (opts.branchPosition !== undefined) {
+    if (!opts.suppressAttachmentRuntimeFields && opts.branchPosition !== undefined) {
         bud.branchPosition = opts.branchPosition as Float32;
     }
-    if (opts.lateralTransY4158 !== undefined) {
+    if (!opts.suppressAttachmentRuntimeFields && opts.lateralTransY4158 !== undefined) {
         bud.lateralTransY4158 = opts.lateralTransY4158 as Float32;
     }
-    if (opts.lateralRoll4158Z !== undefined) {
+    if (!opts.suppressAttachmentRuntimeFields && opts.lateralRoll4158Z !== undefined) {
         bud.lateralRoll4158Z = opts.lateralRoll4158Z as Float32;
     }
     bud.maxGrowth =
@@ -401,5 +514,22 @@ function createBudChild(
 
     sub413F50AttachChild(parent, bud);
     bud.updateAttachmentPosition(parent);
+    if (growthDebugEnabled()) {
+        growthDebugLog("bud_create", {
+            parent: growthDebugSectionLabel(parent),
+            bud: growthDebugSectionLabel(bud),
+            yaw,
+            pitch,
+            roll: opts.roll ?? 0,
+            branchPosition: bud.branchPosition,
+            lateralTransY4158: bud.lateralTransY4158,
+            lateralRoll4158Z: bud.lateralRoll4158Z,
+            maxGrowth452: Number((bud.maxGrowth as number).toFixed(5)),
+            birthDay: Number((bud.branchBirthSimulationDay as number).toFixed(2)),
+            exactTemplate: bud.useExactLocalTemplateAttachment240,
+            structuralChildrenParent: growthDebugStructuralChildCount(parent),
+            allChildrenParent: parent.children.length,
+        });
+    }
     return bud;
 }
